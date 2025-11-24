@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install:*)",
+      "Bash(django-admin startproject:*)",
+      "Bash(python manage.py:*)",
+      "Bash(timeout:*)",
+      "Bash(ping:*)",
+      "Bash(nul)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(python app.py:*)",
+      "Bash(del nutrition.html)",
+      "Bash(ren nutrition_enhanced.html nutrition.html)",
+      "Bash(del \"c:\\Users\\ramse\\gymlog\\templates\\nutrition.html\")",
+      "Bash(ren \"c:\\Users\\ramse\\gymlog\\templates\\nutrition_enhanced.html\" nutrition.html)",
+      "Bash(python:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(if exist nul del nul)",
+      "Bash(git config:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

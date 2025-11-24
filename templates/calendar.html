@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block title %}Calendar - GymLog{% endblock %}
+
+{% block extra_css %}
+<style>
+    .calendar {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 5px;
+    }
+    .calendar-header {
+        text-align: center;
+        font-weight: bold;
+        padding: 10px;
+        background: #f8f9fa;
+    }
+    .calendar-day {
+        aspect-ratio: 1;
+        border: 1px solid #dee2e6;
+        padding: 5px;
+        text-align: center;
+        position: relative;
+        cursor: pointer;
+        background: white;
+    }
+    .calendar-day.other-month {
+        background: #f8f9fa;
+        color: #adb5bd;
+    }
+    .calendar-day.has-workout {
+        background: #d1e7dd;
+        border-color: #198754;
+    }
+    .calendar-day:hover {
+        background: #e9ecef;
+    }
+    .workout-indicator {
+        position: absolute;
+        bottom: 2px;
+        right: 2px;
+        background: #198754;
+        color: white;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        font-size: 0.7rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <button class="btn btn-outline-primary" onclick="changeMonth(-1)">
+        <i class="bi bi-chevron-left"></i>
+    </button>
+    <h4 id="calendar-title"></h4>
+    <button class="btn btn-outline-primary" onclick="changeMonth(1)">
+        <i class="bi bi-chevron-right"></i>
+    </button>
+</div>
+
+<div class="calendar mb-3">
+    <div class="calendar-header">Sun</div>
+    <div class="calendar-header">Mon</div>
+    <div class="calendar-header">Tue</div>
+    <div class="calendar-header">Wed</div>
+    <div class="calendar-header">Thu</div>
+    <div class="calendar-header">Fri</div>
+    <div class="calendar-header">Sat</div>
+</div>
+
+<div class="calendar" id="calendar-grid"></div>
+
+<!-- Workout Details Modal -->
+<div class="modal fade" id="workoutModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modal-date"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="modal-body">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentDate = new Date();
+    let workoutData = {};
+
+    function loadCalendarData() {
+        fetch('/api/calendar_data')
+            .then(response => response.json())
+            .then(data => {
+                workoutData = data;
+                renderCalendar();
+            });
+    }
+
+    function renderCalendar() {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+
+        document.getElementById('calendar-title').textContent =
+            currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+        const grid = document.getElementById('calendar-grid');
+        grid.innerHTML = '';
+
+        // Previous month days
+        for (let i = firstDay - 1; i >= 0; i--) {
+            const day = daysInPrevMonth - i;
+            const cell = createDayCell(day, true);
+            grid.appendChild(cell);
+        }
+
+        // Current month days
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const cell = createDayCell(day, false, dateStr);
+            grid.appendChild(cell);
+        }
+
+        // Next month days
+        const totalCells = firstDay + daysInMonth;
+        const remainingCells = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+        for (let day = 1; day <= remainingCells; day++) {
+            const cell = createDayCell(day, true);
+            grid.appendChild(cell);
+        }
+    }
+
+    function createDayCell(day, isOtherMonth, dateStr = null) {
+        const cell = document.createElement('div');
+        cell.className = 'calendar-day' + (isOtherMonth ? ' other-month' : '');
+        cell.textContent = day;
+
+        if (dateStr && workoutData[dateStr]) {
+            cell.classList.add('has-workout');
+            const indicator = document.createElement('div');
+            indicator.className = 'workout-indicator';
+            indicator.textContent = workoutData[dateStr].length;
+            cell.appendChild(indicator);
+
+            cell.onclick = () => showWorkoutDetails(dateStr);
+        }
+
+        return cell;
+    }
+
+    function showWorkoutDetails(dateStr) {
+        const workouts = workoutData[dateStr];
+        const modal = new bootstrap.Modal(document.getElementById('workoutModal'));
+
+        document.getElementById('modal-date').textContent =
+            new Date(dateStr).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+        const modalBody = document.getElementById('modal-body');
+        modalBody.innerHTML = workouts.map(w => `
+            <div class="mb-3">
+                <strong>${w.exercises} exercise${w.exercises > 1 ? 's' : ''}</strong>
+                ${w.notes ? `<p class="text-muted mb-0"><small>${w.notes}</small></p>` : ''}
+            </div>
+        `).join('');
+
+        modal.show();
+    }
+
+    function changeMonth(delta) {
+        currentDate.setMonth(currentDate.getMonth() + delta);
+        renderCalendar();
+    }
+
+    loadCalendarData();
+</script>
+{% endblock %}

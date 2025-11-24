@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Progress - GymLog{% endblock %}
+
+{% block content %}
+<h3>Progress Tracking</h3>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <label for="exercise-select" class="form-label">Select Exercise</label>
+        <select class="form-select" id="exercise-select" onchange="loadProgress()">
+            <option value="">Choose an exercise...</option>
+        </select>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">
+        <strong>Weight Progress</strong>
+    </div>
+    <div class="card-body">
+        <canvas id="weight-chart"></canvas>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">
+        <strong>Volume Progress (Sets × Reps)</strong>
+    </div>
+    <div class="card-body">
+        <canvas id="volume-chart"></canvas>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    let weightChart, volumeChart;
+
+    function loadExercises() {
+        fetch('/api/exercise_names')
+            .then(response => response.json())
+            .then(exercises => {
+                const select = document.getElementById('exercise-select');
+                exercises.forEach(ex => {
+                    const option = document.createElement('option');
+                    option.value = ex;
+                    option.textContent = ex;
+                    select.appendChild(option);
+                });
+            });
+    }
+
+    function loadProgress() {
+        const exercise = document.getElementById('exercise-select').value;
+        if (!exercise) return;
+
+        fetch(`/api/progress/${encodeURIComponent(exercise)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.length === 0) {
+                    alert('No data available for this exercise');
+                    return;
+                }
+
+                const labels = data.map(d => new Date(d.date).toLocaleDateString());
+                const weights = data.map(d => d.weight);
+                const volumes = data.map(d => d.sets * d.reps);
+
+                updateWeightChart(labels, weights);
+                updateVolumeChart(labels, volumes);
+            });
+    }
+
+    function updateWeightChart(labels, data) {
+        const ctx = document.getElementById('weight-chart').getContext('2d');
+
+        if (weightChart) {
+            weightChart.destroy();
+        }
+
+        weightChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Weight (lbs)',
+                    data: data,
+                    borderColor: '#0d6efd',
+                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    y: {
+                        beginAtZero: false
+                    }
+                }
+            }
+        });
+    }
+
+    function updateVolumeChart(labels, data) {
+        const ctx = document.getElementById('volume-chart').getContext('2d');
+
+        if (volumeChart) {
+            volumeChart.destroy();
+        }
+
+        volumeChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Total Volume',
+                    data: data,
+                    backgroundColor: '#198754',
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    loadExercises();
+</script>
+{% endblock %}

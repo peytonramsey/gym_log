@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gym Log - Django Version</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .nav {
+            background-color: #333;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .nav a {
+            color: white;
+            text-decoration: none;
+            margin: 0 15px;
+            padding: 10px 15px;
+            border-radius: 3px;
+        }
+        .nav a:hover {
+            background-color: #555;
+        }
+        .welcome {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .admin-link {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+        .admin-link:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏋️ Gym Log - Django Version</h1>
+
+    <div class="nav">
+        <a href="{% url 'workouts:index' %}">Home</a>
+        <a href="{% url 'workouts:log_workout' %}">Log Workout</a>
+        <a href="{% url 'workouts:history' %}">History</a>
+        <a href="{% url 'workouts:calendar' %}">Calendar</a>
+        <a href="{% url 'workouts:progress' %}">Progress</a>
+        <a href="{% url 'workouts:body_metrics' %}">Body Metrics</a>
+    </div>
+
+    <div class="welcome">
+        <h2>Welcome to Your Gym Log!</h2>
+        <p>This is the Django version of your gym tracking application.</p>
+
+        <h3>Features:</h3>
+        <ul>
+            <li>Log your workouts with exercises, sets, reps, and weights</li>
+            <li>Track your progress over time</li>
+            <li>View workout history</li>
+            <li>Track body metrics (weight, height)</li>
+            <li>Calendar view of your workouts</li>
+        </ul>
+
+        <h3>Django Admin Interface:</h3>
+        <p>Django comes with a powerful admin interface where you can manage all your data:</p>
+        <a href="/admin/" class="admin-link">Go to Admin Panel</a>
+        <p><small>Note: You'll need to create a superuser first (see instructions)</small></p>
+
+        <h3>API Endpoints:</h3>
+        <ul>
+            <li><a href="{% url 'workouts:get_workouts' %}">GET /api/workouts/</a> - List all workouts</li>
+            <li><a href="{% url 'workouts:get_exercise_names' %}">GET /api/exercise_names/</a> - List all exercise names</li>
+            <li><a href="{% url 'workouts:get_body_metrics' %}">GET /api/body_metrics/</a> - List all body metrics</li>
+            <li><a href="{% url 'workouts:calendar_data' %}">GET /api/calendar_data/</a> - Get calendar data</li>
+        </ul>
+    </div>
+</body>
+</html>

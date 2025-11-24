@@ -1,0 +1,378 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+    /* Glassmorphism styles */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 15px;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        transition: all 0.3s ease;
+    }
+
+    .glass-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.5);
+        background: rgba(255, 255, 255, 0.15);
+    }
+
+    body.dark-mode .glass-card {
+        background: rgba(45, 45, 45, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+    }
+
+    body.dark-mode .glass-card:hover {
+        background: rgba(45, 45, 45, 0.4);
+        box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.7);
+    }
+
+    /* Welcome banner glassmorphism */
+    .welcome-banner {
+        background: linear-gradient(135deg, rgba(0, 234, 215, 0.895), rgba(78, 236, 64, 0.47));
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 20px;
+        padding: 30px;
+        margin-bottom: 30px;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    }
+
+    body.dark-mode .welcome-banner {
+        background: linear-gradient(135deg, rgba(0, 234, 215, 0.895), rgba(78, 236, 64, 0.47));
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Stats cards glassmorphism */
+    .stat-card {
+        background: rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 12px;
+        padding: 15px;
+        margin-bottom: 15px;
+        box-shadow: 0 4px 16px 0 rgba(31, 38, 135, 0.2);
+    }
+
+    body.dark-mode .stat-card {
+        background: rgba(45, 45, 45, 0.25);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    /* Chart container glassmorphism */
+    .chart-container {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 15px;
+        padding: 15px;
+        margin-bottom: 15px;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.3);
+        max-height: 300px;
+    }
+
+    body.dark-mode .chart-container {
+        background: rgba(45, 45, 45, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    /* Feature link cards */
+    .feature-link {
+        text-decoration: none;
+        color: inherit;
+        display: block;
+        margin-bottom: 15px;
+    }
+
+    .feature-card-content {
+        padding: 25px;
+        text-align: center;
+    }
+
+    .feature-icon {
+        font-size: 2.5rem;
+        margin-bottom: 10px;
+        display: block;
+    }
+
+    /* Split screen layout */
+    .left-section, .right-section {
+        min-height: 600px;
+    }
+
+    @media (max-width: 991px) {
+        .left-section, .right-section {
+            min-height: auto;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Welcome Banner -->
+<div class="welcome-banner text-center">
+    <h2 class="mb-2">Welcome to training for that Puh</h2>
+    <p class="mb-0">Refining your fitness training</p>
+</div>
+
+<!-- Split Screen Layout -->
+<div class="row">
+    <!-- LEFT SECTION: Charts -->
+    <div class="col-lg-6 left-section">
+        <!-- Workout Frequency Chart -->
+        <div class="chart-container">
+            <h6 class="mb-2">Weekly Workout Activity</h6>
+            <canvas id="workoutChart" height="220"></canvas>
+        </div>
+
+        <!-- Nutrition Summary Chart -->
+        <div class="chart-container">
+            <h6 class="mb-2">Today's Nutrition</h6>
+            <canvas id="nutritionChart" height="220"></canvas>
+        </div>
+    </div>
+
+    <!-- RIGHT SECTION: Stats & Feature Blocks -->
+    <div class="col-lg-6 right-section">
+        <!-- Quick Stats -->
+        <div class="row mb-2">
+            <div class="col-6">
+                <div class="stat-card text-center">
+                    <h3 id="total-workouts" class="mb-1">0</h3>
+                    <small>Total Workouts</small>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="stat-card text-center">
+                    <h3 id="total-exercises" class="mb-1">0</h3>
+                    <small>Exercises Logged</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Log Workout -->
+            <div class="col-md-6">
+                <a href="/log" class="feature-link">
+                    <div class="glass-card feature-card-content">
+                        <i class="bi bi-plus-circle feature-icon" style="color: #0d6efd;"></i>
+                        <h6>Log Workout</h6>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Nutrition -->
+            <div class="col-md-6">
+                <a href="/nutrition" class="feature-link">
+                    <div class="glass-card feature-card-content">
+                        <i class="bi bi-egg-fried feature-icon" style="color: #fd7e14;"></i>
+                        <h6>Nutrition</h6>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Body Metrics -->
+            <div class="col-md-6">
+                <a href="/body_metrics" class="feature-link">
+                    <div class="glass-card feature-card-content">
+                        <i class="bi bi-activity feature-icon" style="color: #198754;"></i>
+                        <h6>Body Metrics</h6>
+                    </div>
+                </a>
+            </div>
+
+            <!-- History -->
+            <div class="col-md-6">
+                <a href="/history" class="feature-link">
+                    <div class="glass-card feature-card-content">
+                        <i class="bi bi-clock-history feature-icon" style="color: #ffc107;"></i>
+                        <h6>History</h6>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Progress -->
+            <div class="col-md-6">
+                <a href="/progress" class="feature-link">
+                    <div class="glass-card feature-card-content">
+                        <i class="bi bi-graph-up feature-icon" style="color: #dc3545;"></i>
+                        <h6>Progress</h6>
+                    </div>
+                </a>
+            </div>
+
+            <!-- My Schedule -->
+            <div class="col-md-6">
+                <a href="/schedule" class="feature-link">
+                    <div class="glass-card feature-card-content">
+                        <i class="bi bi-calendar-week feature-icon" style="color: #20c997;"></i>
+                        <h6>My Schedule</h6>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Prevent multiple initializations
+    let chartsInitialized = false;
+
+    // Fetch workout data
+    fetch('/api/workouts')
+        .then(response => response.json())
+        .then(data => {
+            // Update stats
+            document.getElementById('total-workouts').textContent = data.length;
+            const totalExercises = data.reduce((sum, w) => sum + w.exercises.length, 0);
+            document.getElementById('total-exercises').textContent = totalExercises;
+
+            // Create workout frequency chart (last 7 days)
+            if (!chartsInitialized) {
+                createWorkoutChart(data);
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching workouts:', error);
+        });
+
+    // Fetch nutrition data for today
+    const today = new Date().toISOString().split('T')[0];
+    fetch(`/api/nutrition/daily/${today}/with-goals`)
+        .then(response => {
+            if (!response.ok) throw new Error('No nutrition data');
+            return response.json();
+        })
+        .then(data => {
+            if (!chartsInitialized) {
+                createNutritionChart(data);
+            }
+        })
+        .catch(error => {
+            console.log('No nutrition data available, showing defaults');
+            // If no data, show empty chart
+            if (!chartsInitialized) {
+                createNutritionChart({
+                    totals: {calories: 0, protein: 0, carbs: 0, fats: 0},
+                    goals: {calories_goal: 2000, protein_goal: 150, carbs_goal: 200, fats_goal: 65}
+                });
+            }
+        });
+
+    function createWorkoutChart(workouts) {
+        try {
+            const ctx = document.getElementById('workoutChart');
+            if (!ctx) return;
+
+            // Get last 7 days
+            const days = [];
+            const counts = [];
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                const dateStr = date.toISOString().split('T')[0];
+                days.push(date.toLocaleDateString('en-US', { weekday: 'short' }));
+
+                // Count workouts on this day
+                const count = workouts.filter(w => w.date.startsWith(dateStr)).length;
+                counts.push(count);
+            }
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: days,
+                    datasets: [{
+                        label: 'Workouts',
+                        data: counts,
+                        backgroundColor: 'rgba(13, 110, 253, 0.6)',
+                        borderColor: 'rgba(13, 110, 253, 1)',
+                        borderWidth: 2,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+            chartsInitialized = true;
+        } catch (error) {
+            console.error('Error creating workout chart:', error);
+        }
+    }
+
+    function createNutritionChart(data) {
+        try {
+            const ctx = document.getElementById('nutritionChart');
+            if (!ctx) return;
+
+            const totals = data.totals || {calories: 0, protein: 0, carbs: 0, fats: 0};
+            const goals = data.goals || {calories_goal: 2000, protein_goal: 150, carbs_goal: 200, fats_goal: 65};
+
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Protein', 'Carbs', 'Fats'],
+                    datasets: [{
+                        data: [
+                            totals.protein * 4,  // Protein: 4 cal/g
+                            totals.carbs * 4,    // Carbs: 4 cal/g
+                            totals.fats * 9      // Fats: 9 cal/g
+                        ],
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.7)',
+                            'rgba(54, 162, 235, 0.7)',
+                            'rgba(255, 206, 86, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 206, 86, 1)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        title: {
+                            display: true,
+                            text: `${Math.round(totals.calories)} / ${goals.calories_goal} cal`
+                        }
+                    }
+                }
+            });
+            chartsInitialized = true;
+        } catch (error) {
+            console.error('Error creating nutrition chart:', error);
+        }
+    }
+</script>
+{% endblock %}

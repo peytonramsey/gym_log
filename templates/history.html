@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}History - GymLog{% endblock %}
+
+{% block content %}
+<h3>Workout History</h3>
+
+<div id="workouts-container">
+    <p class="text-center text-muted">Loading...</p>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function loadWorkouts() {
+        fetch('/api/workouts')
+            .then(response => response.json())
+            .then(workouts => {
+                const container = document.getElementById('workouts-container');
+
+                if (workouts.length === 0) {
+                    container.innerHTML = '<p class="text-center text-muted">No workouts logged yet.</p>';
+                    return;
+                }
+
+                container.innerHTML = workouts.map(workout => `
+                    <div class="card mb-3">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>${new Date(workout.date).toLocaleDateString()}</strong>
+                                <small class="text-muted ms-2">${new Date(workout.date).toLocaleTimeString()}</small>
+                            </div>
+                            <button class="btn btn-danger btn-sm" onclick="deleteWorkout(${workout.id})">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            ${workout.notes ? `<p class="text-muted mb-2"><em>${workout.notes}</em></p>` : ''}
+                            ${workout.exercises.map(ex => `
+                                <div class="mb-2 pb-2 border-bottom">
+                                    <div class="d-flex justify-content-between">
+                                        <strong>${ex.name}</strong>
+                                        <span class="badge bg-primary">${ex.weight} lbs</span>
+                                    </div>
+                                    <small class="text-muted">
+                                        ${ex.sets} sets × ${ex.reps} reps
+                                        ${ex.rest_time ? `• ${ex.rest_time}s rest` : ''}
+                                    </small>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('');
+            });
+    }
+
+    function deleteWorkout(id) {
+        if (!confirm('Are you sure you want to delete this workout?')) {
+            return;
+        }
+
+        fetch(`/api/workouts/${id}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                loadWorkouts();
+            }
+        });
+    }
+
+    loadWorkouts();
+</script>
+{% endblock %}

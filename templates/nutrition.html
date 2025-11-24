@@ -1,0 +1,582 @@
+{% extends "base.html" %}
+
+{% block title %}Nutrition Tracker - GymLog{% endblock %}
+
+{% block extra_css %}
+<style>
+    .progress-thin {
+        height: 8px;
+    }
+    .macro-circle {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+    .goal-card {
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .goal-card:hover {
+        transform: scale(1.02);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+        <h4>Nutrition Tracker 🍽️</h4>
+        <button class="btn btn-sm btn-outline-primary" onclick="showGoalsModal()">
+            <i class="bi bi-gear"></i> Set Goals
+        </button>
+    </div>
+</div>
+
+<!-- Daily Summary with Goals -->
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="card-title mb-3">Today's Progress</h6>
+
+                <!-- Calories -->
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span><strong>Calories</strong></span>
+                        <span id="calories-text">0 / 2000 kcal</span>
+                    </div>
+                    <div class="progress progress-thin">
+                        <div class="progress-bar bg-primary" id="calories-bar" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- Macros Row -->
+                <div class="row text-center">
+                    <div class="col-4">
+                        <div class="mb-1"><strong>Protein</strong></div>
+                        <div class="text-danger fw-bold" id="protein-text">0g</div>
+                        <small class="text-muted" id="protein-goal">/ 150g</small>
+                        <div class="progress progress-thin mt-1">
+                            <div class="progress-bar bg-danger" id="protein-bar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="mb-1"><strong>Carbs</strong></div>
+                        <div class="text-warning fw-bold" id="carbs-text">0g</div>
+                        <small class="text-muted" id="carbs-goal">/ 200g</small>
+                        <div class="progress progress-thin mt-1">
+                            <div class="progress-bar bg-warning" id="carbs-bar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="mb-1"><strong>Fats</strong></div>
+                        <div class="text-info fw-bold" id="fats-text">0g</div>
+                        <small class="text-muted" id="fats-goal">/ 65g</small>
+                        <div class="progress progress-thin mt-1">
+                            <div class="progress-bar bg-info" id="fats-bar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Macro Split Percentages -->
+                <div class="row text-center mt-3">
+                    <div class="col-12">
+                        <small class="text-muted">Macro Split:</small>
+                        <div class="mt-2">
+                            <span class="badge bg-danger me-2" id="protein-percent">0%</span>
+                            <span class="badge bg-warning me-2" id="carbs-percent">0%</span>
+                            <span class="badge bg-info" id="fats-percent">0%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Log New Meal -->
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <strong>Log Meal</strong>
+            </div>
+            <div class="card-body">
+                <form id="meal-form">
+                    <div class="mb-3">
+                        <label class="form-label">Meal Type</label>
+                        <select class="form-select" id="meal-type">
+                            <option value="Breakfast">Breakfast</option>
+                            <option value="Lunch">Lunch</option>
+                            <option value="Dinner">Dinner</option>
+                            <option value="Snack">Snack</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Search Food</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="food-search" placeholder="e.g., chicken breast, banana">
+                            <button type="button" class="btn btn-primary" onclick="searchFood()">
+                                <i class="bi bi-search"></i> Search
+                            </button>
+                        </div>
+                        <small class="text-muted">Search USDA database for nutrition info</small>
+                    </div>
+
+                    <!-- Search Results -->
+                    <div id="search-results" class="mb-3" style="display: none;"></div>
+
+                    <!-- Selected Foods -->
+                    <div id="selected-foods" class="mb-3"></div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Notes (optional)</label>
+                        <input type="text" class="form-control" id="meal-notes" placeholder="e.g., Post-workout meal">
+                    </div>
+
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="bi bi-check-circle"></i> Save Meal
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Weekly Chart -->
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <strong>7-Day Nutrition Trends</strong>
+            </div>
+            <div class="card-body">
+                <canvas id="weeklyChart" style="max-height: 250px;"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Meals -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <strong>Recent Meals</strong>
+            </div>
+            <div class="card-body" id="recent-meals">
+                <p class="text-muted text-center">Loading...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Goals Modal -->
+<div class="modal fade" id="goalsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Set Nutrition Goals</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="goals-form">
+                    <div class="mb-3">
+                        <label class="form-label">Daily Calorie Goal</label>
+                        <input type="number" class="form-control" id="goal-calories" value="2000">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Protein Goal (g)</label>
+                        <input type="number" class="form-control" id="goal-protein" value="150">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Carbs Goal (g)</label>
+                        <input type="number" class="form-control" id="goal-carbs" value="200">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Fats Goal (g)</label>
+                        <input type="number" class="form-control" id="goal-fats" value="65">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveGoals()">Save Goals</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let selectedFoods = [];
+let weeklyChart = null;
+
+// Load goals
+function loadGoals() {
+    fetch('/api/nutrition/goals')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('goal-calories').value = data.calories_goal;
+            document.getElementById('goal-protein').value = data.protein_goal;
+            document.getElementById('goal-carbs').value = data.carbs_goal;
+            document.getElementById('goal-fats').value = data.fats_goal;
+        });
+}
+
+// Show goals modal
+function showGoalsModal() {
+    const modal = new bootstrap.Modal(document.getElementById('goalsModal'));
+    loadGoals();
+    modal.show();
+}
+
+// Save goals
+function saveGoals() {
+    const goals = {
+        calories_goal: parseInt(document.getElementById('goal-calories').value),
+        protein_goal: parseInt(document.getElementById('goal-protein').value),
+        carbs_goal: parseInt(document.getElementById('goal-carbs').value),
+        fats_goal: parseInt(document.getElementById('goal-fats').value)
+    };
+
+    fetch('/api/nutrition/goals', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(goals)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            alert('Goals saved successfully!');
+            bootstrap.Modal.getInstance(document.getElementById('goalsModal')).hide();
+            loadDailyData();
+        }
+    });
+}
+
+// Load daily data with goals
+function loadDailyData() {
+    const today = new Date().toISOString().split('T')[0];
+    fetch(`/api/nutrition/daily/${today}/with-goals`)
+        .then(response => response.json())
+        .then(data => {
+            // Update totals
+            document.getElementById('calories-text').textContent =
+                `${Math.round(data.calories)} / ${data.goals.calories_goal} kcal`;
+            document.getElementById('protein-text').textContent = `${Math.round(data.protein)}g`;
+            document.getElementById('carbs-text').textContent = `${Math.round(data.carbs)}g`;
+            document.getElementById('fats-text').textContent = `${Math.round(data.fats)}g`;
+
+            // Update goals text
+            document.getElementById('protein-goal').textContent = `/ ${data.goals.protein_goal}g`;
+            document.getElementById('carbs-goal').textContent = `/ ${data.goals.carbs_goal}g`;
+            document.getElementById('fats-goal').textContent = `/ ${data.goals.fats_goal}g`;
+
+            // Update progress bars
+            document.getElementById('calories-bar').style.width = Math.min(data.percentages.calories, 100) + '%';
+            document.getElementById('protein-bar').style.width = Math.min(data.percentages.protein, 100) + '%';
+            document.getElementById('carbs-bar').style.width = Math.min(data.percentages.carbs, 100) + '%';
+            document.getElementById('fats-bar').style.width = Math.min(data.percentages.fats, 100) + '%';
+
+            // Update macro split percentages
+            document.getElementById('protein-percent').textContent = `Protein ${data.macro_split.protein}%`;
+            document.getElementById('carbs-percent').textContent = `Carbs ${data.macro_split.carbs}%`;
+            document.getElementById('fats-percent').textContent = `Fats ${data.macro_split.fats}%`;
+        });
+}
+
+// Search for food
+function searchFood() {
+    const query = document.getElementById('food-search').value.trim();
+    if (!query) {
+        alert('Please enter a food name');
+        return;
+    }
+
+    const resultsDiv = document.getElementById('search-results');
+    resultsDiv.innerHTML = '<p class="text-center"><span class="spinner-border spinner-border-sm"></span> Searching...</p>';
+    resultsDiv.style.display = 'block';
+
+    fetch(`/api/food/search/${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.results.length > 0) {
+                let html = '<div class="list-group">';
+                data.results.forEach((food, index) => {
+                    html += `
+                        <a href="#" class="list-group-item list-group-item-action" onclick="addFood(${index}); return false;">
+                            <div class="d-flex justify-content-between">
+                                <strong>${food.name}</strong>
+                                <small>${food.calories} cal/100g</small>
+                            </div>
+                            <small class="text-muted">
+                                P: ${food.protein}g | C: ${food.carbs}g | F: ${food.fats}g (per 100g)
+                            </small>
+                        </a>
+                    `;
+                });
+                html += '</div>';
+                resultsDiv.innerHTML = html;
+                window.searchResults = data.results;
+            } else {
+                resultsDiv.innerHTML = '<p class="text-muted">No foods found. Try a different search term.</p>';
+            }
+        })
+        .catch(error => {
+            resultsDiv.innerHTML = '<p class="text-danger">Error searching for food</p>';
+            console.error(error);
+        });
+}
+
+// Add food to selection
+function addFood(index) {
+    const food = window.searchResults[index];
+    selectedFoods.push({...food, quantity: 100, unit: 'g'});
+    updateSelectedFoods();
+    document.getElementById('search-results').style.display = 'none';
+}
+
+// Update selected foods display
+function updateSelectedFoods() {
+    const container = document.getElementById('selected-foods');
+
+    if (selectedFoods.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+
+    let html = '<div class="border rounded p-2"><strong>Selected Foods:</strong>';
+    selectedFoods.forEach((food, index) => {
+        // Calculate scaled nutrition
+        const factor = food.quantity / 100; // Since API returns per 100g
+        const scaledCals = Math.round(food.calories * factor);
+        const scaledProtein = Math.round(food.protein * factor);
+        const scaledCarbs = Math.round(food.carbs * factor);
+        const scaledFats = Math.round(food.fats * factor);
+
+        html += `
+            <div class="d-flex justify-content-between align-items-center mt-2 border-bottom pb-2">
+                <div class="flex-grow-1">
+                    <div><strong>${food.name}</strong></div>
+                    <small class="text-muted">${scaledCals} cal | P: ${scaledProtein}g | C: ${scaledCarbs}g | F: ${scaledFats}g</small>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <input type="number" class="form-control form-control-sm" style="width: 80px;"
+                           value="${food.quantity}" min="1" step="1"
+                           onchange="updateQuantity(${index}, this.value)">
+                    <select class="form-select form-select-sm" style="width: 90px;"
+                            onchange="updateUnit(${index}, this.value)">
+                        <option value="g" ${food.unit === 'g' ? 'selected' : ''}>g</option>
+                        <option value="oz" ${food.unit === 'oz' ? 'selected' : ''}>oz</option>
+                        <option value="kg" ${food.unit === 'kg' ? 'selected' : ''}>kg</option>
+                        <option value="lb" ${food.unit === 'lb' ? 'selected' : ''}>lb</option>
+                        <option value="ml" ${food.unit === 'ml' ? 'selected' : ''}>ml</option>
+                        <option value="l" ${food.unit === 'l' ? 'selected' : ''}>L</option>
+                        <option value="fl oz" ${food.unit === 'fl oz' ? 'selected' : ''}>fl oz</option>
+                        <option value="cup" ${food.unit === 'cup' ? 'selected' : ''}>cup</option>
+                        <option value="tbsp" ${food.unit === 'tbsp' ? 'selected' : ''}>tbsp</option>
+                        <option value="tsp" ${food.unit === 'tsp' ? 'selected' : ''}>tsp</option>
+                    </select>
+                    <button class="btn btn-sm btn-danger" onclick="removeFood(${index})">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+// Update quantity
+function updateQuantity(index, quantity) {
+    selectedFoods[index].quantity = parseFloat(quantity);
+    updateSelectedFoods();
+}
+
+// Update unit
+function updateUnit(index, unit) {
+    selectedFoods[index].unit = unit;
+    updateSelectedFoods();
+}
+
+// Remove food
+function removeFood(index) {
+    selectedFoods.splice(index, 1);
+    updateSelectedFoods();
+}
+
+// Submit meal
+document.getElementById('meal-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    if (selectedFoods.length === 0) {
+        alert('Please add at least one food item');
+        return;
+    }
+
+    const data = {
+        meal_type: document.getElementById('meal-type').value,
+        notes: document.getElementById('meal-notes').value,
+        date: new Date().toISOString(),
+        food_items: selectedFoods
+    };
+
+    fetch('/nutrition', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            alert('Meal logged successfully!');
+            selectedFoods = [];
+            updateSelectedFoods();
+            document.getElementById('meal-notes').value = '';
+            document.getElementById('food-search').value = '';
+            document.getElementById('search-results').style.display = 'none';
+            loadDailyData();
+            loadRecentMeals();
+            loadWeeklyChart();
+        }
+    });
+});
+
+// Load recent meals
+function loadRecentMeals() {
+    fetch('/api/nutrition')
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('recent-meals');
+            if (data.length === 0) {
+                container.innerHTML = '<p class="text-muted text-center">No meals logged yet</p>';
+                return;
+            }
+
+            let html = '';
+            data.slice(0, 10).forEach(meal => {
+                html += `
+                    <div class="border-bottom pb-2 mb-2">
+                        <div class="d-flex justify-content-between">
+                            <strong>${meal.meal_type}</strong>
+                            <small class="text-muted">${new Date(meal.date).toLocaleString()}</small>
+                        </div>
+                        <div class="small">
+                            ${meal.food_items.map(item => `${item.name} (${item.quantity}${item.unit})`).join(', ')}
+                        </div>
+                        <div class="mt-1">
+                            <span class="badge bg-secondary">${Math.round(meal.totals.calories)} cal</span>
+                            <span class="badge bg-danger">P: ${Math.round(meal.totals.protein)}g</span>
+                            <span class="badge bg-warning text-dark">C: ${Math.round(meal.totals.carbs)}g</span>
+                            <span class="badge bg-info">F: ${Math.round(meal.totals.fats)}g</span>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        });
+}
+
+// Load weekly chart
+function loadWeeklyChart() {
+    fetch('/api/nutrition/weekly')
+        .then(response => response.json())
+        .then(data => {
+            const labels = data.map(d => new Date(d.date).toLocaleDateString('en-US', {weekday: 'short'}));
+            const calories = data.map(d => d.calories);
+            const protein = data.map(d => d.protein);
+            const carbs = data.map(d => d.carbs);
+            const fats = data.map(d => d.fats);
+
+            const ctx = document.getElementById('weeklyChart').getContext('2d');
+
+            if (weeklyChart) {
+                weeklyChart.destroy();
+            }
+
+            weeklyChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Calories',
+                            data: calories,
+                            borderColor: 'rgb(13, 110, 253)',
+                            backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Protein (g)',
+                            data: protein,
+                            borderColor: 'rgb(220, 53, 69)',
+                            backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                            yAxisID: 'y1'
+                        },
+                        {
+                            label: 'Carbs (g)',
+                            data: carbs,
+                            borderColor: 'rgb(255, 193, 7)',
+                            backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                            yAxisID: 'y1'
+                        },
+                        {
+                            label: 'Fats (g)',
+                            data: fats,
+                            borderColor: 'rgb(13, 202, 240)',
+                            backgroundColor: 'rgba(13, 202, 240, 0.1)',
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Calories'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Macros (g)'
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                            }
+                        }
+                    }
+                }
+            });
+        });
+}
+
+// Load all data on page load
+loadDailyData();
+loadRecentMeals();
+loadWeeklyChart();
+</script>
+{% endblock %}

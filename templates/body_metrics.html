@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Body Metrics - GymLog{% endblock %}
+
+{% block content %}
+<h3>Body Metrics</h3>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h5 class="card-title">Log Metrics</h5>
+        <div class="mb-3">
+            <label for="metric-date" class="form-label">Date</label>
+            <input type="date" class="form-control" id="metric-date">
+        </div>
+        <div class="mb-3">
+            <label for="weight" class="form-label">Weight (lbs)</label>
+            <input type="number" step="0.1" class="form-control" id="weight" placeholder="e.g., 180.5">
+        </div>
+        <div class="mb-3">
+            <label for="height" class="form-label">Height (inches)</label>
+            <input type="number" step="0.1" class="form-control" id="height" placeholder="e.g., 70">
+        </div>
+        <button class="btn btn-primary w-100" onclick="saveMetrics()">Save Metrics</button>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">
+        <strong>Weight Trend</strong>
+    </div>
+    <div class="card-body">
+        <canvas id="weight-trend-chart"></canvas>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">
+        <strong>Metrics History</strong>
+    </div>
+    <div class="card-body" id="metrics-history">
+        <p class="text-center text-muted">Loading...</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    let weightTrendChart;
+
+    document.getElementById('metric-date').value = new Date().toISOString().split('T')[0];
+
+    function saveMetrics() {
+        const data = {
+            date: document.getElementById('metric-date').value,
+            weight: document.getElementById('weight').value,
+            height: document.getElementById('height').value
+        };
+
+        if (!data.weight && !data.height) {
+            alert('Please enter at least one metric');
+            return;
+        }
+
+        fetch('/body_metrics', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                alert('Metrics saved successfully!');
+                document.getElementById('weight').value = '';
+                document.getElementById('height').value = '';
+                loadMetrics();
+            }
+        });
+    }
+
+    function loadMetrics() {
+        fetch('/api/body_metrics')
+            .then(response => response.json())
+            .then(metrics => {
+                const historyDiv = document.getElementById('metrics-history');
+
+                if (metrics.length === 0) {
+                    historyDiv.innerHTML = '<p class="text-center text-muted">No metrics logged yet.</p>';
+                    return;
+                }
+
+                historyDiv.innerHTML = metrics.map(m => `
+                    <div class="mb-2 pb-2 border-bottom">
+                        <div class="d-flex justify-content-between">
+                            <strong>${new Date(m.date).toLocaleDateString()}</strong>
+                        </div>
+                        <small class="text-muted">
+                            ${m.weight ? `Weight: ${m.weight} lbs` : ''}
+                            ${m.weight && m.height ? ' • ' : ''}
+                            ${m.height ? `Height: ${m.height} in` : ''}
+                        </small>
+                    </div>
+                `).join('');
+
+                // Update chart
+                const labels = metrics.reverse().map(m => new Date(m.date).toLocaleDateString());
+                const weights = metrics.map(m => m.weight);
+
+                updateWeightTrendChart(labels, weights);
+            });
+    }
+
+    function updateWeightTrendChart(labels, data) {
+        const ctx = document.getElementById('weight-trend-chart').getContext('2d');
+
+        if (weightTrendChart) {
+            weightTrendChart.destroy();
+        }
+
+        weightTrendChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Weight (lbs)',
+                    data: data,
+                    borderColor: '#dc3545',
+                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                    tension: 0.3,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    y: {
+                        beginAtZero: false
+                    }
+                }
+            }
+        });
+    }
+
+    loadMetrics();
+</script>
+{% endblock %}
