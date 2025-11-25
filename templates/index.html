@@ -30,21 +30,12 @@
         box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.7);
     }
 
-    /* Welcome banner glassmorphism */
-    .welcome-banner {
-        background: linear-gradient(135deg, rgba(0, 234, 215, 0.895), rgba(78, 236, 64, 0.47));
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 20px;
-        padding: 30px;
+    /* Welcome back text */
+    .welcome-text {
+        background: transparent;
+        padding: 20px;
         margin-bottom: 30px;
-        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-    }
-
-    body.dark-mode .welcome-banner {
-        background: linear-gradient(135deg, rgba(0, 234, 215, 0.895), rgba(78, 236, 64, 0.47));
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        text-align: center;
     }
 
     /* Stats cards glassmorphism */
@@ -75,11 +66,40 @@
         margin-bottom: 15px;
         box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.3);
         max-height: 300px;
+        transition: all 0.3s ease;
+    }
+
+    .chart-container:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.5);
+        background: rgba(255, 255, 255, 0.08);
     }
 
     body.dark-mode .chart-container {
         background: rgba(45, 45, 45, 0.2);
         border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    body.dark-mode .chart-container:hover {
+        background: rgba(45, 45, 45, 0.3);
+        box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.7);
+    }
+
+    /* Food items styling */
+    .food-item {
+        border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    body.dark-mode .food-item {
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    body.dark-mode .food-name {
+        color: #ffffff;
+    }
+
+    body.dark-mode .food-quantity {
+        color: #a0a0a0;
     }
 
     /* Feature link cards */
@@ -115,10 +135,9 @@
 {% endblock %}
 
 {% block content %}
-<!-- Welcome Banner -->
-<div class="welcome-banner text-center">
-    <h2 class="mb-2">Welcome to training for that Puh</h2>
-    <p class="mb-0">Refining your fitness training</p>
+<!-- Welcome Text -->
+<div class="welcome-text">
+    <h3>Welcome back, {{ current_user.username }}</h3>
 </div>
 
 <!-- Split Screen Layout -->
@@ -131,10 +150,36 @@
             <canvas id="workoutChart" height="220"></canvas>
         </div>
 
-        <!-- Nutrition Summary Chart -->
-        <div class="chart-container">
-            <h6 class="mb-2">Today's Nutrition</h6>
-            <canvas id="nutritionChart" height="220"></canvas>
+        <!-- Nutrition Summary -->
+        <div class="chart-container" onclick="window.location.href='/nutrition'" style="cursor: pointer;" title="Click to view full nutrition details">
+            <h6 class="mb-2">Today's Nutrition <i class="bi bi-box-arrow-up-right" style="font-size: 0.8rem;"></i></h6>
+
+            <!-- Nutrition Summary Stats -->
+            <div class="text-center mb-3" id="nutrition-stats">
+                <div class="d-flex justify-content-around">
+                    <div>
+                        <div class="fw-bold" id="cal-display">0</div>
+                        <small class="text-muted">Cal</small>
+                    </div>
+                    <div>
+                        <div class="fw-bold text-danger" id="protein-display">0g</div>
+                        <small class="text-muted">Protein</small>
+                    </div>
+                    <div>
+                        <div class="fw-bold text-warning" id="carbs-display">0g</div>
+                        <small class="text-muted">Carbs</small>
+                    </div>
+                    <div>
+                        <div class="fw-bold text-info" id="fats-display">0g</div>
+                        <small class="text-muted">Fats</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Foods List -->
+            <div id="foods-eaten-list" style="max-height: 180px; overflow-y: auto;">
+                <p class="text-muted text-center small">No foods logged yet</p>
+            </div>
         </div>
     </div>
 
@@ -150,8 +195,12 @@
             </div>
             <div class="col-6">
                 <div class="stat-card text-center">
-                    <h3 id="total-exercises" class="mb-1">0</h3>
-                    <small>Exercises Logged</small>
+                    <div id="todays-workout-display">
+                        <div class="spinner-border spinner-border-sm" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                    <small>Today's Workout</small>
                 </div>
             </div>
         </div>
@@ -233,8 +282,6 @@
         .then(data => {
             // Update stats
             document.getElementById('total-workouts').textContent = data.length;
-            const totalExercises = data.reduce((sum, w) => sum + w.exercises.length, 0);
-            document.getElementById('total-exercises').textContent = totalExercises;
 
             // Create workout frequency chart (last 7 days)
             if (!chartsInitialized) {
@@ -243,6 +290,22 @@
         })
         .catch(error => {
             console.error('Error fetching workouts:', error);
+        });
+
+    // Fetch today's scheduled workout
+    fetch('/api/schedule/today')
+        .then(response => response.json())
+        .then(data => {
+            const display = document.getElementById('todays-workout-display');
+            if (data.scheduled && data.template) {
+                display.innerHTML = `<h3 class="mb-1">${data.template.name}</h3>`;
+            } else {
+                display.innerHTML = `<h3 class="mb-1">Rest Day</h3>`;
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching today\'s workout:', error);
+            document.getElementById('todays-workout-display').innerHTML = '<h3 class="mb-1">-</h3>';
         });
 
     // Fetch nutrition data for today
@@ -262,8 +325,12 @@
             // If no data, show empty chart
             if (!chartsInitialized) {
                 createNutritionChart({
-                    totals: {calories: 0, protein: 0, carbs: 0, fats: 0},
-                    goals: {calories_goal: 2000, protein_goal: 150, carbs_goal: 200, fats_goal: 65}
+                    calories: 0,
+                    protein: 0,
+                    carbs: 0,
+                    fats: 0,
+                    goals: {calories_goal: 2000, protein_goal: 150, carbs_goal: 200, fats_goal: 65},
+                    meals: []
                 });
             }
         });
@@ -326,52 +393,40 @@
 
     function createNutritionChart(data) {
         try {
-            const ctx = document.getElementById('nutritionChart');
-            if (!ctx) return;
+            // Data comes directly, not nested in 'totals'
+            const calories = data.calories || 0;
+            const protein = data.protein || 0;
+            const carbs = data.carbs || 0;
+            const fats = data.fats || 0;
+            const meals = data.meals || [];
 
-            const totals = data.totals || {calories: 0, protein: 0, carbs: 0, fats: 0};
-            const goals = data.goals || {calories_goal: 2000, protein_goal: 150, carbs_goal: 200, fats_goal: 65};
+            // Update summary stats
+            document.getElementById('cal-display').textContent = Math.round(calories);
+            document.getElementById('protein-display').textContent = Math.round(protein) + 'g';
+            document.getElementById('carbs-display').textContent = Math.round(carbs) + 'g';
+            document.getElementById('fats-display').textContent = Math.round(fats) + 'g';
 
-            new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Protein', 'Carbs', 'Fats'],
-                    datasets: [{
-                        data: [
-                            totals.protein * 4,  // Protein: 4 cal/g
-                            totals.carbs * 4,    // Carbs: 4 cal/g
-                            totals.fats * 9      // Fats: 9 cal/g
-                        ],
-                        backgroundColor: [
-                            'rgba(255, 99, 132, 0.7)',
-                            'rgba(54, 162, 235, 0.7)',
-                            'rgba(255, 206, 86, 0.7)'
-                        ],
-                        borderColor: [
-                            'rgba(255, 99, 132, 1)',
-                            'rgba(54, 162, 235, 1)',
-                            'rgba(255, 206, 86, 1)'
-                        ],
-                        borderWidth: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom'
-                        },
-                        title: {
-                            display: true,
-                            text: `${Math.round(totals.calories)} / ${goals.calories_goal} cal`
-                        }
-                    }
-                }
+            // Build foods list (just names)
+            const foodsList = document.getElementById('foods-eaten-list');
+
+            if (meals.length === 0) {
+                foodsList.innerHTML = '<p class="text-muted text-center small">No foods logged yet</p>';
+                chartsInitialized = true;
+                return;
+            }
+
+            let listHtml = '<div class="small">';
+            meals.forEach(meal => {
+                meal.food_items.forEach(item => {
+                    listHtml += `<div class="food-item pb-1 mb-1">${item.name}</div>`;
+                });
             });
+            listHtml += '</div>';
+
+            foodsList.innerHTML = listHtml;
             chartsInitialized = true;
         } catch (error) {
-            console.error('Error creating nutrition chart:', error);
+            console.error('Error creating nutrition display:', error);
         }
     }
 </script>

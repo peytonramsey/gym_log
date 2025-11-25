@@ -104,10 +104,10 @@ class Meal(db.Model):
 
     def get_totals(self):
         totals = {
-            'calories': sum(item.calories * item.quantity for item in self.food_items),
-            'protein': sum(item.protein * item.quantity for item in self.food_items),
-            'carbs': sum(item.carbs * item.quantity for item in self.food_items),
-            'fats': sum(item.fats * item.quantity for item in self.food_items)
+            'calories': sum(item.calories for item in self.food_items),
+            'protein': sum(item.protein for item in self.food_items),
+            'carbs': sum(item.carbs for item in self.food_items),
+            'fats': sum(item.fats for item in self.food_items)
         }
         return totals
 
@@ -170,6 +170,7 @@ class WorkoutTemplate(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     name = db.Column(db.String(100), nullable=False)  # e.g., "Push Day 1", "Pull Day"
     description = db.Column(db.String(500))
+    day_of_week = db.Column(db.Integer, nullable=True)  # 0=Monday, 1=Tuesday, ..., 6=Sunday, None=Unscheduled
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relationship with template exercises
@@ -180,6 +181,7 @@ class WorkoutTemplate(db.Model):
             'id': self.id,
             'name': self.name,
             'description': self.description,
+            'day_of_week': self.day_of_week,
             'created_at': self.created_at.strftime('%Y-%m-%d'),
             'exercises': [ex.to_dict() for ex in self.template_exercises]
         }

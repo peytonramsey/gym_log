@@ -79,6 +79,48 @@
     body.dark-mode .exercise-form-row {
         background: rgba(60, 60, 60, 0.2);
     }
+
+    /* Dark mode for modal */
+    body.dark-mode .modal-content {
+        background-color: #2d2d2d;
+        color: #ffffff;
+    }
+
+    body.dark-mode .modal-header {
+        border-bottom-color: #404040;
+    }
+
+    body.dark-mode .modal-footer {
+        border-top-color: #404040;
+    }
+
+    body.dark-mode .form-label {
+        color: #ffffff;
+    }
+
+    body.dark-mode .form-control,
+    body.dark-mode .form-select {
+        background-color: #1a1a1a;
+        color: #ffffff;
+        border-color: #404040;
+    }
+
+    body.dark-mode .form-control:focus,
+    body.dark-mode .form-select:focus {
+        background-color: #1a1a1a;
+        color: #ffffff;
+        border-color: #4a9eff;
+    }
+
+    body.dark-mode .btn-close {
+        filter: invert(1);
+    }
+
+    body.dark-mode .list-group-item {
+        background-color: #2d2d2d;
+        color: #ffffff;
+        border-color: #404040;
+    }
 </style>
 {% endblock %}
 
@@ -121,6 +163,20 @@
                     <div class="mb-3">
                         <label class="form-label">Description (optional)</label>
                         <textarea class="form-control" id="template-description" rows="2" placeholder="Notes about this workout"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Schedule for Day</label>
+                        <select class="form-select" id="template-day">
+                            <option value="">Unscheduled</option>
+                            <option value="0">Monday</option>
+                            <option value="1">Tuesday</option>
+                            <option value="2">Wednesday</option>
+                            <option value="3">Thursday</option>
+                            <option value="4">Friday</option>
+                            <option value="5">Saturday</option>
+                            <option value="6">Sunday</option>
+                        </select>
                     </div>
 
                     <hr>
@@ -201,8 +257,12 @@ function displayTemplates() {
         return;
     }
 
+    const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
     let html = '';
     templates.forEach(template => {
+        const scheduledDay = template.day_of_week !== null ? dayNames[template.day_of_week] : 'Unscheduled';
+
         html += `
             <div class="col-md-6 col-lg-4">
                 <div class="template-card">
@@ -221,6 +281,11 @@ function displayTemplates() {
 
                         ${template.description ? `<p class="text-muted small mb-2">${template.description}</p>` : ''}
 
+                        <div class="mb-2">
+                            <small class="text-muted">
+                                <i class="bi bi-calendar"></i> ${scheduledDay}
+                            </small>
+                        </div>
                         <div class="mb-2">
                             <small class="text-muted">
                                 <i class="bi bi-list-check"></i> ${template.exercises.length} exercise${template.exercises.length !== 1 ? 's' : ''}
@@ -251,6 +316,7 @@ function showCreateTemplateModal() {
     document.getElementById('template-id').value = '';
     document.getElementById('template-name').value = '';
     document.getElementById('template-description').value = '';
+    document.getElementById('template-day').value = '';
     document.getElementById('exercises-container').innerHTML = '';
 
     // Add one default exercise row
@@ -310,6 +376,7 @@ function editTemplate(templateId) {
     document.getElementById('template-id').value = templateId;
     document.getElementById('template-name').value = template.name;
     document.getElementById('template-description').value = template.description || '';
+    document.getElementById('template-day').value = template.day_of_week !== null ? template.day_of_week : '';
     document.getElementById('exercises-container').innerHTML = '';
 
     // Add exercise rows
@@ -356,9 +423,12 @@ function saveTemplate() {
         return;
     }
 
+    const dayOfWeek = document.getElementById('template-day').value;
+
     const data = {
         name: name,
         description: description,
+        day_of_week: dayOfWeek !== '' ? parseInt(dayOfWeek) : null,
         exercises: exercises
     };
 

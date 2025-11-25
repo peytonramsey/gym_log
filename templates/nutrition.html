@@ -24,6 +24,58 @@
     .goal-card:hover {
         transform: scale(1.02);
     }
+
+    /* Dark mode styles for modal */
+    body.dark-mode .modal-content {
+        background-color: #2d2d2d;
+        color: #ffffff;
+    }
+
+    body.dark-mode .modal-header {
+        border-bottom-color: #404040;
+    }
+
+    body.dark-mode .modal-footer {
+        border-top-color: #404040;
+    }
+
+    body.dark-mode .form-label {
+        color: #ffffff;
+    }
+
+    body.dark-mode .form-control,
+    body.dark-mode .form-select {
+        background-color: #1a1a1a;
+        color: #ffffff;
+        border-color: #404040;
+    }
+
+    body.dark-mode .form-control:focus,
+    body.dark-mode .form-select:focus {
+        background-color: #1a1a1a;
+        color: #ffffff;
+        border-color: #4a9eff;
+    }
+
+    body.dark-mode .btn-close {
+        filter: invert(1);
+    }
+
+    body.dark-mode .list-group-item {
+        background-color: #2d2d2d;
+        color: #ffffff;
+        border-color: #404040;
+    }
+
+    body.dark-mode .list-group-item:hover {
+        background-color: #3a3a3a;
+    }
+
+    /* Dark mode for muted text */
+    body.dark-mode .text-muted,
+    body.dark-mode small.text-muted {
+        color: #a0a0a0 !important;
+    }
 </style>
 {% endblock %}
 
@@ -44,53 +96,66 @@
             <div class="card-body">
                 <h6 class="card-title mb-3">Today's Progress</h6>
 
-                <!-- Calories -->
-                <div class="mb-3">
-                    <div class="d-flex justify-content-between mb-1">
-                        <span><strong>Calories</strong></span>
-                        <span id="calories-text">0 / 2000 kcal</span>
+                <div class="row">
+                    <!-- Left: Foods Eaten Today -->
+                    <div class="col-md-5">
+                        <h6 class="mb-3">Foods Eaten Today</h6>
+                        <div id="foods-list" class="small" style="max-height: 300px; overflow-y: auto;">
+                            <p class="text-muted text-center">No foods logged yet</p>
+                        </div>
                     </div>
-                    <div class="progress progress-thin">
-                        <div class="progress-bar bg-primary" id="calories-bar" style="width: 0%"></div>
-                    </div>
-                </div>
 
-                <!-- Macros Row -->
-                <div class="row text-center">
-                    <div class="col-4">
-                        <div class="mb-1"><strong>Protein</strong></div>
-                        <div class="text-danger fw-bold" id="protein-text">0g</div>
-                        <small class="text-muted" id="protein-goal">/ 150g</small>
-                        <div class="progress progress-thin mt-1">
-                            <div class="progress-bar bg-danger" id="protein-bar" style="width: 0%"></div>
+                    <!-- Right: Progress Bars -->
+                    <div class="col-md-7">
+                        <!-- Calories -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span><strong>Calories</strong></span>
+                                <span id="calories-text">0 / 2000 kcal</span>
+                            </div>
+                            <div class="progress progress-thin">
+                                <div class="progress-bar bg-primary" id="calories-bar" style="width: 0%"></div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="col-4">
-                        <div class="mb-1"><strong>Carbs</strong></div>
-                        <div class="text-warning fw-bold" id="carbs-text">0g</div>
-                        <small class="text-muted" id="carbs-goal">/ 200g</small>
-                        <div class="progress progress-thin mt-1">
-                            <div class="progress-bar bg-warning" id="carbs-bar" style="width: 0%"></div>
-                        </div>
-                    </div>
-                    <div class="col-4">
-                        <div class="mb-1"><strong>Fats</strong></div>
-                        <div class="text-info fw-bold" id="fats-text">0g</div>
-                        <small class="text-muted" id="fats-goal">/ 65g</small>
-                        <div class="progress progress-thin mt-1">
-                            <div class="progress-bar bg-info" id="fats-bar" style="width: 0%"></div>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Macro Split Percentages -->
-                <div class="row text-center mt-3">
-                    <div class="col-12">
-                        <small class="text-muted">Macro Split:</small>
-                        <div class="mt-2">
-                            <span class="badge bg-danger me-2" id="protein-percent">0%</span>
-                            <span class="badge bg-warning me-2" id="carbs-percent">0%</span>
-                            <span class="badge bg-info" id="fats-percent">0%</span>
+                        <!-- Macros Row -->
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="mb-1"><strong>Protein</strong></div>
+                                <div class="text-danger fw-bold" id="protein-text">0g</div>
+                                <small class="text-muted" id="protein-goal">/ 150g</small>
+                                <div class="progress progress-thin mt-1">
+                                    <div class="progress-bar bg-danger" id="protein-bar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="mb-1"><strong>Carbs</strong></div>
+                                <div class="text-warning fw-bold" id="carbs-text">0g</div>
+                                <small class="text-muted" id="carbs-goal">/ 200g</small>
+                                <div class="progress progress-thin mt-1">
+                                    <div class="progress-bar bg-warning" id="carbs-bar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="mb-1"><strong>Fats</strong></div>
+                                <div class="text-info fw-bold" id="fats-text">0g</div>
+                                <small class="text-muted" id="fats-goal">/ 65g</small>
+                                <div class="progress progress-thin mt-1">
+                                    <div class="progress-bar bg-info" id="fats-bar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Macro Split Percentages -->
+                        <div class="row text-center mt-3">
+                            <div class="col-12">
+                                <small class="text-muted">Macro Split:</small>
+                                <div class="mt-2">
+                                    <span class="badge bg-danger me-2" id="protein-percent">0%</span>
+                                    <span class="badge bg-warning me-2" id="carbs-percent">0%</span>
+                                    <span class="badge bg-info" id="fats-percent">0%</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -188,19 +253,19 @@
             <div class="modal-body">
                 <form id="goals-form">
                     <div class="mb-3">
-                        <label class="form-label">Daily Calorie Goal (kcal)</label>
+                        <label class="form-label"><strong>Calories</strong> - Daily Target (e.g., 2000 kcal)</label>
                         <input type="number" class="form-control" id="goal-calories" value="2000" placeholder="2000">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Protein Goal (g)</label>
+                        <label class="form-label"><strong>Protein</strong> - Daily Target (e.g., 150g)</label>
                         <input type="number" class="form-control" id="goal-protein" value="150" placeholder="150">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Carbs Goal (g)</label>
+                        <label class="form-label"><strong>Carbs</strong> - Daily Target (e.g., 200g)</label>
                         <input type="number" class="form-control" id="goal-carbs" value="200" placeholder="200">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Fats Goal (g)</label>
+                        <label class="form-label"><strong>Fats</strong> - Daily Target (e.g., 65g)</label>
                         <input type="number" class="form-control" id="goal-fats" value="65" placeholder="65">
                     </div>
                 </form>
@@ -220,6 +285,7 @@
 <script>
 let selectedFoods = [];
 let weeklyChart = null;
+let foodsChart = null;
 
 // Load goals
 function loadGoals() {
@@ -292,7 +358,49 @@ function loadDailyData() {
             document.getElementById('protein-percent').textContent = `Protein ${data.macro_split.protein}%`;
             document.getElementById('carbs-percent').textContent = `Carbs ${data.macro_split.carbs}%`;
             document.getElementById('fats-percent').textContent = `Fats ${data.macro_split.fats}%`;
+
+            // Update foods chart
+            loadFoodsChart(data.meals);
         });
+}
+
+// Load foods list
+function loadFoodsChart(meals) {
+    const foodsList = document.getElementById('foods-list');
+
+    // No foods logged
+    if (meals.length === 0) {
+        foodsList.innerHTML = '<p class="text-muted text-center">No foods logged yet</p>';
+        return;
+    }
+
+    // Build list of all food items
+    let listHtml = '';
+    meals.forEach(meal => {
+        meal.food_items.forEach(item => {
+            const calories = Math.round(item.calories);
+            const protein = Math.round(item.protein);
+            const carbs = Math.round(item.carbs);
+            const fats = Math.round(item.fats);
+
+            listHtml += `
+                <div class="border-bottom pb-2 mb-2">
+                    <div><strong>${item.name}</strong></div>
+                    <div class="text-muted" style="font-size: 0.85rem;">
+                        ${item.quantity}${item.unit}
+                    </div>
+                    <div class="mt-1">
+                        <span class="badge bg-secondary" style="font-size: 0.7rem;">${calories} cal</span>
+                        <span class="badge bg-danger" style="font-size: 0.7rem;">P: ${protein}g</span>
+                        <span class="badge bg-warning text-dark" style="font-size: 0.7rem;">C: ${carbs}g</span>
+                        <span class="badge bg-info" style="font-size: 0.7rem;">F: ${fats}g</span>
+                    </div>
+                </div>
+            `;
+        });
+    });
+
+    foodsList.innerHTML = listHtml;
 }
 
 // Search for food
@@ -432,13 +540,19 @@ document.getElementById('meal-form').addEventListener('submit', function(e) {
         food_items: selectedFoods
     };
 
+    console.log('Submitting meal data:', data);
+
     fetch('/nutrition', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(data)
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('Response status:', response.status);
+        return response.json();
+    })
     .then(result => {
+        console.log('Result:', result);
         if (result.success) {
             alert('Meal logged successfully!');
             selectedFoods = [];
@@ -449,7 +563,13 @@ document.getElementById('meal-form').addEventListener('submit', function(e) {
             loadDailyData();
             loadRecentMeals();
             loadWeeklyChart();
+        } else {
+            alert('Error saving meal: ' + (result.message || 'Unknown error'));
         }
+    })
+    .catch(error => {
+        console.error('Error submitting meal:', error);
+        alert('Error saving meal. Please check the console for details.');
     });
 });
 

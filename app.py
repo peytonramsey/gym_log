@@ -276,18 +276,21 @@ def search_food(food_name):
                 # Extract nutrients
                 nutrients = {}
                 for nutrient in food.get('foodNutrients', []):
-                    nutrient_name = nutrient.get('nutrientName', '')
+                    nutrient_name = nutrient.get('nutrientName', '').lower()
                     nutrient_value = nutrient.get('value', 0)
+                    unit_name = nutrient.get('unitName', '').lower()
 
-                    if 'Energy' in nutrient_name and 'kcal' in nutrient.get('unitName', ''):
-                        nutrients['calories'] = round(nutrient_value, 1)
-                    elif nutrient_name == 'Protein':
+                    # More flexible calorie detection
+                    if ('energy' in nutrient_name or 'calorie' in nutrient_name) and nutrient_value > 0:
+                        if 'kcal' in unit_name or 'calories' in unit_name or nutrient_value < 1000:
+                            nutrients['calories'] = round(nutrient_value, 1)
+                    elif 'protein' in nutrient_name:
                         nutrients['protein'] = round(nutrient_value, 1)
-                    elif 'Carbohydrate' in nutrient_name:
+                    elif 'carbohydrate' in nutrient_name and 'fiber' not in nutrient_name:
                         nutrients['carbs'] = round(nutrient_value, 1)
-                    elif 'Total lipid' in nutrient_name or nutrient_name == 'Fat':
+                    elif 'total lipid' in nutrient_name or nutrient_name == 'fat':
                         nutrients['fats'] = round(nutrient_value, 1)
-                    elif 'Fiber' in nutrient_name:
+                    elif 'fiber' in nutrient_name:
                         nutrients['fiber'] = round(nutrient_value, 1)
 
                 results.append({
@@ -558,7 +561,8 @@ def create_template():
     template = WorkoutTemplate(
         user_id=current_user.id,
         name=data['name'],
-        description=data.get('description', '')
+        description=data.get('description', ''),
+        day_of_week=data.get('day_of_week')
     )
     db.session.add(template)
     db.session.flush()
@@ -588,6 +592,7 @@ def update_template(template_id):
 
     template.name = data.get('name', template.name)
     template.description = data.get('description', template.description)
+    template.day_of_week = data.get('day_of_week', template.day_of_week)
 
     # Delete existing exercises
     TemplateExercise.query.filter_by(template_id=template.id).delete()
@@ -616,6 +621,33 @@ def delete_template(template_id):
     db.session.delete(template)
     db.session.commit()
     return jsonify({'success': True})
+
+# Get today's scheduled workout
+@app.route('/api/schedule/today')
+@login_required
+def get_todays_workout():
+    from datetime import datetime
+    # Get current day of week (0=Monday, 6=Sunday)
+    today = datetime.now().weekday()
+
+    # Find template scheduled for today
+    template = WorkoutTemplate.query.filter_by(
+        user_id=current_user.id,
+        day_of_week=today
+    ).first()
+
+    if template:
+        return jsonify({
+            'success': True,
+            'scheduled': True,
+            'template': template.to_dict()
+        })
+    else:
+        return jsonify({
+            'success': True,
+            'scheduled': False,
+            'message': 'Rest Day'
+        })
 
 # My Schedule page route
 @app.route('/schedule')
