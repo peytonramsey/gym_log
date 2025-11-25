@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from models import db, User, Workout, Exercise, BodyMetrics, Meal, FoodItem, NutritionGoals, WorkoutTemplate, TemplateExercise
+from models import db, User, Workout, Exercise, BodyMetrics, Meal, FoodItem, NutritionGoals, WorkoutTemplate, TemplateExercise, WeightPrediction
 from datetime import datetime, timedelta
 from sqlalchemy import func
 import requests
@@ -654,6 +654,169 @@ def get_todays_workout():
 @login_required
 def schedule():
     return render_template('schedule.html')
+
+# ===== ML PREDICTION ENDPOINTS =====
+
+@app.route('/api/ml/predict/weight/<exercise_name>')
+@login_required
+def predict_weight(exercise_name):
+    """
+    Get ML prediction for optimal weight for an exercise
+    Query params: sets, reps
+    """
+    from ml_models.progressive_overload import ProgressiveOverloadPredictor
+    import json
+
+    # Get query params
+    target_sets = int(request.args.get('sets', 3))
+    target_reps = int(request.args.get('reps', 10))
+
+    # Get user's exercise history
+    workouts = Workout.query.filter_by(user_id=current_user.id).all()
+    exercise_history = []
+    for workout in workouts:
+        for exercise in workout.exercises:
+            exercise_history.append({
+                'name': exercise.name,
+                'weight': exercise.weight,
+                'sets': exercise.sets,
+                'reps': exercise.reps,
+                'date': workout.date.strftime('%Y-%m-%d %H:%M')
+            })
+
+    # Initialize predictor
+    predictor = ProgressiveOverloadPredictor()
+
+    # Try to load existing model
+    predictor.load_model()
+
+    # If not trained or insufficient data, train now
+    if not predictor.is_trained and len(exercise_history) >= 10:
+        predictor.train(exercise_history)
+        predictor.save_model()
+
+    # Get prediction
+    predicted_weight, (conf_lower, conf_upper), features = predictor.predict(
+        exercise_history,
+        exercise_name,
+        target_sets,
+        target_reps
+    )
+
+    # Save prediction to database for tracking
+    prediction_record = WeightPrediction(
+        user_id=current_user.id,
+        exercise_name=exercise_name,
+        predicted_weight=predicted_weight,
+        confidence_lower=conf_lower,
+        confidence_upper=conf_upper,
+        model_version=predictor.model_version,
+        features_used=json.dumps(features)
+    )
+    db.session.add(prediction_record)
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'exercise_name': exercise_name,
+        'predicted_weight': predicted_weight,
+        'confidence_interval': {
+            'lower': conf_lower,
+            'upper': conf_upper
+        },
+        'prediction_id': prediction_record.id,
+        'model_version': predictor.model_version,
+        'is_trained': predictor.is_trained,
+        'features': features
+    })
+
+@app.route('/api/ml/train', methods=['POST'])
+@login_required
+def train_model():
+    """Manually trigger model training"""
+    from ml_models.progressive_overload import ProgressiveOverloadPredictor
+
+    # Get user's exercise history
+    workouts = Workout.query.filter_by(user_id=current_user.id).all()
+    exercise_history = []
+    for workout in workouts:
+        for exercise in workout.exercises:
+            exercise_history.append({
+                'name': exercise.name,
+                'weight': exercise.weight,
+                'sets': exercise.sets,
+                'reps': exercise.reps,
+                'date': workout.date.strftime('%Y-%m-%d %H:%M')
+            })
+
+    if len(exercise_history) < 10:
+        return jsonify({
+            'success': False,
+            'message': f'Need at least 10 exercises to train model. You have {len(exercise_history)}.'
+        }), 400
+
+    # Train model
+    predictor = ProgressiveOverloadPredictor()
+    success = predictor.train(exercise_history)
+
+    if success:
+        predictor.save_model()
+        return jsonify({
+            'success': True,
+            'message': 'Model trained successfully',
+            'training_samples': len(exercise_history)
+        })
+    else:
+        return jsonify({
+            'success': False,
+            'message': 'Failed to train model'
+        }), 500
+
+@app.route('/api/ml/predictions/feedback', methods=['POST'])
+@login_required
+def update_prediction_feedback():
+    """Update prediction with actual outcome"""
+    data = request.get_json()
+
+    prediction_id = data.get('prediction_id')
+    actual_weight = data.get('actual_weight')
+    completed = data.get('completed', True)
+
+    prediction = WeightPrediction.query.get(prediction_id)
+    if not prediction or prediction.user_id != current_user.id:
+        return jsonify({'success': False, 'message': 'Prediction not found'}), 404
+
+    prediction.actual_weight = actual_weight
+    prediction.actual_completed = completed
+    prediction.workout_date = datetime.now()
+    db.session.commit()
+
+    # Calculate error
+    error = abs(prediction.predicted_weight - actual_weight)
+    error_pct = (error / actual_weight) * 100 if actual_weight > 0 else 0
+
+    return jsonify({
+        'success': True,
+        'prediction_id': prediction_id,
+        'error': error,
+        'error_percentage': error_pct
+    })
+
+@app.route('/api/ml/predictions/history')
+@login_required
+def get_prediction_history():
+    """Get prediction accuracy history"""
+    predictions = WeightPrediction.query.filter_by(
+        user_id=current_user.id
+    ).filter(
+        WeightPrediction.actual_weight.isnot(None)
+    ).order_by(WeightPrediction.workout_date.desc()).limit(50).all()
+
+    return jsonify({
+        'success': True,
+        'predictions': [p.to_dict() for p in predictions],
+        'count': len(predictions)
+    })
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

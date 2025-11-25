@@ -206,3 +206,35 @@ class TemplateExercise(db.Model):
             'rest_time': self.rest_time,
             'order': self.order
         }
+
+class WeightPrediction(db.Model):
+    """Track ML predictions vs actual outcomes for model improvement"""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    exercise_name = db.Column(db.String(100), nullable=False)
+    predicted_weight = db.Column(db.Float, nullable=False)
+    confidence_lower = db.Column(db.Float, nullable=True)  # Lower bound of confidence interval
+    confidence_upper = db.Column(db.Float, nullable=True)  # Upper bound of confidence interval
+    actual_weight = db.Column(db.Float, nullable=True)  # Filled in after workout
+    actual_completed = db.Column(db.Boolean, nullable=True)  # Did user complete all sets?
+    prediction_date = db.Column(db.DateTime, default=datetime.utcnow)
+    workout_date = db.Column(db.DateTime, nullable=True)  # When actual workout happened
+    model_version = db.Column(db.String(50), default='v1.0')  # Track model version
+    features_used = db.Column(db.Text, nullable=True)  # JSON of features used for prediction
+
+    user = db.relationship('User', backref='weight_predictions')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'exercise_name': self.exercise_name,
+            'predicted_weight': self.predicted_weight,
+            'confidence_lower': self.confidence_lower,
+            'confidence_upper': self.confidence_upper,
+            'actual_weight': self.actual_weight,
+            'actual_completed': self.actual_completed,
+            'prediction_date': self.prediction_date.strftime('%Y-%m-%d %H:%M'),
+            'workout_date': self.workout_date.strftime('%Y-%m-%d %H:%M') if self.workout_date else None,
+            'model_version': self.model_version,
+            'error': abs(self.predicted_weight - self.actual_weight) if self.actual_weight else None
+        }
