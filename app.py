@@ -1,5 +1,6 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for
-from models import db, Workout, Exercise, BodyMetrics, Meal, FoodItem, NutritionGoals, WorkoutTemplate, TemplateExercise
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from models import db, User, Workout, Exercise, BodyMetrics, Meal, FoodItem, NutritionGoals, WorkoutTemplate, TemplateExercise
 from datetime import datetime, timedelta
 from sqlalchemy import func
 import requests
@@ -44,19 +45,95 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-pro
 
 db.init_app(app)
 
+# Initialize Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
 with app.app_context():
     db.create_all()
 
+# ===== AUTHENTICATION ROUTES =====
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+
+        user = User.query.filter_by(username=username).first()
+
+        if user and user.check_password(password):
+            login_user(user)
+            return redirect(url_for('index'))
+        else:
+            return render_template('login.html', error='Invalid username or password')
+
+    return render_template('login.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+
+    if request.method == 'POST':
+        username = request.form.get('username')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+
+        # Validation
+        if password != confirm_password:
+            return render_template('register.html', error='Passwords do not match')
+
+        if len(password) < 6:
+            return render_template('register.html', error='Password must be at least 6 characters')
+
+        if User.query.filter_by(username=username).first():
+            return render_template('register.html', error='Username already exists')
+
+        if User.query.filter_by(email=email).first():
+            return render_template('register.html', error='Email already registered')
+
+        # Create user
+        user = User(username=username, email=email)
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+
+        login_user(user)
+        return redirect(url_for('index'))
+
+    return render_template('register.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
+# ===== MAIN ROUTES =====
+
 @app.route('/')
+@login_required
 def index():
     return render_template('index.html')
 
 @app.route('/log', methods=['GET', 'POST'])
+@login_required
 def log_workout():
     if request.method == 'POST':
         data = request.get_json()
 
         workout = Workout(
+            user_id=current_user.id,
             date=datetime.fromisoformat(data.get('date', datetime.now().isoformat())),
             notes=data.get('notes', '')
         )
@@ -80,39 +157,47 @@ def log_workout():
     return render_template('log.html')
 
 @app.route('/history')
+@login_required
 def history():
-    workouts = Workout.query.order_by(Workout.date.desc()).all()
+    workouts = Workout.query.filter_by(user_id=current_user.id).order_by(Workout.date.desc()).all()
     return render_template('history.html', workouts=workouts)
 
 @app.route('/calendar')
+@login_required
 def calendar():
     return render_template('calendar.html')
 
 @app.route('/api/workouts')
+@login_required
 def get_workouts():
-    workouts = Workout.query.order_by(Workout.date.desc()).all()
+    workouts = Workout.query.filter_by(user_id=current_user.id).order_by(Workout.date.desc()).all()
     return jsonify([w.to_dict() for w in workouts])
 
 @app.route('/api/workouts/<int:workout_id>')
+@login_required
 def get_workout(workout_id):
-    workout = Workout.query.get_or_404(workout_id)
+    workout = Workout.query.filter_by(id=workout_id, user_id=current_user.id).first_or_404()
     return jsonify(workout.to_dict())
 
 @app.route('/api/workouts/<int:workout_id>', methods=['DELETE'])
+@login_required
 def delete_workout(workout_id):
-    workout = Workout.query.get_or_404(workout_id)
+    workout = Workout.query.filter_by(id=workout_id, user_id=current_user.id).first_or_404()
     db.session.delete(workout)
     db.session.commit()
     return jsonify({'success': True})
 
 @app.route('/progress')
+@login_required
 def progress():
     return render_template('progress.html')
 
 @app.route('/api/progress/<exercise_name>')
+@login_required
 def get_exercise_progress(exercise_name):
     exercises = Exercise.query.join(Workout).filter(
-        Exercise.name == exercise_name
+        Exercise.name == exercise_name,
+        Workout.user_id == current_user.id
     ).order_by(Workout.date.asc()).all()
 
     data = [{
@@ -125,15 +210,20 @@ def get_exercise_progress(exercise_name):
     return jsonify(data)
 
 @app.route('/api/exercise_names')
+@login_required
 def get_exercise_names():
-    exercises = db.session.query(Exercise.name).distinct().all()
+    exercises = db.session.query(Exercise.name).join(Workout).filter(
+        Workout.user_id == current_user.id
+    ).distinct().all()
     return jsonify([ex[0] for ex in exercises])
 
 @app.route('/body_metrics', methods=['GET', 'POST'])
+@login_required
 def body_metrics():
     if request.method == 'POST':
         data = request.get_json()
         metric = BodyMetrics(
+            user_id=current_user.id,
             date=datetime.fromisoformat(data.get('date', datetime.now().isoformat())),
             weight=float(data['weight']) if data.get('weight') else None,
             height=float(data['height']) if data.get('height') else None
@@ -145,13 +235,15 @@ def body_metrics():
     return render_template('body_metrics.html')
 
 @app.route('/api/body_metrics')
+@login_required
 def get_body_metrics():
-    metrics = BodyMetrics.query.order_by(BodyMetrics.date.desc()).all()
+    metrics = BodyMetrics.query.filter_by(user_id=current_user.id).order_by(BodyMetrics.date.desc()).all()
     return jsonify([m.to_dict() for m in metrics])
 
 @app.route('/api/calendar_data')
+@login_required
 def calendar_data():
-    workouts = Workout.query.all()
+    workouts = Workout.query.filter_by(user_id=current_user.id).all()
     data = {}
     for w in workouts:
         date_str = w.date.strftime('%Y-%m-%d')
@@ -168,6 +260,7 @@ def calendar_data():
 
 # USDA API nutrition lookup
 @app.route('/api/food/search/<food_name>')
+@login_required
 def search_food(food_name):
     """Search for food nutrition data using USDA API"""
     # USDA FoodData Central API (no key needed for basic search)
@@ -216,11 +309,13 @@ def search_food(food_name):
 
 # Log nutrition
 @app.route('/nutrition', methods=['GET', 'POST'])
+@login_required
 def log_nutrition():
     if request.method == 'POST':
         data = request.get_json()
 
         meal = Meal(
+            user_id=current_user.id,
             date=datetime.fromisoformat(data.get('date', datetime.now().isoformat())),
             meal_type=data.get('meal_type', 'Snack'),
             notes=data.get('notes', '')
@@ -258,15 +353,18 @@ def log_nutrition():
 
 # Get all nutrition data
 @app.route('/api/nutrition')
+@login_required
 def get_nutrition():
-    meals = Meal.query.order_by(Meal.date.desc()).limit(50).all()
+    meals = Meal.query.filter_by(user_id=current_user.id).order_by(Meal.date.desc()).limit(50).all()
     return jsonify([m.to_dict() for m in meals])
 
 # Get daily nutrition summary
 @app.route('/api/nutrition/daily/<date>')
+@login_required
 def get_daily_nutrition(date):
     target_date = datetime.fromisoformat(date)
     meals = Meal.query.filter(
+        Meal.user_id == current_user.id,
         func.date(Meal.date) == target_date.date()
     ).all()
 
@@ -291,8 +389,9 @@ def get_daily_nutrition(date):
 
 # Delete meal
 @app.route('/api/nutrition/<int:meal_id>', methods=['DELETE'])
+@login_required
 def delete_meal(meal_id):
-    meal = Meal.query.get_or_404(meal_id)
+    meal = Meal.query.filter_by(id=meal_id, user_id=current_user.id).first_or_404()
     db.session.delete(meal)
     db.session.commit()
     return jsonify({'success': True})
@@ -301,25 +400,28 @@ def delete_meal(meal_id):
 
 # Get active nutrition goals
 @app.route('/api/nutrition/goals', methods=['GET'])
+@login_required
 def get_nutrition_goals():
-    goals = NutritionGoals.query.filter_by(is_active=True).first()
+    goals = NutritionGoals.query.filter_by(user_id=current_user.id, is_active=True).first()
     if not goals:
         # Create default goals if none exist
-        goals = NutritionGoals()
+        goals = NutritionGoals(user_id=current_user.id)
         db.session.add(goals)
         db.session.commit()
     return jsonify(goals.to_dict())
 
 # Set nutrition goals
 @app.route('/api/nutrition/goals', methods=['POST'])
+@login_required
 def set_nutrition_goals():
     data = request.get_json()
 
-    # Deactivate old goals
-    NutritionGoals.query.update({NutritionGoals.is_active: False})
+    # Deactivate old goals for this user
+    NutritionGoals.query.filter_by(user_id=current_user.id).update({NutritionGoals.is_active: False})
 
     # Create new goals
     goals = NutritionGoals(
+        user_id=current_user.id,
         calories_goal=int(data.get('calories_goal', 2000)),
         protein_goal=int(data.get('protein_goal', 150)),
         carbs_goal=int(data.get('carbs_goal', 200)),
@@ -333,11 +435,13 @@ def set_nutrition_goals():
 
 # Get weekly nutrition summary
 @app.route('/api/nutrition/weekly')
+@login_required
 def get_weekly_nutrition():
     today = datetime.now().date()
     week_ago = today - timedelta(days=7)
 
     meals = Meal.query.filter(
+        Meal.user_id == current_user.id,
         func.date(Meal.date) >= week_ago,
         func.date(Meal.date) <= today
     ).all()
@@ -371,9 +475,11 @@ def get_weekly_nutrition():
 
 # Get daily nutrition with goals and percentages
 @app.route('/api/nutrition/daily/<date>/with-goals')
+@login_required
 def get_daily_nutrition_with_goals(date):
     target_date = datetime.fromisoformat(date)
     meals = Meal.query.filter(
+        Meal.user_id == current_user.id,
         func.date(Meal.date) == target_date.date()
     ).all()
 
@@ -395,9 +501,9 @@ def get_daily_nutrition_with_goals(date):
         daily_totals['fats'] += meal_data['totals']['fats']
 
     # Get goals
-    goals = NutritionGoals.query.filter_by(is_active=True).first()
+    goals = NutritionGoals.query.filter_by(user_id=current_user.id, is_active=True).first()
     if not goals:
-        goals = NutritionGoals()
+        goals = NutritionGoals(user_id=current_user.id)
         db.session.add(goals)
         db.session.commit()
 
@@ -431,22 +537,26 @@ def get_daily_nutrition_with_goals(date):
 
 # Get all workout templates
 @app.route('/api/templates')
+@login_required
 def get_templates():
-    templates = WorkoutTemplate.query.order_by(WorkoutTemplate.created_at.desc()).all()
+    templates = WorkoutTemplate.query.filter_by(user_id=current_user.id).order_by(WorkoutTemplate.created_at.desc()).all()
     return jsonify([t.to_dict() for t in templates])
 
 # Get a specific template
 @app.route('/api/templates/<int:template_id>')
+@login_required
 def get_template(template_id):
-    template = WorkoutTemplate.query.get_or_404(template_id)
+    template = WorkoutTemplate.query.filter_by(id=template_id, user_id=current_user.id).first_or_404()
     return jsonify(template.to_dict())
 
 # Create a new template
 @app.route('/api/templates', methods=['POST'])
+@login_required
 def create_template():
     data = request.get_json()
 
     template = WorkoutTemplate(
+        user_id=current_user.id,
         name=data['name'],
         description=data.get('description', '')
     )
@@ -471,8 +581,9 @@ def create_template():
 
 # Update a template
 @app.route('/api/templates/<int:template_id>', methods=['PUT'])
+@login_required
 def update_template(template_id):
-    template = WorkoutTemplate.query.get_or_404(template_id)
+    template = WorkoutTemplate.query.filter_by(id=template_id, user_id=current_user.id).first_or_404()
     data = request.get_json()
 
     template.name = data.get('name', template.name)
@@ -499,14 +610,16 @@ def update_template(template_id):
 
 # Delete a template
 @app.route('/api/templates/<int:template_id>', methods=['DELETE'])
+@login_required
 def delete_template(template_id):
-    template = WorkoutTemplate.query.get_or_404(template_id)
+    template = WorkoutTemplate.query.filter_by(id=template_id, user_id=current_user.id).first_or_404()
     db.session.delete(template)
     db.session.commit()
     return jsonify({'success': True})
 
 # My Schedule page route
 @app.route('/schedule')
+@login_required
 def schedule():
     return render_template('schedule.html')
 

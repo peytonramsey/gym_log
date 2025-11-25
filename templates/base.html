@@ -87,7 +87,13 @@
     <nav class="navbar navbar-dark bg-dark">
         <div class="container-fluid">
             <span class="navbar-brand mb-0 h1">GymLog </span>
-            <div class="d-flex gap-3">
+            <div class="d-flex gap-3 align-items-center">
+                {% if current_user.is_authenticated %}
+                <span class="text-light" style="font-size: 0.9rem;">{{ current_user.username }}</span>
+                <a href="/logout" class="theme-toggle" title="Logout" style="text-decoration: none;">
+                    <i class="bi bi-box-arrow-right"></i>
+                </a>
+                {% endif %}
                 <button class="theme-toggle" onclick="alert('Settings coming soon!')" title="Settings">
                     <i class="bi bi-gear"></i>
                 </button>
