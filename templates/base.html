@@ -81,6 +81,21 @@
             transform: rotate(20deg);
         }
 
+        /* Logo container styling */
+        .logo-container {
+            background: rgba(0, 0, 0, 0.5) !important;
+            padding: 8px 16px;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+        }
+
+        body.dark-mode .logo-container {
+            background: rgba(255, 255, 255, 0.1) !important;
+            box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
+        }
+
         /* Toast Notifications */
         .toast-container {
             position: fixed;
@@ -164,7 +179,9 @@
 <body>
     <nav class="navbar navbar-dark bg-dark">
         <div class="container-fluid">
-            <img src="{{ url_for('static', filename='transparent-logo-v003.svg') }}" alt="Logo" class="navbar-brand mb-0" style="height: 35px; object-fit: contain;">
+            <div class="logo-container">
+                <img src="{{ url_for('static', filename='transparent-logo-fitglyph.svg') }}" alt="FitGlyph Logo" class="navbar-brand mb-0" style="height: 35px; object-fit: contain;">
+            </div>
             <div class="d-flex gap-3 align-items-center">
                 {% if current_user.is_authenticated %}
                 <span class="text-light" style="font-size: 0.9rem;">{{ current_user.username }}</span>
