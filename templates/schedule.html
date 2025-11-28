@@ -121,6 +121,41 @@
         color: #ffffff;
         border-color: #404040;
     }
+
+    /* Dark mode text colors */
+    body.dark-mode h1,
+    body.dark-mode h2,
+    body.dark-mode h3,
+    body.dark-mode h4,
+    body.dark-mode h5,
+    body.dark-mode h6 {
+        color: #ffffff !important;
+    }
+
+    body.dark-mode .card-title {
+        color: #ffffff !important;
+    }
+
+    body.dark-mode p {
+        color: #e0e0e0;
+    }
+
+    body.dark-mode .text-muted,
+    body.dark-mode small.text-muted {
+        color: #a0a0a0 !important;
+    }
+
+    body.dark-mode small {
+        color: #ccc !important;
+    }
+
+    body.dark-mode strong {
+        color: #ffffff !important;
+    }
+
+    body.dark-mode input::placeholder {
+        color: #888 !important;
+    }
 </style>
 {% endblock %}
 
@@ -394,7 +429,7 @@ function saveTemplate() {
     const description = document.getElementById('template-description').value.trim();
 
     if (!name) {
-        alert('Please enter a template name');
+        showWarning('Please enter a template name');
         return;
     }
 
@@ -419,7 +454,7 @@ function saveTemplate() {
     }
 
     if (exercises.length === 0) {
-        alert('Please add at least one exercise');
+        showWarning('Please add at least one exercise');
         return;
     }
 
@@ -443,14 +478,14 @@ function saveTemplate() {
     .then(response => response.json())
     .then(result => {
         if (result.success) {
-            alert(`Template ${editingTemplateId ? 'updated' : 'created'} successfully!`);
+            showSuccess(`Template ${editingTemplateId ? 'updated' : 'created'} successfully!`);
             bootstrap.Modal.getInstance(document.getElementById('templateModal')).hide();
             loadTemplates();
         }
     })
     .catch(error => {
         console.error('Error saving template:', error);
-        alert('Error saving template');
+        showError('Error saving template');
     });
 }
 
@@ -502,13 +537,13 @@ function deleteTemplate(templateId) {
     .then(response => response.json())
     .then(result => {
         if (result.success) {
-            alert('Template deleted successfully!');
+            showSuccess('Template deleted successfully!');
             loadTemplates();
         }
     })
     .catch(error => {
         console.error('Error deleting template:', error);
-        alert('Error deleting template');
+        showError('Error deleting template');
     });
 }
 

@@ -76,6 +76,36 @@
     body.dark-mode small.text-muted {
         color: #a0a0a0 !important;
     }
+
+    /* Dark mode comprehensive text colors */
+    body.dark-mode h1,
+    body.dark-mode h2,
+    body.dark-mode h3,
+    body.dark-mode h4,
+    body.dark-mode h5,
+    body.dark-mode h6,
+    body.dark-mode strong {
+        color: #ffffff !important;
+    }
+
+    body.dark-mode p,
+    body.dark-mode span,
+    body.dark-mode div,
+    body.dark-mode label {
+        color: #e0e0e0;
+    }
+
+    body.dark-mode small {
+        color: #ccc !important;
+    }
+
+    body.dark-mode .card-title {
+        color: #ffffff !important;
+    }
+
+    body.dark-mode input::placeholder {
+        color: #888 !important;
+    }
 </style>
 {% endblock %}
 
@@ -214,6 +244,56 @@
     </div>
 </div>
 
+<!-- Supplements Tracker -->
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <strong>Supplements Tracker</strong>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- Left: Add Supplement Form -->
+                    <div class="col-md-5">
+                        <h6 class="mb-3">Log Supplement</h6>
+                        <div class="mb-3">
+                            <label class="form-label">Supplement Name</label>
+                            <input type="text" id="supplement-name-input" class="form-control form-control-sm" placeholder="e.g., Creatine, Vitamin D">
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <label class="form-label">Dosage</label>
+                                <input type="text" id="supplement-dosage-input" class="form-control form-control-sm" placeholder="e.g., 1000mg">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Time</label>
+                                <select id="supplement-time-input" class="form-select form-select-sm">
+                                    <option value="">Select time</option>
+                                    <option value="Morning">Morning</option>
+                                    <option value="Afternoon">Afternoon</option>
+                                    <option value="Evening">Evening</option>
+                                    <option value="Night">Night</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary btn-sm w-100" onclick="logSupplement()">
+                            <i class="bi bi-plus-circle"></i> Log Supplement
+                        </button>
+                    </div>
+
+                    <!-- Right: Today's Supplements -->
+                    <div class="col-md-7">
+                        <h6 class="mb-3">Today's Supplements</h6>
+                        <div id="supplements-list" style="max-height: 250px; overflow-y: auto;">
+                            <p class="text-muted text-center">No supplements logged yet</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Weekly Chart -->
 <div class="row mb-3">
     <div class="col-12">
@@ -323,7 +403,7 @@ function saveGoals() {
     .then(response => response.json())
     .then(result => {
         if (result.success) {
-            alert('Goals saved successfully!');
+            showSuccess('Goals saved successfully!');
             bootstrap.Modal.getInstance(document.getElementById('goalsModal')).hide();
             loadDailyData();
         }
@@ -407,7 +487,7 @@ function loadFoodsChart(meals) {
 function searchFood() {
     const query = document.getElementById('food-search').value.trim();
     if (!query) {
-        alert('Please enter a food name');
+        showWarning('Please enter a food name');
         return;
     }
 
@@ -529,7 +609,7 @@ document.getElementById('meal-form').addEventListener('submit', function(e) {
     e.preventDefault();
 
     if (selectedFoods.length === 0) {
-        alert('Please add at least one food item');
+        showWarning('Please add at least one food item');
         return;
     }
 
@@ -554,7 +634,15 @@ document.getElementById('meal-form').addEventListener('submit', function(e) {
     .then(result => {
         console.log('Result:', result);
         if (result.success) {
-            alert('Meal logged successfully!');
+            showSuccess('Meal logged successfully!');
+
+            // Notify other pages (like home page) that nutrition data updated
+            localStorage.setItem('nutritionUpdated', 'true');
+            setTimeout(() => localStorage.removeItem('nutritionUpdated'), 1000);
+
+            // Trigger event for same page
+            document.dispatchEvent(new Event('nutritionUpdated'));
+
             selectedFoods = [];
             updateSelectedFoods();
             document.getElementById('meal-notes').value = '';
@@ -564,12 +652,12 @@ document.getElementById('meal-form').addEventListener('submit', function(e) {
             loadRecentMeals();
             loadWeeklyChart();
         } else {
-            alert('Error saving meal: ' + (result.message || 'Unknown error'));
+            showError('Error saving meal: ' + (result.message || 'Unknown error'));
         }
     })
     .catch(error => {
         console.error('Error submitting meal:', error);
-        alert('Error saving meal. Please check the console for details.');
+        showError('Error saving meal. Please check the console for details.');
     });
 });
 
@@ -694,9 +782,121 @@ function loadWeeklyChart() {
         });
 }
 
+// Fetch supplements for today
+function fetchSupplements() {
+    const today = new Date().toISOString().split('T')[0];
+    fetch(`/api/supplements/daily/${today}`)
+        .then(response => response.json())
+        .then(supplements => {
+            displaySupplements(supplements);
+        })
+        .catch(error => {
+            console.error('Error fetching supplements:', error);
+        });
+}
+
+// Display supplements
+function displaySupplements(supplements) {
+    const supplementsList = document.getElementById('supplements-list');
+
+    if (supplements.length === 0) {
+        supplementsList.innerHTML = '<p class="text-muted text-center">No supplements logged yet</p>';
+        return;
+    }
+
+    let listHtml = '';
+    supplements.forEach(supplement => {
+        listHtml += `
+            <div class="d-flex justify-content-between align-items-center pb-2 mb-2 border-bottom">
+                <div>
+                    <div><strong>${supplement.name}</strong></div>
+                    <div class="small text-muted">
+                        ${supplement.dosage ? `${supplement.dosage}` : ''}
+                        ${supplement.time_of_day ? `<span class="badge bg-secondary ms-2">${supplement.time_of_day}</span>` : ''}
+                    </div>
+                </div>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteSupplement(${supplement.id})">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        `;
+    });
+
+    supplementsList.innerHTML = listHtml;
+}
+
+// Log a new supplement
+function logSupplement() {
+    const name = document.getElementById('supplement-name-input').value.trim();
+    const dosage = document.getElementById('supplement-dosage-input').value.trim();
+    const timeOfDay = document.getElementById('supplement-time-input').value;
+
+    if (!name) {
+        showWarning('Please enter a supplement name');
+        return;
+    }
+
+    const data = {
+        name: name,
+        dosage: dosage,
+        time_of_day: timeOfDay,
+        date: new Date().toISOString()
+    };
+
+    fetch('/api/supplements', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            // Clear form
+            document.getElementById('supplement-name-input').value = '';
+            document.getElementById('supplement-dosage-input').value = '';
+            document.getElementById('supplement-time-input').value = '';
+
+            // Refresh supplements list
+            fetchSupplements();
+            showSuccess('Supplement logged successfully!');
+        } else {
+            showError('Failed to log supplement');
+        }
+    })
+    .catch(error => {
+        console.error('Error logging supplement:', error);
+        showError('Error logging supplement');
+    });
+}
+
+// Delete a supplement
+function deleteSupplement(supplementId) {
+    if (!confirm('Delete this supplement?')) return;
+
+    fetch(`/api/supplements/${supplementId}`, {
+        method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            fetchSupplements();
+            showSuccess('Supplement deleted successfully!');
+        } else {
+            showError('Failed to delete supplement');
+        }
+    })
+    .catch(error => {
+        console.error('Error deleting supplement:', error);
+        showError('Error deleting supplement');
+    });
+}
+
 // Load all data on page load
 loadDailyData();
 loadRecentMeals();
 loadWeeklyChart();
+fetchSupplements();
 </script>
 {% endblock %}

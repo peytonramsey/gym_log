@@ -65,7 +65,6 @@
         padding: 15px;
         margin-bottom: 15px;
         box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.3);
-        max-height: 300px;
         transition: all 0.3s ease;
     }
 
@@ -122,7 +121,13 @@
     }
 
     /* Split screen layout */
-    .left-section, .right-section {
+    .left-section {
+        min-height: 600px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .right-section {
         min-height: 600px;
     }
 
@@ -131,31 +136,109 @@
             min-height: auto;
         }
     }
+
+    /* Dark mode text colors */
+    body.dark-mode h1,
+    body.dark-mode h2,
+    body.dark-mode h3,
+    body.dark-mode h4,
+    body.dark-mode h5,
+    body.dark-mode h6,
+    body.dark-mode strong {
+        color: #ffffff !important;
+    }
+
+    body.dark-mode p,
+    body.dark-mode span,
+    body.dark-mode div {
+        color: #e0e0e0;
+    }
+
+    body.dark-mode .text-muted {
+        color: #aaa !important;
+    }
+
+    body.dark-mode small {
+        color: #ccc !important;
+    }
+
+    body.dark-mode .card-title {
+        color: #ffffff !important;
+    }
+
+    /* Calendar hover effects */
+    #dashboard-calendar-grid > div {
+        transition: all 0.2s ease;
+    }
+
+    #dashboard-calendar-grid > div:hover {
+        transform: scale(1.05);
+        background-color: rgba(13, 110, 253, 0.2) !important;
+    }
+
+    body.dark-mode #dashboard-calendar-grid > div {
+        color: #e0e0e0;
+    }
+
+    /* Consistency color coding */
+    .text-success {
+        color: #198754 !important;
+    }
+
+    .text-warning {
+        color: #ffc107 !important;
+    }
+
+    .text-danger {
+        color: #dc3545 !important;
+    }
+
+    body.dark-mode .text-success {
+        color: #28a745 !important;
+    }
+
+    body.dark-mode .text-warning {
+        color: #ffc107 !important;
+    }
+
+    body.dark-mode .text-danger {
+        color: #dc3545 !important;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <!-- Welcome Text -->
 <div class="welcome-text">
-    <h3>Welcome back, {{ current_user.username }}</h3>
+    <h3 id = "welcome-message"> Welcome back, {{ current_user.username }}</h3>
 </div>
 
 <!-- Split Screen Layout -->
 <div class="row">
     <!-- LEFT SECTION: Charts -->
     <div class="col-lg-6 left-section">
-        <!-- Workout Frequency Chart -->
+        <!-- Monthly Workout Calendar -->
         <div class="chart-container">
-            <h6 class="mb-2">Weekly Workout Activity</h6>
-            <canvas id="workoutChart" height="220"></canvas>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <button class="btn btn-sm btn-outline-primary" onclick="changeDashboardMonth(-1)" style="padding: 2px 8px;">
+                    <i class="bi bi-chevron-left"></i>
+                </button>
+                <h6 class="mb-0" id="dashboard-calendar-title">Workout Calendar</h6>
+                <button class="btn btn-sm btn-outline-primary" onclick="changeDashboardMonth(1)" style="padding: 2px 8px;">
+                    <i class="bi bi-chevron-right"></i>
+                </button>
+            </div>
+            <div id="dashboard-calendar-grid" style="display: grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: 1fr; gap: 3px; font-size: 0.75rem; height: 245px;"></div>
         </div>
 
         <!-- Nutrition Summary -->
-        <div class="chart-container" onclick="window.location.href='/nutrition'" style="cursor: pointer;" title="Click to view full nutrition details">
-            <h6 class="mb-2">Today's Nutrition <i class="bi bi-box-arrow-up-right" style="font-size: 0.8rem;"></i></h6>
+        <div class="chart-container" style="flex: 1; display: flex; flex-direction: column;">
+            <div class="d-flex justify-content-between align-items-center mb-2" onclick="window.location.href='/nutrition'" style="cursor: pointer;" title="Click to view full nutrition details">
+                <h6 class="mb-0">Today's Nutrition <i class="bi bi-box-arrow-up-right" style="font-size: 0.8rem;"></i></h6>
+            </div>
 
             <!-- Nutrition Summary Stats -->
-            <div class="text-center mb-3" id="nutrition-stats">
+            <div class="text-center mb-2" id="nutrition-stats">
                 <div class="d-flex justify-content-around">
                     <div>
                         <div class="fw-bold" id="cal-display">0</div>
@@ -176,8 +259,8 @@
                 </div>
             </div>
 
-            <!-- Foods List -->
-            <div id="foods-eaten-list" style="max-height: 180px; overflow-y: auto;">
+            <!-- Foods Eaten List -->
+            <div id="foods-eaten-list" style="flex: 1; overflow-y: auto;">
                 <p class="text-muted text-center small">No foods logged yet</p>
             </div>
         </div>
@@ -187,13 +270,13 @@
     <div class="col-lg-6 right-section">
         <!-- Quick Stats -->
         <div class="row mb-2">
-            <div class="col-6">
+            <div class="col-4">
                 <div class="stat-card text-center">
                     <h3 id="total-workouts" class="mb-1">0</h3>
                     <small>Total Workouts</small>
                 </div>
             </div>
-            <div class="col-6">
+            <div class="col-4">
                 <div class="stat-card text-center">
                     <div id="todays-workout-display">
                         <div class="spinner-border spinner-border-sm" role="status">
@@ -201,6 +284,16 @@
                         </div>
                     </div>
                     <small>Today's Workout</small>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="stat-card text-center">
+                    <div id="consistency-display">
+                        <div class="spinner-border spinner-border-sm" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                    <small>Consistency (30d)</small>
                 </div>
             </div>
         </div>
@@ -275,6 +368,24 @@
 <script>
     // Prevent multiple initializations
     let chartsInitialized = false;
+    let dashboardCalendarDate = new Date();
+    let workoutCalendarData = {};
+
+    // Welcome message rotation
+    const welcomeMessages = [
+        "Welcome back, {{ current_user.username }}!",
+        "Hey, {{ current_user.username }}, let's get sendy!",
+        "Don't get kirkified, {{ current_user.username }}!",
+        "Hey, {{ current_user.username }}, you're looking extra fat today, let's get to work.",
+        "C'mon skittle {{ current_user.username }}, let's get lean",
+        "Long time no see {{ current_user.username }}...",
+        "{{ current_user.username }} don't be queer today, let's get swole.",
+        "Sup, {{ current_user.username }}, nice ASSets!"
+    ];
+
+    // Pick a random message
+    const randomMessage = welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)];
+    document.getElementById('welcome-message').textContent = randomMessage;
 
     // Fetch workout data
     fetch('/api/workouts')
@@ -282,14 +393,43 @@
         .then(data => {
             // Update stats
             document.getElementById('total-workouts').textContent = data.length;
-
-            // Create workout frequency chart (last 7 days)
-            if (!chartsInitialized) {
-                createWorkoutChart(data);
-            }
         })
         .catch(error => {
             console.error('Error fetching workouts:', error);
+        });
+
+    // Fetch calendar data
+    fetch('/api/calendar_data')
+        .then(response => response.json())
+        .then(data => {
+            workoutCalendarData = data;
+            if (!chartsInitialized) {
+                renderDashboardCalendar();
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching calendar data:', error);
+        });
+
+    // Fetch consistency data
+    fetch('/api/consistency?days=30')
+        .then(response => response.json())
+        .then(data => {
+            const display = document.getElementById('consistency-display');
+            const percentage = data.adherence_percentage || 0;
+
+            // Color code based on percentage
+            let colorClass = '';
+            if (percentage >= 80) colorClass = 'text-success';
+            else if (percentage >= 60) colorClass = 'text-warning';
+            else colorClass = 'text-danger';
+
+            display.innerHTML = `<h3 class="mb-1 ${colorClass}">${percentage}%</h3>`;
+            display.title = `${data.completed_days} of ${data.scheduled_days} scheduled workouts completed`;
+        })
+        .catch(error => {
+            console.error('Error fetching consistency:', error);
+            document.getElementById('consistency-display').innerHTML = '<h3 class="mb-1">-</h3>';
         });
 
     // Fetch today's scheduled workout
@@ -309,21 +449,18 @@
         });
 
     // Fetch nutrition data for today
-    const today = new Date().toISOString().split('T')[0];
-    fetch(`/api/nutrition/daily/${today}/with-goals`)
-        .then(response => {
-            if (!response.ok) throw new Error('No nutrition data');
-            return response.json();
-        })
-        .then(data => {
-            if (!chartsInitialized) {
+    function fetchNutritionData() {
+        const today = new Date().toISOString().split('T')[0];
+        fetch(`/api/nutrition/daily/${today}/with-goals`)
+            .then(response => {
+                if (!response.ok) throw new Error('No nutrition data');
+                return response.json();
+            })
+            .then(data => {
                 createNutritionChart(data);
-            }
-        })
-        .catch(error => {
-            console.log('No nutrition data available, showing defaults');
-            // If no data, show empty chart
-            if (!chartsInitialized) {
+            })
+            .catch(error => {
+                console.log('No nutrition data available, showing defaults');
                 createNutritionChart({
                     calories: 0,
                     protein: 0,
@@ -332,63 +469,88 @@
                     goals: {calories_goal: 2000, protein_goal: 150, carbs_goal: 200, fats_goal: 65},
                     meals: []
                 });
-            }
-        });
-
-    function createWorkoutChart(workouts) {
-        try {
-            const ctx = document.getElementById('workoutChart');
-            if (!ctx) return;
-
-            // Get last 7 days
-            const days = [];
-            const counts = [];
-            for (let i = 6; i >= 0; i--) {
-                const date = new Date();
-                date.setDate(date.getDate() - i);
-                const dateStr = date.toISOString().split('T')[0];
-                days.push(date.toLocaleDateString('en-US', { weekday: 'short' }));
-
-                // Count workouts on this day
-                const count = workouts.filter(w => w.date.startsWith(dateStr)).length;
-                counts.push(count);
-            }
-
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: days,
-                    datasets: [{
-                        label: 'Workouts',
-                        data: counts,
-                        backgroundColor: 'rgba(13, 110, 253, 0.6)',
-                        borderColor: 'rgba(13, 110, 253, 1)',
-                        borderWidth: 2,
-                        borderRadius: 8
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                stepSize: 1
-                            }
-                        }
-                    }
-                }
             });
+    }
+
+    // Initial fetch
+    fetchNutritionData();
+
+    // Listen for nutrition updates from other pages
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'nutritionUpdated' && e.newValue === 'true') {
+            console.log('Nutrition data updated, refreshing...');
+            fetchNutritionData();
+            // Clear the flag
+            localStorage.removeItem('nutritionUpdated');
+        }
+    });
+
+    // Also listen for same-page updates (if nutrition page is in iframe or same window)
+    document.addEventListener('nutritionUpdated', function() {
+        console.log('Nutrition updated event received');
+        fetchNutritionData();
+    });
+
+    function renderDashboardCalendar() {
+        try {
+            const year = dashboardCalendarDate.getFullYear();
+            const month = dashboardCalendarDate.getMonth();
+
+            // Update title
+            document.getElementById('dashboard-calendar-title').textContent =
+                dashboardCalendarDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            const grid = document.getElementById('dashboard-calendar-grid');
+            grid.innerHTML = '';
+
+            // Add day headers
+            const dayHeaders = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+            dayHeaders.forEach(day => {
+                const header = document.createElement('div');
+                header.style.cssText = 'text-align: center; font-weight: bold; padding: 4px; font-size: 0.7rem; display: flex; align-items: center; justify-content: center;';
+                header.textContent = day;
+                grid.appendChild(header);
+            });
+
+            // Empty cells for days before month starts
+            for (let i = 0; i < firstDay; i++) {
+                const cell = document.createElement('div');
+                grid.appendChild(cell);
+            }
+
+            // Days of the month
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const cell = document.createElement('div');
+                cell.style.cssText = 'border: 1px solid rgba(255,255,255,0.2); padding: 2px; text-align: center; font-size: 0.7rem; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center;';
+
+                // Check if there are workouts on this day
+                if (workoutCalendarData[dateStr]) {
+                    cell.style.backgroundColor = 'rgba(25, 135, 84, 0.3)';
+                    cell.style.borderColor = 'rgba(25, 135, 84, 0.8)';
+                    cell.title = `${workoutCalendarData[dateStr].length} workout(s)`;
+                }
+
+                cell.textContent = day;
+
+                // Click to go to calendar page
+                cell.onclick = () => window.location.href = '/calendar';
+
+                grid.appendChild(cell);
+            }
+
             chartsInitialized = true;
         } catch (error) {
-            console.error('Error creating workout chart:', error);
+            console.error('Error rendering dashboard calendar:', error);
         }
+    }
+
+    function changeDashboardMonth(delta) {
+        dashboardCalendarDate.setMonth(dashboardCalendarDate.getMonth() + delta);
+        renderDashboardCalendar();
     }
 
     function createNutritionChart(data) {
@@ -411,7 +573,6 @@
 
             if (meals.length === 0) {
                 foodsList.innerHTML = '<p class="text-muted text-center small">No foods logged yet</p>';
-                chartsInitialized = true;
                 return;
             }
 
@@ -424,10 +585,10 @@
             listHtml += '</div>';
 
             foodsList.innerHTML = listHtml;
-            chartsInitialized = true;
         } catch (error) {
             console.error('Error creating nutrition display:', error);
         }
     }
+
 </script>
 {% endblock %}

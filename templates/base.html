@@ -80,6 +80,84 @@
         .theme-toggle:hover {
             transform: rotate(20deg);
         }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            z-index: 9999;
+        }
+
+        .custom-toast {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            min-width: 300px;
+            margin-bottom: 10px;
+        }
+
+        body.dark-mode .custom-toast {
+            background: rgba(45, 45, 45, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+        }
+
+        .custom-toast.toast-success {
+            border-left: 4px solid #198754;
+        }
+
+        .custom-toast.toast-error {
+            border-left: 4px solid #dc3545;
+        }
+
+        .custom-toast.toast-warning {
+            border-left: 4px solid #ffc107;
+        }
+
+        .custom-toast.toast-info {
+            border-left: 4px solid #0d6efd;
+        }
+
+        .toast-icon {
+            font-size: 1.5rem;
+            margin-right: 10px;
+        }
+
+        .toast-success .toast-icon {
+            color: #198754;
+        }
+
+        .toast-error .toast-icon {
+            color: #dc3545;
+        }
+
+        .toast-warning .toast-icon {
+            color: #ffc107;
+        }
+
+        .toast-info .toast-icon {
+            color: #0d6efd;
+        }
+
+        .custom-toast .toast-body {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+        }
+
+        body.dark-mode .toast-header {
+            background-color: rgba(60, 60, 60, 0.5);
+            color: #ffffff;
+            border-bottom-color: #404040;
+        }
+
+        body.dark-mode .btn-close {
+            filter: invert(1);
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -94,7 +172,7 @@
                     <i class="bi bi-box-arrow-right"></i>
                 </a>
                 {% endif %}
-                <button class="theme-toggle" onclick="alert('Settings coming soon!')" title="Settings">
+                <button class="theme-toggle" onclick="showInfo('Settings coming soon!')" title="Settings">
                     <i class="bi bi-gear"></i>
                 </button>
                 <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">
@@ -103,6 +181,9 @@
             </div>
         </div>
     </nav>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
 
     <div class="container mt-3">
         {% block content %}{% endblock %}
@@ -173,6 +254,70 @@
                 themeIcon.className = 'bi bi-sun-fill';
             }
         });
+
+        // Toast Notification System
+        function showToast(message, type = 'info', duration = 3000) {
+            const container = document.getElementById('toast-container');
+
+            // Create toast element
+            const toastId = 'toast-' + Date.now();
+            const toastEl = document.createElement('div');
+            toastEl.id = toastId;
+            toastEl.className = `toast custom-toast toast-${type}`;
+            toastEl.setAttribute('role', 'alert');
+            toastEl.setAttribute('aria-live', 'assertive');
+            toastEl.setAttribute('aria-atomic', 'true');
+
+            // Icon mapping
+            const icons = {
+                success: 'bi-check-circle-fill',
+                error: 'bi-x-circle-fill',
+                warning: 'bi-exclamation-triangle-fill',
+                info: 'bi-info-circle-fill'
+            };
+
+            const icon = icons[type] || icons.info;
+
+            toastEl.innerHTML = `
+                <div class="toast-body">
+                    <i class="bi ${icon} toast-icon"></i>
+                    <span class="flex-grow-1">${message}</span>
+                    <button type="button" class="btn-close ms-2" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            `;
+
+            container.appendChild(toastEl);
+
+            // Initialize and show toast
+            const toast = new bootstrap.Toast(toastEl, {
+                autohide: true,
+                delay: duration
+            });
+
+            toast.show();
+
+            // Remove from DOM after hidden
+            toastEl.addEventListener('hidden.bs.toast', function() {
+                toastEl.remove();
+            });
+        }
+
+        // Convenience functions
+        function showSuccess(message, duration) {
+            showToast(message, 'success', duration);
+        }
+
+        function showError(message, duration) {
+            showToast(message, 'error', duration);
+        }
+
+        function showWarning(message, duration) {
+            showToast(message, 'warning', duration);
+        }
+
+        function showInfo(message, duration) {
+            showToast(message, 'info', duration);
+        }
     </script>
 
     {% block extra_js %}{% endblock %}

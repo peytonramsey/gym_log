@@ -71,15 +71,18 @@ class Exercise(db.Model):
     reps = db.Column(db.Integer, nullable=False)
     weight = db.Column(db.Float, nullable=False)
     rest_time = db.Column(db.Integer, nullable=True)  # rest time in seconds
+    set_data = db.Column(db.Text, nullable=True)  # JSON array of individual sets: [{"set_number": 1, "reps": 10, "weight": 135}, ...]
 
     def to_dict(self):
+        import json
         return {
             'id': self.id,
             'name': self.name,
             'sets': self.sets,
             'reps': self.reps,
             'weight': self.weight,
-            'rest_time': self.rest_time
+            'rest_time': self.rest_time,
+            'set_data': json.loads(self.set_data) if self.set_data else None
         }
 
 class Meal(db.Model):
@@ -163,6 +166,27 @@ class NutritionGoals(db.Model):
             'carbs_goal': self.carbs_goal,
             'fats_goal': self.fats_goal,
             'is_active': self.is_active
+        }
+
+class Supplement(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    name = db.Column(db.String(100), nullable=False)
+    dosage = db.Column(db.String(50))  # e.g., "1000mg", "2 capsules"
+    time_of_day = db.Column(db.String(20))  # Morning, Afternoon, Evening, Night
+    notes = db.Column(db.String(200))
+
+    user = db.relationship('User', backref='supplements')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'date': self.date.strftime('%Y-%m-%d %H:%M'),
+            'name': self.name,
+            'dosage': self.dosage,
+            'time_of_day': self.time_of_day,
+            'notes': self.notes
         }
 
 class WorkoutTemplate(db.Model):

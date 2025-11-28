@@ -2,6 +2,46 @@
 
 {% block title %}History - GymLog{% endblock %}
 
+{% block extra_css %}
+<style>
+    body.dark-mode .card {
+        background: rgba(45, 45, 45, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #ffffff;
+    }
+
+    body.dark-mode .card-header {
+        background: rgba(60, 60, 60, 0.4);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        color: #ffffff;
+    }
+
+    body.dark-mode .card-body {
+        color: #ffffff;
+    }
+
+    body.dark-mode .text-muted {
+        color: #aaa !important;
+    }
+
+    body.dark-mode h3,
+    body.dark-mode h4,
+    body.dark-mode h5,
+    body.dark-mode h6,
+    body.dark-mode strong {
+        color: #ffffff !important;
+    }
+
+    body.dark-mode small {
+        color: #ccc !important;
+    }
+
+    body.dark-mode .badge {
+        color: #ffffff;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <h3>Workout History</h3>
 
@@ -36,18 +76,31 @@
                         </div>
                         <div class="card-body">
                             ${workout.notes ? `<p class="text-muted mb-2"><em>${workout.notes}</em></p>` : ''}
-                            ${workout.exercises.map(ex => `
-                                <div class="mb-2 pb-2 border-bottom">
-                                    <div class="d-flex justify-content-between">
-                                        <strong>${ex.name}</strong>
-                                        <span class="badge bg-primary">${ex.weight} lbs</span>
-                                    </div>
-                                    <small class="text-muted">
+                            ${workout.exercises.map(ex => {
+                                // Display individual sets if available, otherwise show summary
+                                const setsDisplay = ex.set_data && ex.set_data.length > 0
+                                    ? ex.set_data.map((set, idx) => `
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <small class="text-muted">Set ${idx + 1}</small>
+                                            <span><small>${set.reps} reps × ${set.weight} lbs</small></span>
+                                        </div>
+                                    `).join('')
+                                    : `<small class="text-muted">
                                         ${ex.sets} sets × ${ex.reps} reps
                                         ${ex.rest_time ? `• ${ex.rest_time}s rest` : ''}
-                                    </small>
-                                </div>
-                            `).join('')}
+                                    </small>`;
+
+                                return `
+                                    <div class="mb-2 pb-2 border-bottom">
+                                        <div class="d-flex justify-content-between">
+                                            <strong>${ex.name}</strong>
+                                            <span class="badge bg-primary">${ex.weight} lbs avg</span>
+                                        </div>
+                                        ${setsDisplay}
+                                        ${ex.rest_time && ex.set_data ? `<small class="text-muted mt-1 d-block">Rest: ${ex.rest_time}s</small>` : ''}
+                                    </div>
+                                `;
+                            }).join('')}
                         </div>
                     </div>
                 `).join('');

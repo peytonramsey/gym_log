@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from models import db, User, Workout, Exercise, BodyMetrics, Meal, FoodItem, NutritionGoals, WorkoutTemplate, TemplateExercise, WeightPrediction
+from models import db, User, Workout, Exercise, BodyMetrics, Meal, FoodItem, NutritionGoals, Supplement, WorkoutTemplate, TemplateExercise, WeightPrediction
 from datetime import datetime, timedelta
 from sqlalchemy import func
 import requests
@@ -141,13 +141,15 @@ def log_workout():
         db.session.flush()
 
         for ex in data.get('exercises', []):
+            import json
             exercise = Exercise(
                 workout_id=workout.id,
                 name=ex['name'],
                 sets=int(ex['sets']),
                 reps=int(ex['reps']),
                 weight=float(ex['weight']),
-                rest_time=int(ex.get('rest_time', 0))
+                rest_time=int(ex.get('rest_time', 0)),
+                set_data=json.dumps(ex.get('set_data')) if ex.get('set_data') else None
             )
             db.session.add(exercise)
 
@@ -263,8 +265,9 @@ def calendar_data():
 @login_required
 def search_food(food_name):
     """Search for food nutrition data using USDA API"""
-    # USDA FoodData Central API (no key needed for basic search)
-    url = f'https://api.nal.usda.gov/fdc/v1/foods/search?query={food_name}&pageSize=5&api_key=DEMO_KEY'
+    # USDA FoodData Central API - reads key from environment or uses DEMO_KEY
+    api_key = os.getenv('USDA_API_KEY', 'DEMO_KEY')
+    url = f'https://api.nal.usda.gov/fdc/v1/foods/search?query={food_name}&pageSize=5&api_key={api_key}'
 
     try:
         response = requests.get(url, timeout=5)
@@ -536,6 +539,47 @@ def get_daily_nutrition_with_goals(date):
 
     return jsonify(daily_totals)
 
+# ===== SUPPLEMENTS =====
+
+# Get supplements for a specific date
+@app.route('/api/supplements/daily/<date>')
+@login_required
+def get_daily_supplements(date):
+    target_date = datetime.fromisoformat(date)
+    supplements = Supplement.query.filter(
+        Supplement.user_id == current_user.id,
+        func.date(Supplement.date) == target_date.date()
+    ).all()
+    return jsonify([s.to_dict() for s in supplements])
+
+# Log a supplement
+@app.route('/api/supplements', methods=['POST'])
+@login_required
+def log_supplement():
+    data = request.get_json()
+
+    supplement = Supplement(
+        user_id=current_user.id,
+        date=datetime.fromisoformat(data.get('date', datetime.now().isoformat())),
+        name=data['name'],
+        dosage=data.get('dosage', ''),
+        time_of_day=data.get('time_of_day', ''),
+        notes=data.get('notes', '')
+    )
+    db.session.add(supplement)
+    db.session.commit()
+
+    return jsonify({'success': True, 'supplement_id': supplement.id, 'supplement': supplement.to_dict()})
+
+# Delete a supplement
+@app.route('/api/supplements/<int:supplement_id>', methods=['DELETE'])
+@login_required
+def delete_supplement(supplement_id):
+    supplement = Supplement.query.filter_by(id=supplement_id, user_id=current_user.id).first_or_404()
+    db.session.delete(supplement)
+    db.session.commit()
+    return jsonify({'success': True})
+
 # ===== WORKOUT TEMPLATES / MY SCHEDULE =====
 
 # Get all workout templates
@@ -654,6 +698,84 @@ def get_todays_workout():
 @login_required
 def schedule():
     return render_template('schedule.html')
+
+# Consistency tracking endpoint
+@app.route('/api/consistency')
+@login_required
+def get_consistency():
+    """
+    Calculate workout consistency based on scheduled workouts vs actual workouts
+    Query params: days (default 30) - number of days to look back
+    """
+    from datetime import datetime, timedelta
+
+    # Get number of days to look back (default 30)
+    days = int(request.args.get('days', 30))
+
+    # Get all scheduled templates
+    scheduled_templates = WorkoutTemplate.query.filter_by(
+        user_id=current_user.id
+    ).filter(WorkoutTemplate.day_of_week.isnot(None)).all()
+
+    # If no scheduled workouts, return 0%
+    if not scheduled_templates:
+        return jsonify({
+            'adherence_percentage': 0,
+            'scheduled_days': 0,
+            'completed_days': 0,
+            'total_workouts': 0,
+            'message': 'No workouts scheduled'
+        })
+
+    # Build a set of scheduled day_of_week values
+    scheduled_days_of_week = set(t.day_of_week for t in scheduled_templates)
+
+    # Get all workouts in the date range
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=days)
+
+    workouts = Workout.query.filter(
+        Workout.user_id == current_user.id,
+        Workout.date >= start_date,
+        Workout.date <= end_date
+    ).all()
+
+    # Group workouts by date (date only, not time)
+    workout_dates = set()
+    for w in workouts:
+        workout_dates.add(w.date.date())
+
+    # Count scheduled days and completed days
+    scheduled_count = 0
+    completed_count = 0
+
+    # Iterate through each day in the range
+    current_date = start_date.date()
+    end = end_date.date()
+
+    while current_date <= end:
+        # Check if this day of week is scheduled
+        day_of_week = current_date.weekday()  # 0=Monday, 6=Sunday
+
+        if day_of_week in scheduled_days_of_week:
+            scheduled_count += 1
+
+            # Check if there was a workout on this date
+            if current_date in workout_dates:
+                completed_count += 1
+
+        current_date += timedelta(days=1)
+
+    # Calculate adherence percentage
+    adherence_percentage = (completed_count / scheduled_count * 100) if scheduled_count > 0 else 0
+
+    return jsonify({
+        'adherence_percentage': round(adherence_percentage, 1),
+        'scheduled_days': scheduled_count,
+        'completed_days': completed_count,
+        'total_workouts': len(workouts),
+        'period_days': days
+    })
 
 # ===== ML PREDICTION ENDPOINTS =====
 

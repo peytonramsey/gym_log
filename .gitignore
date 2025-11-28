@@ -53,3 +53,6 @@ Thumbs.db
 
 # Temp files
 nul
+
+# Claude Code local settings
+.claude/settings.local.json

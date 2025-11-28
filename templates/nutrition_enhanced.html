@@ -30,7 +30,7 @@
 {% block content %}
 <div class="row mb-3">
     <div class="col-12 d-flex justify-content-between align-items-center">
-        <h4>Nutrition Tracker 🍽️</h4>
+        <h4>Nutrition Tracker </h4>
         <button class="btn btn-sm btn-outline-primary" onclick="showGoalsModal()">
             <i class="bi bi-gear"></i> Set Goals
         </button>
@@ -257,7 +257,7 @@ function saveGoals() {
     .then(response => response.json())
     .then(result => {
         if (result.success) {
-            alert('Goals saved successfully!');
+            showSuccess('Goals saved successfully!');
             bootstrap.Modal.getInstance(document.getElementById('goalsModal')).hide();
             loadDailyData();
         }
@@ -299,7 +299,7 @@ function loadDailyData() {
 function searchFood() {
     const query = document.getElementById('food-search').value.trim();
     if (!query) {
-        alert('Please enter a food name');
+        showWarning('Please enter a food name');
         return;
     }
 
@@ -421,7 +421,7 @@ document.getElementById('meal-form').addEventListener('submit', function(e) {
     e.preventDefault();
 
     if (selectedFoods.length === 0) {
-        alert('Please add at least one food item');
+        showWarning('Please add at least one food item');
         return;
     }
 
@@ -440,7 +440,7 @@ document.getElementById('meal-form').addEventListener('submit', function(e) {
     .then(response => response.json())
     .then(result => {
         if (result.success) {
-            alert('Meal logged successfully!');
+            showSuccess('Meal logged successfully!');
             selectedFoods = [];
             updateSelectedFoods();
             document.getElementById('meal-notes').value = '';
