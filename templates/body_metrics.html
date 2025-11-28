@@ -265,6 +265,10 @@
             <div class="alert alert-info mt-3" role="alert">
                 <i class="bi bi-info-circle"></i> <strong>Note:</strong> These estimates are based on scientific formulas and averages. Individual results may vary based on genetics, adherence, sleep, stress, and other factors. Adjust based on your weekly progress.
             </div>
+
+            <button class="btn btn-success w-100 mt-3" onclick="saveToNutritionGoals()">
+                <i class="bi bi-check-circle"></i> Save to Nutrition Goals
+            </button>
         </div>
     </div>
 </div>
@@ -292,6 +296,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
     let weightTrendChart;
+    let calculatedNutritionGoals = null; // Store calculated goals
 
     document.getElementById('metric-date').value = new Date().toISOString().split('T')[0];
 
@@ -303,7 +308,7 @@
         };
 
         if (!data.weight && !data.height) {
-            alert('Please enter at least one metric');
+            showWarning('Please enter at least one metric');
             return;
         }
 
@@ -315,7 +320,7 @@
         .then(response => response.json())
         .then(result => {
             if (result.success) {
-                alert('Metrics saved successfully!');
+                showSuccess('Metrics saved successfully!');
                 document.getElementById('weight').value = '';
                 document.getElementById('height').value = '';
                 loadMetrics();
@@ -405,7 +410,7 @@
 
         // Validation
         if (!weight || !height || !age || !weeks) {
-            alert('Please fill in all required fields');
+            showWarning('Please fill in all required fields');
             return;
         }
 
@@ -541,11 +546,45 @@
         document.getElementById('result-target-weight').textContent = `${targetWeight} lbs`;
         document.getElementById('result-timeframe').textContent = weeks;
 
+        // Store calculated goals for saving to nutrition
+        calculatedNutritionGoals = {
+            calories_goal: calorieTarget,
+            protein_goal: proteinGrams,
+            carbs_goal: carbGrams,
+            fats_goal: fatGrams
+        };
+
         // Show results
         document.getElementById('prediction-results').style.display = 'block';
 
         // Scroll to results
         document.getElementById('prediction-results').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // Save calculated nutrition goals to the nutrition page
+    function saveToNutritionGoals() {
+        if (!calculatedNutritionGoals) {
+            showWarning('Please calculate a prediction first');
+            return;
+        }
+
+        fetch('/api/nutrition/goals', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(calculatedNutritionGoals)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                showSuccess('Nutrition goals saved successfully! Your nutrition page has been updated.');
+            } else {
+                showError('Failed to save nutrition goals');
+            }
+        })
+        .catch(error => {
+            console.error('Error saving nutrition goals:', error);
+            showError('Error saving nutrition goals');
+        });
     }
 </script>
 {% endblock %}

@@ -4,15 +4,6 @@
 
 {% block extra_css %}
 <style>
-    .ai-badge {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        font-size: 0.7rem;
-        padding: 2px 8px;
-        border-radius: 10px;
-        margin-left: 5px;
-    }
-
     .prediction-pill {
         background: rgba(102, 126, 234, 0.1);
         border: 1px solid rgba(102, 126, 234, 0.3);
@@ -95,6 +86,31 @@
 
     body.dark-mode .btn-close {
         filter: invert(1);
+    }
+
+    body.dark-mode input::placeholder {
+        color: #888 !important;
+    }
+
+    body.dark-mode .text-muted {
+        color: #aaa !important;
+    }
+
+    body.dark-mode h3,
+    body.dark-mode h4,
+    body.dark-mode h5,
+    body.dark-mode h6 {
+        color: #ffffff !important;
+    }
+
+    body.dark-mode small {
+        color: #ccc !important;
+    }
+
+    body.dark-mode .form-control-sm {
+        background-color: #1a1a1a;
+        color: #ffffff;
+        border-color: #404040;
     }
 </style>
 {% endblock %}
@@ -211,13 +227,13 @@
     function loadTemplate() {
         const templateId = document.getElementById('template-select').value;
         if (!templateId) {
-            alert('Please select a template');
+            showWarning('Please select a template');
             return;
         }
 
         const template = templates.find(t => t.id == templateId);
         if (!template) {
-            alert('Template not found');
+            showError('Template not found');
             return;
         }
 
@@ -235,7 +251,7 @@
             addExercise(ex);
         });
 
-        alert(`Loaded template: ${template.name}`);
+        showSuccess(`Loaded template: ${template.name}`);
     }
 
     function addExercise(exerciseData = null) {
@@ -249,29 +265,33 @@
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <h6 class="mb-0">
                         Exercise ${exerciseCount}
-                        <span class="ai-badge">AI</span>
                     </h6>
                     <button class="btn btn-danger btn-sm" onclick="removeExercise(${exerciseCount})">
                         <i class="bi bi-trash"></i>
                     </button>
                 </div>
-                <div class="mb-2">
+                <div class="mb-3">
                     <input type="text" class="form-control" placeholder="Exercise name" id="name-${exerciseCount}" value="${exerciseData ? exerciseData.name : ''}" onchange="clearPrediction(${exerciseCount})">
                 </div>
-                <div class="row g-2 mb-2">
-                    <div class="col-3">
-                        <input type="number" class="form-control" placeholder="Sets" id="sets-${exerciseCount}" value="${exerciseData ? exerciseData.sets : ''}" onchange="clearPrediction(${exerciseCount})">
+
+                <!-- Sets Container -->
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <small class="text-muted"><strong>Sets</strong></small>
+                        <button class="btn btn-success btn-sm" onclick="addSet(${exerciseCount})">
+                            <i class="bi bi-plus"></i> Add Set
+                        </button>
                     </div>
-                    <div class="col-3">
-                        <input type="number" class="form-control" placeholder="Reps" id="reps-${exerciseCount}" value="${exerciseData ? exerciseData.reps : ''}" onchange="clearPrediction(${exerciseCount})">
-                    </div>
-                    <div class="col-3">
-                        <input type="number" step="0.5" class="form-control" placeholder="Weight" id="weight-${exerciseCount}" value="${exerciseData ? exerciseData.weight : ''}">
-                    </div>
-                    <div class="col-3">
-                        <input type="number" class="form-control" placeholder="Rest (s)" id="rest-${exerciseCount}" value="${exerciseData && exerciseData.rest_time ? exerciseData.rest_time : ''}">
+                    <div id="sets-container-${exerciseCount}" class="mb-2">
+                        <!-- Sets will be added here -->
                     </div>
                 </div>
+
+                <div class="mb-2">
+                    <label class="form-label small">Rest Time (seconds)</label>
+                    <input type="number" class="form-control" placeholder="Rest (s)" id="rest-${exerciseCount}" value="${exerciseData && exerciseData.rest_time ? exerciseData.rest_time : '60'}">
+                </div>
+
                 <div class="row g-2">
                     <div class="col-6">
                         <button class="btn ml-button btn-sm w-100" onclick="getMLPrediction(${exerciseCount})" id="ml-btn-${exerciseCount}">
@@ -301,10 +321,72 @@
             </div>
         `;
         container.appendChild(exerciseDiv);
+
+        // Add initial set or load from template
+        if (exerciseData && exerciseData.set_data) {
+            // Load sets from existing data
+            exerciseData.set_data.forEach(set => {
+                addSet(exerciseCount, set.reps, set.weight);
+            });
+        } else if (exerciseData) {
+            // Convert old format (single sets/reps/weight) to new format
+            for (let i = 0; i < (exerciseData.sets || 1); i++) {
+                addSet(exerciseCount, exerciseData.reps, exerciseData.weight);
+            }
+        } else {
+            // Add one empty set by default
+            addSet(exerciseCount);
+        }
     }
 
     function removeExercise(id) {
         document.getElementById(`exercise-${id}`).remove();
+    }
+
+    let setCounters = {}; // Track set numbers per exercise
+
+    function addSet(exerciseId, reps = '', weight = '') {
+        if (!setCounters[exerciseId]) {
+            setCounters[exerciseId] = 0;
+        }
+        setCounters[exerciseId]++;
+
+        const setNumber = setCounters[exerciseId];
+        const container = document.getElementById(`sets-container-${exerciseId}`);
+
+        const setDiv = document.createElement('div');
+        setDiv.className = 'row g-2 mb-2 align-items-center';
+        setDiv.id = `exercise-${exerciseId}-set-${setNumber}`;
+        setDiv.innerHTML = `
+            <div class="col-2">
+                <strong class="text-muted">Set ${setNumber}</strong>
+            </div>
+            <div class="col-4">
+                <input type="number" class="form-control form-control-sm" placeholder="Reps"
+                       id="exercise-${exerciseId}-set-${setNumber}-reps" value="${reps}">
+            </div>
+            <div class="col-4">
+                <input type="number" step="0.5" class="form-control form-control-sm" placeholder="Weight (lbs)"
+                       id="exercise-${exerciseId}-set-${setNumber}-weight" value="${weight}">
+            </div>
+            <div class="col-2">
+                <button class="btn btn-danger btn-sm" onclick="removeSet(${exerciseId}, ${setNumber})">
+                    <i class="bi bi-x"></i>
+                </button>
+            </div>
+        `;
+        container.appendChild(setDiv);
+
+        // Clear prediction when sets change
+        clearPrediction(exerciseId);
+    }
+
+    function removeSet(exerciseId, setNumber) {
+        const setDiv = document.getElementById(`exercise-${exerciseId}-set-${setNumber}`);
+        if (setDiv) {
+            setDiv.remove();
+            clearPrediction(exerciseId);
+        }
     }
 
     function openTimer(exerciseId) {
@@ -333,7 +415,7 @@
                     document.getElementById('start-btn').disabled = false;
                     document.getElementById('pause-btn').disabled = true;
                     // Play a sound or show notification
-                    alert('Rest time is up!');
+                    showSuccess('Rest time is up!', 5000);
                 }
             }, 1000);
         }
@@ -367,25 +449,30 @@
     // ML Prediction Functions
     function getMLPrediction(exerciseId) {
         const exerciseName = document.getElementById(`name-${exerciseId}`).value;
-        const sets = document.getElementById(`sets-${exerciseId}`).value;
-        const reps = document.getElementById(`reps-${exerciseId}`).value;
 
         // Validation
         if (!exerciseName) {
-            alert('Please enter an exercise name first');
+            showWarning('Please enter an exercise name first');
             return;
         }
-        if (!sets || !reps) {
-            alert('Please enter sets and reps to get a weight suggestion');
+
+        // Get all sets for this exercise
+        const sets = getSetsForExercise(exerciseId);
+        if (sets.length === 0) {
+            showWarning('Please add at least one set first');
             return;
         }
+
+        // Calculate average reps for prediction
+        const avgReps = Math.round(sets.reduce((sum, set) => sum + set.reps, 0) / sets.length);
+        const numSets = sets.length;
 
         const button = document.getElementById(`ml-btn-${exerciseId}`);
         button.disabled = true;
         button.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Loading...';
 
         // Fetch prediction from backend
-        fetch(`/api/ml/predict/weight/${encodeURIComponent(exerciseName)}?sets=${sets}&reps=${reps}`)
+        fetch(`/api/ml/predict/weight/${encodeURIComponent(exerciseName)}?sets=${numSets}&reps=${avgReps}`)
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
@@ -411,12 +498,12 @@
                         predictionDiv.appendChild(trainingMsg);
                     }
                 } else {
-                    alert('Could not get prediction. Try logging more workouts first!');
+                    showWarning('Could not get prediction. Try logging more workouts first!');
                 }
             })
             .catch(error => {
                 console.error('Error fetching prediction:', error);
-                alert('Error getting AI suggestion. Please try again.');
+                showError('Error getting AI suggestion. Please try again.');
             })
             .finally(() => {
                 button.disabled = false;
@@ -429,8 +516,13 @@
         const predictedWeight = predictionDiv.dataset.predictedWeight;
 
         if (predictedWeight) {
-            document.getElementById(`weight-${exerciseId}`).value = predictedWeight;
-            alert('Weight updated to AI suggestion!');
+            // Apply to all sets for this exercise
+            const container = document.getElementById(`sets-container-${exerciseId}`);
+            const weightInputs = container.querySelectorAll('input[id*="weight"]');
+            weightInputs.forEach(input => {
+                input.value = predictedWeight;
+            });
+            showSuccess('Weight updated to AI suggestion for all sets!');
         }
     }
 
@@ -441,6 +533,31 @@
         }
     }
 
+    function getSetsForExercise(exerciseId) {
+        const container = document.getElementById(`sets-container-${exerciseId}`);
+        if (!container) return [];
+
+        const sets = [];
+        const setDivs = container.querySelectorAll('[id^="exercise-' + exerciseId + '-set-"]');
+
+        setDivs.forEach(setDiv => {
+            const setId = setDiv.id;
+            const repsInput = document.getElementById(`${setId}-reps`);
+            const weightInput = document.getElementById(`${setId}-weight`);
+
+            if (repsInput && weightInput) {
+                const reps = parseInt(repsInput.value);
+                const weight = parseFloat(weightInput.value);
+
+                if (reps && weight) {
+                    sets.push({ reps, weight });
+                }
+            }
+        });
+
+        return sets;
+    }
+
     function saveWorkout() {
         const exercises = [];
         for (let i = 1; i <= exerciseCount; i++) {
@@ -448,18 +565,28 @@
             if (!nameEl) continue;
 
             const name = nameEl.value;
-            const sets = document.getElementById(`sets-${i}`).value;
-            const reps = document.getElementById(`reps-${i}`).value;
-            const weight = document.getElementById(`weight-${i}`).value;
             const rest = document.getElementById(`rest-${i}`).value || 0;
+            const sets = getSetsForExercise(i);
 
-            if (name && sets && reps && weight) {
-                exercises.push({ name, sets, reps, weight, rest_time: rest });
+            if (name && sets.length > 0) {
+                // Calculate totals for backward compatibility
+                const totalSets = sets.length;
+                const avgReps = Math.round(sets.reduce((sum, s) => sum + s.reps, 0) / sets.length);
+                const avgWeight = Math.round(sets.reduce((sum, s) => sum + s.weight, 0) / sets.length * 10) / 10;
+
+                exercises.push({
+                    name,
+                    sets: totalSets,
+                    reps: avgReps,
+                    weight: avgWeight,
+                    rest_time: rest,
+                    set_data: sets
+                });
             }
         }
 
         if (exercises.length === 0) {
-            alert('Please add at least one exercise');
+            showWarning('Please add at least one exercise');
             return;
         }
 
@@ -477,12 +604,14 @@
         .then(response => response.json())
         .then(result => {
             if (result.success) {
-                alert('Workout saved successfully!');
-                window.location.href = '/history';
+                showSuccess('Workout saved successfully!');
+                setTimeout(() => {
+                    window.location.href = '/history';
+                }, 1000);
             }
         })
         .catch(error => {
-            alert('Error saving workout: ' + error);
+            showError('Error saving workout: ' + error);
         });
     }
 
