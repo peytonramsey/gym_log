@@ -41,6 +41,20 @@
         background: rgba(220, 53, 69, 0.3);
         color: #ff8787;
     }
+
+    body.dark-mode .form-check-label {
+        color: #e0e0e0;
+    }
+
+    body.dark-mode .form-check-input {
+        background-color: #1a1a1a;
+        border-color: #404040;
+    }
+
+    body.dark-mode .form-check-input:checked {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+    }
 </style>
 {% endblock %}
 
@@ -64,6 +78,13 @@
             <div class="mb-3">
                 <label for="password" class="form-label">Password</label>
                 <input type="password" class="form-control" id="password" name="password" required>
+            </div>
+
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="remember_me" name="remember_me" checked>
+                <label class="form-check-label" for="remember_me">
+                    Remember me for 30 days
+                </label>
             </div>
 
             <button type="submit" class="btn btn-primary w-100 mb-3">Login</button>
