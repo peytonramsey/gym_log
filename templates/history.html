@@ -1,9 +1,305 @@
 {% extends "base.html" %}
 
-{% block title %}History - GymLog{% endblock %}
+{% block title %}History - FitGlyph{% endblock %}
 
 {% block extra_css %}
 <style>
+    /* Calendar Container */
+    .calendar-container {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
+        margin-bottom: 30px;
+    }
+
+    body.dark-mode .calendar-container {
+        background: rgba(45, 45, 45, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+    }
+
+    .calendar {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 8px;
+        margin-top: 15px;
+    }
+
+    .calendar-header {
+        text-align: center;
+        font-weight: 600;
+        padding: 12px;
+        background: rgba(13, 110, 253, 0.1);
+        border-radius: 8px;
+        font-size: 0.85rem;
+        color: #0d6efd;
+    }
+
+    body.dark-mode .calendar-header {
+        background: rgba(74, 158, 255, 0.15);
+        color: #4a9eff;
+    }
+
+    .calendar-day {
+        aspect-ratio: 1;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        padding: 8px;
+        text-align: center;
+        position: relative;
+        cursor: pointer;
+        background: rgba(255, 255, 255, 0.5);
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        font-weight: 500;
+    }
+
+    body.dark-mode .calendar-day {
+        background: rgba(45, 45, 45, 0.4);
+        border-color: rgba(255, 255, 255, 0.1);
+        color: #e0e0e0;
+    }
+
+    .calendar-day.other-month {
+        background: rgba(248, 249, 250, 0.3);
+        color: #adb5bd;
+        cursor: default;
+    }
+
+    body.dark-mode .calendar-day.other-month {
+        background: rgba(30, 30, 30, 0.3);
+        color: #666;
+    }
+
+    .calendar-day.today {
+        border: 2px solid #0d6efd;
+        background: rgba(13, 110, 253, 0.1);
+        font-weight: 700;
+    }
+
+    body.dark-mode .calendar-day.today {
+        border-color: #4a9eff;
+        background: rgba(74, 158, 255, 0.15);
+    }
+
+    .calendar-day.has-workout {
+        background: rgba(25, 135, 84, 0.15);
+        border-color: #198754;
+    }
+
+    body.dark-mode .calendar-day.has-workout {
+        background: rgba(25, 135, 84, 0.25);
+        border-color: #28a745;
+    }
+
+    .calendar-day.has-nutrition {
+        background: rgba(253, 126, 20, 0.15);
+        border-color: #fd7e14;
+    }
+
+    body.dark-mode .calendar-day.has-nutrition {
+        background: rgba(253, 126, 20, 0.25);
+        border-color: #ff922b;
+    }
+
+    .calendar-day.has-both {
+        background: linear-gradient(135deg, rgba(25, 135, 84, 0.2), rgba(253, 126, 20, 0.2));
+        border: 2px solid #0d6efd;
+    }
+
+    body.dark-mode .calendar-day.has-both {
+        background: linear-gradient(135deg, rgba(25, 135, 84, 0.3), rgba(253, 126, 20, 0.3));
+    }
+
+    .calendar-day.has-workout.today,
+    .calendar-day.has-nutrition.today,
+    .calendar-day.has-both.today {
+        border: 2px solid #0d6efd;
+    }
+
+    .calendar-day:not(.other-month):hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        background: rgba(13, 110, 253, 0.08);
+    }
+
+    body.dark-mode .calendar-day:not(.other-month):hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        background: rgba(74, 158, 255, 0.12);
+    }
+
+    .activity-indicators {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        display: flex;
+        gap: 4px;
+    }
+
+    .workout-indicator {
+        background: #198754;
+        color: white;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        font-size: 0.65rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    body.dark-mode .workout-indicator {
+        background: #28a745;
+    }
+
+    .nutrition-indicator {
+        background: #fd7e14;
+        color: white;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        font-size: 0.65rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    body.dark-mode .nutrition-indicator {
+        background: #ff922b;
+    }
+
+    .calendar-nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .calendar-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    body.dark-mode .calendar-title {
+        color: #ffffff;
+    }
+
+    .month-nav-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+    }
+
+    .month-nav-btn:hover {
+        transform: scale(1.1);
+    }
+
+    /* Modal styling */
+    body.dark-mode .modal-content {
+        background-color: #2d2d2d;
+        color: #ffffff;
+    }
+
+    body.dark-mode .modal-header {
+        border-bottom-color: #404040;
+    }
+
+    body.dark-mode .modal-body {
+        color: #e0e0e0;
+    }
+
+    body.dark-mode .btn-close {
+        filter: invert(1);
+    }
+
+    body.dark-mode .text-muted {
+        color: #aaa !important;
+    }
+
+    .activity-card {
+        background: rgba(13, 110, 253, 0.05);
+        border: 1px solid rgba(13, 110, 253, 0.2);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 10px;
+    }
+
+    body.dark-mode .activity-card {
+        background: rgba(74, 158, 255, 0.1);
+        border-color: rgba(74, 158, 255, 0.2);
+    }
+
+    .legend {
+        display: flex;
+        gap: 20px;
+        justify-content: center;
+        margin-top: 20px;
+        font-size: 0.85rem;
+        flex-wrap: wrap;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .legend-box {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        border: 1px solid rgba(0, 0, 0, 0.2);
+    }
+
+    body.dark-mode .legend-box {
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .legend-workout {
+        background: rgba(25, 135, 84, 0.3);
+        border-color: #198754;
+    }
+
+    .legend-nutrition {
+        background: rgba(253, 126, 20, 0.3);
+        border-color: #fd7e14;
+    }
+
+    .legend-both {
+        background: linear-gradient(135deg, rgba(25, 135, 84, 0.3), rgba(253, 126, 20, 0.3));
+        border-color: #0d6efd;
+    }
+
+    .legend-today {
+        background: rgba(13, 110, 253, 0.3);
+        border: 2px solid #0d6efd;
+    }
+
+    body.dark-mode h4,
+    body.dark-mode h5 {
+        color: #ffffff !important;
+    }
+
+    body.dark-mode strong {
+        color: #ffffff;
+    }
+
     body.dark-mode .card {
         background: rgba(45, 45, 45, 0.3);
         border: 1px solid rgba(255, 255, 255, 0.1);
@@ -20,18 +316,6 @@
         color: #ffffff;
     }
 
-    body.dark-mode .text-muted {
-        color: #aaa !important;
-    }
-
-    body.dark-mode h3,
-    body.dark-mode h4,
-    body.dark-mode h5,
-    body.dark-mode h6,
-    body.dark-mode strong {
-        color: #ffffff !important;
-    }
-
     body.dark-mode small {
         color: #ccc !important;
     }
@@ -43,86 +327,288 @@
 {% endblock %}
 
 {% block content %}
-<h3>Workout History</h3>
+<h3>Workout & Nutrition History</h3>
 
-<div id="workouts-container">
-    <p class="text-center text-muted">Loading...</p>
+<!-- Calendar View -->
+<div class="calendar-container">
+    <div class="calendar-nav">
+        <button class="btn btn-outline-primary month-nav-btn" onclick="changeMonth(-1)">
+            <i class="bi bi-chevron-left"></i>
+        </button>
+        <h4 class="calendar-title" id="calendar-title"></h4>
+        <button class="btn btn-outline-primary month-nav-btn" onclick="changeMonth(1)">
+            <i class="bi bi-chevron-right"></i>
+        </button>
+    </div>
+
+    <div class="calendar">
+        <div class="calendar-header">Sun</div>
+        <div class="calendar-header">Mon</div>
+        <div class="calendar-header">Tue</div>
+        <div class="calendar-header">Wed</div>
+        <div class="calendar-header">Thu</div>
+        <div class="calendar-header">Fri</div>
+        <div class="calendar-header">Sat</div>
+    </div>
+
+    <div class="calendar" id="calendar-grid"></div>
+
+    <!-- Legend -->
+    <div class="legend">
+        <div class="legend-item">
+            <div class="legend-box legend-today"></div>
+            <span>Today</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-box legend-workout"></div>
+            <span>Workout</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-box legend-nutrition"></div>
+            <span>Nutrition</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-box legend-both"></div>
+            <span>Both</span>
+        </div>
+    </div>
+</div>
+
+<!-- Activity Details Modal -->
+<div class="modal fade" id="activityModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modal-date"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="modal-body">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    function loadWorkouts() {
-        fetch('/api/workouts')
-            .then(response => response.json())
-            .then(workouts => {
-                const container = document.getElementById('workouts-container');
+    let currentDate = new Date();
+    let workoutData = {};
+    let nutritionData = {};
+    const today = new Date();
 
-                if (workouts.length === 0) {
-                    container.innerHTML = '<p class="text-center text-muted">No workouts logged yet.</p>';
-                    return;
+    function loadCalendarData() {
+        // Fetch both workouts and nutrition data
+        Promise.all([
+            fetch('/api/calendar_data').then(r => r.json()),
+            fetch('/api/nutrition').then(r => r.json())
+        ])
+        .then(([workouts, meals]) => {
+            workoutData = workouts;
+
+            // Group nutrition data by date
+            nutritionData = {};
+            meals.forEach(meal => {
+                const dateStr = new Date(meal.date).toISOString().split('T')[0];
+                if (!nutritionData[dateStr]) {
+                    nutritionData[dateStr] = [];
                 }
-
-                container.innerHTML = workouts.map(workout => `
-                    <div class="card mb-3">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <div>
-                                <strong>${new Date(workout.date).toLocaleDateString()}</strong>
-                                <small class="text-muted ms-2">${new Date(workout.date).toLocaleTimeString()}</small>
-                            </div>
-                            <button class="btn btn-danger btn-sm" onclick="deleteWorkout(${workout.id})">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                        <div class="card-body">
-                            ${workout.notes ? `<p class="text-muted mb-2"><em>${workout.notes}</em></p>` : ''}
-                            ${workout.exercises.map(ex => {
-                                // Display individual sets if available, otherwise show summary
-                                const setsDisplay = ex.set_data && ex.set_data.length > 0
-                                    ? ex.set_data.map((set, idx) => `
-                                        <div class="d-flex justify-content-between align-items-center mb-1">
-                                            <small class="text-muted">Set ${idx + 1}</small>
-                                            <span><small>${set.reps} reps × ${set.weight} lbs</small></span>
-                                        </div>
-                                    `).join('')
-                                    : `<small class="text-muted">
-                                        ${ex.sets} sets × ${ex.reps} reps
-                                        ${ex.rest_time ? `• ${ex.rest_time}s rest` : ''}
-                                    </small>`;
-
-                                return `
-                                    <div class="mb-2 pb-2 border-bottom">
-                                        <div class="d-flex justify-content-between">
-                                            <strong>${ex.name}</strong>
-                                            <span class="badge bg-primary">${ex.weight} lbs avg</span>
-                                        </div>
-                                        ${setsDisplay}
-                                        ${ex.rest_time && ex.set_data ? `<small class="text-muted mt-1 d-block">Rest: ${ex.rest_time}s</small>` : ''}
-                                    </div>
-                                `;
-                            }).join('')}
-                        </div>
-                    </div>
-                `).join('');
+                nutritionData[dateStr].push(meal);
             });
-    }
 
-    function deleteWorkout(id) {
-        if (!confirm('Are you sure you want to delete this workout?')) {
-            return;
-        }
-
-        fetch(`/api/workouts/${id}`, {
-            method: 'DELETE'
+            renderCalendar();
         })
-        .then(response => response.json())
-        .then(result => {
-            if (result.success) {
-                loadWorkouts();
-            }
+        .catch(error => {
+            console.error('Error loading calendar data:', error);
+            showError('Failed to load calendar data');
         });
     }
 
-    loadWorkouts();
+    function renderCalendar() {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+
+        document.getElementById('calendar-title').textContent =
+            currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+        const grid = document.getElementById('calendar-grid');
+        grid.innerHTML = '';
+
+        // Previous month days
+        for (let i = firstDay - 1; i >= 0; i--) {
+            const day = daysInPrevMonth - i;
+            const cell = createDayCell(day, true, null);
+            grid.appendChild(cell);
+        }
+
+        // Current month days
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const isToday = (year === today.getFullYear() && month === today.getMonth() && day === today.getDate());
+            const cell = createDayCell(day, false, dateStr, isToday);
+            grid.appendChild(cell);
+        }
+
+        // Next month days
+        const totalCells = firstDay + daysInMonth;
+        const remainingCells = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+        for (let day = 1; day <= remainingCells; day++) {
+            const cell = createDayCell(day, true, null);
+            grid.appendChild(cell);
+        }
+    }
+
+    function createDayCell(day, isOtherMonth, dateStr = null, isToday = false) {
+        const cell = document.createElement('div');
+        cell.className = 'calendar-day';
+
+        if (isOtherMonth) {
+            cell.classList.add('other-month');
+        }
+
+        if (isToday) {
+            cell.classList.add('today');
+        }
+
+        const dayNumber = document.createElement('div');
+        dayNumber.textContent = day;
+        cell.appendChild(dayNumber);
+
+        if (dateStr) {
+            const hasWorkout = workoutData[dateStr] && workoutData[dateStr].length > 0;
+            const hasNutrition = nutritionData[dateStr] && nutritionData[dateStr].length > 0;
+
+            if (hasWorkout && hasNutrition) {
+                cell.classList.add('has-both');
+            } else if (hasWorkout) {
+                cell.classList.add('has-workout');
+            } else if (hasNutrition) {
+                cell.classList.add('has-nutrition');
+            }
+
+            // Add activity indicators
+            if (hasWorkout || hasNutrition) {
+                const indicators = document.createElement('div');
+                indicators.className = 'activity-indicators';
+
+                if (hasWorkout) {
+                    const workoutIndicator = document.createElement('div');
+                    workoutIndicator.className = 'workout-indicator';
+                    workoutIndicator.textContent = workoutData[dateStr].length;
+                    workoutIndicator.title = `${workoutData[dateStr].length} workout(s)`;
+                    indicators.appendChild(workoutIndicator);
+                }
+
+                if (hasNutrition) {
+                    const nutritionIndicator = document.createElement('div');
+                    nutritionIndicator.className = 'nutrition-indicator';
+                    nutritionIndicator.textContent = nutritionData[dateStr].length;
+                    nutritionIndicator.title = `${nutritionData[dateStr].length} meal(s)`;
+                    indicators.appendChild(nutritionIndicator);
+                }
+
+                cell.appendChild(indicators);
+                cell.onclick = () => showActivityDetails(dateStr);
+            }
+        }
+
+        return cell;
+    }
+
+    function showActivityDetails(dateStr) {
+        const workouts = workoutData[dateStr] || [];
+        const meals = nutritionData[dateStr] || [];
+        const modal = new bootstrap.Modal(document.getElementById('activityModal'));
+
+        const date = new Date(dateStr + 'T00:00:00');
+        document.getElementById('modal-date').textContent =
+            date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+        const modalBody = document.getElementById('modal-body');
+        let html = '';
+
+        // Show workouts
+        if (workouts.length > 0) {
+            html += '<h6 class="mb-3"><i class="bi bi-dumbbell"></i> Workouts</h6>';
+            workouts.forEach(w => {
+                html += `
+                    <div class="activity-card">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <strong><i class="bi bi-check-circle-fill text-success"></i> Workout Completed</strong>
+                            <span class="badge bg-primary">${w.exercises} exercise${w.exercises > 1 ? 's' : ''}</span>
+                        </div>
+                        ${w.notes ? `<p class="text-muted mb-0 mt-2"><small><i class="bi bi-sticky"></i> ${w.notes}</small></p>` : ''}
+                    </div>
+                `;
+            });
+        }
+
+        // Show nutrition
+        if (meals.length > 0) {
+            html += '<h6 class="mb-3 mt-3"><i class="bi bi-egg-fried"></i> Nutrition</h6>';
+
+            // Calculate daily totals
+            let totalCals = 0, totalProtein = 0, totalCarbs = 0, totalFats = 0;
+
+            meals.forEach(meal => {
+                totalCals += meal.totals.calories;
+                totalProtein += meal.totals.protein;
+                totalCarbs += meal.totals.carbs;
+                totalFats += meal.totals.fats;
+
+                html += `
+                    <div class="activity-card">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <strong>${meal.meal_type}</strong>
+                            <small class="text-muted">${new Date(meal.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</small>
+                        </div>
+                        <div class="small mb-2">
+                            ${meal.food_items.map(item => `${item.name} (${item.quantity}${item.unit})`).join(', ')}
+                        </div>
+                        <div>
+                            <span class="badge bg-secondary"><i class="bi bi-fire"></i> ${Math.round(meal.totals.calories)} cal</span>
+                            <span class="badge bg-danger"><i class="bi bi-egg"></i> ${Math.round(meal.totals.protein)}g</span>
+                            <span class="badge bg-warning text-dark"><i class="bi bi-lightning-charge"></i> ${Math.round(meal.totals.carbs)}g</span>
+                            <span class="badge bg-info"><i class="bi bi-droplet"></i> ${Math.round(meal.totals.fats)}g</span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Show daily totals
+            html += `
+                <div class="activity-card" style="background: rgba(13, 110, 253, 0.1); border-color: #0d6efd;">
+                    <strong>Daily Totals</strong>
+                    <div class="mt-2">
+                        <span class="badge bg-secondary"><i class="bi bi-fire"></i> ${Math.round(totalCals)} cal</span>
+                        <span class="badge bg-danger"><i class="bi bi-egg"></i> ${Math.round(totalProtein)}g</span>
+                        <span class="badge bg-warning text-dark"><i class="bi bi-lightning-charge"></i> ${Math.round(totalCarbs)}g</span>
+                        <span class="badge bg-info"><i class="bi bi-droplet"></i> ${Math.round(totalFats)}g</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        if (workouts.length === 0 && meals.length === 0) {
+            html = '<p class="text-muted text-center">No workouts or meals logged for this day.</p>';
+        }
+
+        modalBody.innerHTML = html;
+        modal.show();
+    }
+
+    function changeMonth(delta) {
+        currentDate.setMonth(currentDate.getMonth() + delta);
+        renderCalendar();
+    }
+
+    // Initial load
+    loadCalendarData();
 </script>
 {% endblock %}

@@ -2,6 +2,43 @@
 
 {% block title %}Progress - GymLog{% endblock %}
 
+{% block extra_css %}
+<style>
+    body.dark-mode .card {
+        background: rgba(45, 45, 45, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #ffffff;
+    }
+
+    body.dark-mode .card-header {
+        background: rgba(60, 60, 60, 0.4);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        color: #ffffff;
+    }
+
+    body.dark-mode .card-body {
+        color: #ffffff;
+    }
+
+    body.dark-mode .form-label {
+        color: #ffffff;
+    }
+
+    body.dark-mode .form-select {
+        background-color: #1a1a1a;
+        color: #ffffff;
+        border-color: #404040;
+    }
+
+    body.dark-mode h3,
+    body.dark-mode h4,
+    body.dark-mode h5,
+    body.dark-mode strong {
+        color: #ffffff !important;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <h3>Progress Tracking</h3>
 

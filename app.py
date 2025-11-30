@@ -699,6 +699,12 @@ def get_todays_workout():
 def schedule():
     return render_template('schedule.html')
 
+# Settings page route
+@app.route('/settings')
+@login_required
+def settings():
+    return render_template('settings.html')
+
 # Consistency tracking endpoint
 @app.route('/api/consistency')
 @login_required

@@ -1,0 +1,335 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - FitGlyph{% endblock %}
+
+{% block extra_css %}
+<style>
+    .settings-section {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
+    }
+
+    body.dark-mode .settings-section {
+        background: rgba(45, 45, 45, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+    }
+
+    .settings-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .settings-item:last-child {
+        border-bottom: none;
+    }
+
+    body.dark-mode .settings-item {
+        border-bottom-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .settings-label {
+        font-weight: 500;
+        margin-bottom: 5px;
+    }
+
+    .settings-description {
+        font-size: 0.85rem;
+        color: #888;
+    }
+
+    body.dark-mode .settings-description {
+        color: #aaa;
+    }
+
+    .form-switch .form-check-input {
+        width: 50px;
+        height: 25px;
+        cursor: pointer;
+    }
+
+    .danger-zone {
+        border-color: rgba(220, 53, 69, 0.3) !important;
+    }
+
+    body.dark-mode h1,
+    body.dark-mode h2,
+    body.dark-mode h3,
+    body.dark-mode h4,
+    body.dark-mode h5,
+    body.dark-mode h6,
+    body.dark-mode .settings-label {
+        color: #ffffff !important;
+    }
+
+    body.dark-mode .form-select,
+    body.dark-mode .form-control {
+        background-color: #1a1a1a;
+        color: #ffffff;
+        border-color: #404040;
+    }
+
+    body.dark-mode .btn-outline-danger {
+        color: #dc3545;
+        border-color: #dc3545;
+    }
+
+    body.dark-mode .btn-outline-danger:hover {
+        background-color: #dc3545;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 800px;">
+    <h2 class="mb-4">Settings</h2>
+
+    <!-- Appearance Section -->
+    <div class="settings-section">
+        <h5 class="mb-3">Appearance</h5>
+
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">Dark Mode</div>
+                <div class="settings-description">Switch between light and dark theme</div>
+            </div>
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="darkModeSwitch" onclick="toggleTheme()">
+            </div>
+        </div>
+    </div>
+
+    <!-- Preferences Section -->
+    <div class="settings-section">
+        <h5 class="mb-3">Preferences</h5>
+
+        <div class="settings-item">
+            <div style="flex: 1;">
+                <div class="settings-label">Weight Unit</div>
+                <div class="settings-description">Choose your preferred weight measurement</div>
+            </div>
+            <select class="form-select" id="weightUnit" style="width: 120px;" onchange="saveWeightUnit()">
+                <option value="lbs">Pounds (lbs)</option>
+                <option value="kg">Kilograms (kg)</option>
+            </select>
+        </div>
+
+        <div class="settings-item">
+            <div style="flex: 1;">
+                <div class="settings-label">Default Rest Time</div>
+                <div class="settings-description">Default rest period between sets</div>
+            </div>
+            <select class="form-select" id="defaultRestTime" style="width: 120px;" onchange="saveRestTime()">
+                <option value="60">60 seconds</option>
+                <option value="90">90 seconds</option>
+                <option value="120">2 minutes</option>
+                <option value="180">3 minutes</option>
+                <option value="300">5 minutes</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Account Section -->
+    <div class="settings-section">
+        <h5 class="mb-3">Account</h5>
+
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">Username</div>
+                <div class="settings-description">{{ current_user.username }}</div>
+            </div>
+        </div>
+
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">Email</div>
+                <div class="settings-description">{{ current_user.email }}</div>
+            </div>
+        </div>
+
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">Member Since</div>
+                <div class="settings-description" id="memberSince"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data & Privacy Section -->
+    <div class="settings-section">
+        <h5 class="mb-3">Data & Privacy</h5>
+
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">Export Data</div>
+                <div class="settings-description">Download all your workout and nutrition data</div>
+            </div>
+            <button class="btn btn-sm btn-outline-primary" onclick="exportData()">
+                <i class="bi bi-download"></i> Export
+            </button>
+        </div>
+    </div>
+
+    <!-- Danger Zone -->
+    <div class="settings-section danger-zone">
+        <h5 class="mb-3 text-danger">Danger Zone</h5>
+
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">Clear All Data</div>
+                <div class="settings-description">Permanently delete all workouts, nutrition logs, and metrics</div>
+            </div>
+            <button class="btn btn-sm btn-outline-danger" onclick="showWarning('This feature is not yet implemented')">
+                <i class="bi bi-trash"></i> Clear Data
+            </button>
+        </div>
+
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">Delete Account</div>
+                <div class="settings-description">Permanently delete your account and all associated data</div>
+            </div>
+            <button class="btn btn-sm btn-outline-danger" onclick="showWarning('This feature is not yet implemented')">
+                <i class="bi bi-x-circle"></i> Delete Account
+            </button>
+        </div>
+    </div>
+
+    <!-- App Info -->
+    <div class="settings-section">
+        <h5 class="mb-3">About</h5>
+
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">Getting Started Tour</div>
+                <div class="settings-description">Replay the interactive tour to learn about FitGlyph features</div>
+            </div>
+            <button class="btn btn-sm btn-outline-primary" onclick="restartTour()">
+                <i class="bi bi-play-circle"></i> Restart Tour
+            </button>
+        </div>
+
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">FitGlyph Version</div>
+                <div class="settings-description">1.0.0</div>
+            </div>
+        </div>
+
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">GitHub</div>
+                <div class="settings-description">View source code and report issues</div>
+            </div>
+            <a href="https://github.com/peytonramsey/gymlog" target="_blank" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-github"></i> GitHub
+            </a>
+        </div>
+    </div>
+
+    <!-- Back Button -->
+    <div class="text-center mt-4 mb-4">
+        <a href="/" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Home
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Load settings on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        // Load dark mode state
+        const savedTheme = localStorage.getItem('theme');
+        document.getElementById('darkModeSwitch').checked = (savedTheme === 'dark');
+
+        // Load weight unit
+        const savedWeightUnit = localStorage.getItem('weightUnit') || 'lbs';
+        document.getElementById('weightUnit').value = savedWeightUnit;
+
+        // Load default rest time
+        const savedRestTime = localStorage.getItem('defaultRestTime') || '90';
+        document.getElementById('defaultRestTime').value = savedRestTime;
+
+        // Set member since date (from user data if available)
+        const createdDate = new Date('{{ current_user.created_at }}');
+        document.getElementById('memberSince').textContent = createdDate.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    });
+
+    function saveWeightUnit() {
+        const unit = document.getElementById('weightUnit').value;
+        localStorage.setItem('weightUnit', unit);
+        showSuccess(`Weight unit changed to ${unit}`);
+    }
+
+    function saveRestTime() {
+        const time = document.getElementById('defaultRestTime').value;
+        localStorage.setItem('defaultRestTime', time);
+        showSuccess(`Default rest time set to ${time} seconds`);
+    }
+
+    function exportData() {
+        showInfo('Exporting your data...');
+
+        // Fetch all user data
+        Promise.all([
+            fetch('/api/workouts').then(r => r.json()),
+            fetch('/api/nutrition').then(r => r.json()),
+            fetch('/api/body_metrics').then(r => r.json())
+        ])
+        .then(([workouts, nutrition, metrics]) => {
+            const data = {
+                export_date: new Date().toISOString(),
+                user: '{{ current_user.username }}',
+                workouts: workouts,
+                nutrition: nutrition,
+                body_metrics: metrics
+            };
+
+            // Create download link
+            const dataStr = JSON.stringify(data, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `fitglyph-data-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            showSuccess('Data exported successfully!');
+        })
+        .catch(error => {
+            console.error('Export error:', error);
+            showError('Failed to export data');
+        });
+    }
+
+    function restartTour() {
+        // Clear the onboarding completion flag
+        localStorage.removeItem('onboardingComplete');
+        showSuccess('Tour will start when you return to the home page');
+
+        // Redirect to home after a short delay
+        setTimeout(() => {
+            window.location.href = '/';
+        }, 1500);
+    }
+</script>
+{% endblock %}

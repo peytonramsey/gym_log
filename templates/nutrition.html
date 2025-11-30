@@ -106,6 +106,300 @@
     body.dark-mode input::placeholder {
         color: #888 !important;
     }
+
+    /* Nutrition Page Macro Cards */
+    .macro-grid-nutrition {
+        display: grid;
+        grid-template-columns: repeat(1, 1fr);
+        gap: 12px;
+        margin-top: 15px;
+    }
+
+    .macro-card-nutrition {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 15px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        transition: all 0.3s ease;
+    }
+
+    body.dark-mode .macro-card-nutrition {
+        background: rgba(45, 45, 45, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .macro-card-nutrition:hover {
+        transform: translateX(5px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    body.dark-mode .macro-card-nutrition:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .macro-icon-nutrition {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        flex-shrink: 0;
+    }
+
+    .macro-details-nutrition {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .macro-value-nutrition {
+        font-size: 1.5rem;
+        font-weight: 700;
+        line-height: 1.2;
+        margin-bottom: 2px;
+    }
+
+    .macro-label-nutrition {
+        font-size: 0.8rem;
+        font-weight: 600;
+        opacity: 0.8;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .macro-goal-nutrition {
+        font-size: 0.75rem;
+        opacity: 0.6;
+        margin-top: 2px;
+    }
+
+    .macro-progress-nutrition {
+        flex-shrink: 0;
+    }
+
+    .progress-circle-nutrition {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        background: conic-gradient(
+            var(--progress-color) calc(var(--percent) * 1%),
+            rgba(200, 200, 200, 0.2) 0
+        );
+    }
+
+    .progress-circle-nutrition::before {
+        content: '';
+        position: absolute;
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: var(--card-bg);
+    }
+
+    body.dark-mode .progress-circle-nutrition::before {
+        background: #2d2d2d;
+    }
+
+    .percent-text {
+        position: relative;
+        z-index: 1;
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: var(--progress-color);
+    }
+
+    /* Protein Card - Red */
+    .protein-card-nutrition {
+        border-left: 4px solid #dc3545;
+        --progress-color: #dc3545;
+        --card-bg: white;
+    }
+
+    .protein-card-nutrition .macro-icon-nutrition {
+        background: rgba(220, 53, 69, 0.15);
+        color: #dc3545;
+    }
+
+    .protein-card-nutrition .macro-value-nutrition {
+        color: #dc3545;
+    }
+
+    body.dark-mode .protein-card-nutrition {
+        --progress-color: #ff6b6b;
+        --card-bg: #2d2d2d;
+    }
+
+    body.dark-mode .protein-card-nutrition .macro-icon-nutrition {
+        background: rgba(220, 53, 69, 0.2);
+        color: #ff6b6b;
+    }
+
+    body.dark-mode .protein-card-nutrition .macro-value-nutrition {
+        color: #ff6b6b;
+    }
+
+    /* Carbs Card - Yellow */
+    .carbs-card-nutrition {
+        border-left: 4px solid #ffc107;
+        --progress-color: #ffc107;
+        --card-bg: white;
+    }
+
+    .carbs-card-nutrition .macro-icon-nutrition {
+        background: rgba(255, 193, 7, 0.15);
+        color: #ffc107;
+    }
+
+    .carbs-card-nutrition .macro-value-nutrition {
+        color: #ffc107;
+    }
+
+    body.dark-mode .carbs-card-nutrition {
+        --progress-color: #ffd43b;
+        --card-bg: #2d2d2d;
+    }
+
+    body.dark-mode .carbs-card-nutrition .macro-icon-nutrition {
+        background: rgba(255, 193, 7, 0.2);
+        color: #ffd43b;
+    }
+
+    body.dark-mode .carbs-card-nutrition .macro-value-nutrition {
+        color: #ffd43b;
+    }
+
+    /* Fats Card - Blue */
+    .fats-card-nutrition {
+        border-left: 4px solid #0dcaf0;
+        --progress-color: #0dcaf0;
+        --card-bg: white;
+    }
+
+    .fats-card-nutrition .macro-icon-nutrition {
+        background: rgba(13, 202, 240, 0.15);
+        color: #0dcaf0;
+    }
+
+    .fats-card-nutrition .macro-value-nutrition {
+        color: #0dcaf0;
+    }
+
+    body.dark-mode .fats-card-nutrition {
+        --progress-color: #3bc9db;
+        --card-bg: #2d2d2d;
+    }
+
+    body.dark-mode .fats-card-nutrition .macro-icon-nutrition {
+        background: rgba(13, 202, 240, 0.2);
+        color: #3bc9db;
+    }
+
+    body.dark-mode .fats-card-nutrition .macro-value-nutrition {
+        color: #3bc9db;
+    }
+
+    @media (max-width: 768px) {
+        .macro-icon-nutrition {
+            width: 45px;
+            height: 45px;
+            font-size: 1.3rem;
+        }
+
+        .macro-value-nutrition {
+            font-size: 1.3rem;
+        }
+
+        .progress-circle-nutrition {
+            width: 55px;
+            height: 55px;
+        }
+
+        .progress-circle-nutrition::before {
+            width: 43px;
+            height: 43px;
+        }
+    }
+
+    /* Today's Meals Cards */
+    .meal-card {
+        background: rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-left: 4px solid #0d6efd;
+        border-radius: 12px;
+        padding: 15px;
+        margin-bottom: 12px;
+        transition: all 0.3s ease;
+    }
+
+    body.dark-mode .meal-card {
+        background: rgba(45, 45, 45, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-left: 4px solid #4a9eff;
+    }
+
+    .meal-card:hover {
+        transform: translateX(5px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    body.dark-mode .meal-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    .meal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    .meal-type {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #0d6efd;
+    }
+
+    body.dark-mode .meal-type {
+        color: #4a9eff;
+    }
+
+    .meal-time {
+        font-size: 0.8rem;
+        opacity: 0.7;
+    }
+
+    .meal-foods {
+        font-size: 0.9rem;
+        margin-bottom: 10px;
+        color: #666;
+    }
+
+    body.dark-mode .meal-foods {
+        color: #ccc;
+    }
+
+    .meal-macros {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .meal-macros .badge {
+        font-size: 0.75rem;
+        padding: 4px 8px;
+    }
 </style>
 {% endblock %}
 
@@ -148,45 +442,57 @@
                             </div>
                         </div>
 
-                        <!-- Macros Row -->
-                        <div class="row text-center">
-                            <div class="col-4">
-                                <div class="mb-1"><strong>Protein</strong></div>
-                                <div class="text-danger fw-bold" id="protein-text">0g</div>
-                                <small class="text-muted" id="protein-goal">/ 150g</small>
-                                <div class="progress progress-thin mt-1">
-                                    <div class="progress-bar bg-danger" id="protein-bar" style="width: 0%"></div>
+                        <!-- Macros Grid -->
+                        <div class="macro-grid-nutrition">
+                            <div class="macro-card-nutrition protein-card-nutrition">
+                                <div class="macro-icon-nutrition">
+                                    <i class="bi bi-egg"></i>
+                                </div>
+                                <div class="macro-details-nutrition">
+                                    <div class="macro-value-nutrition" id="protein-text">0g</div>
+                                    <div class="macro-label-nutrition">Protein</div>
+                                    <div class="macro-goal-nutrition" id="protein-goal">/ 150g</div>
+                                </div>
+                                <div class="macro-progress-nutrition">
+                                    <div class="progress-circle-nutrition" id="protein-circle" data-percent="0">
+                                        <span class="percent-text" id="protein-percent-value">0%</span>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="col-4">
-                                <div class="mb-1"><strong>Carbs</strong></div>
-                                <div class="text-warning fw-bold" id="carbs-text">0g</div>
-                                <small class="text-muted" id="carbs-goal">/ 200g</small>
-                                <div class="progress progress-thin mt-1">
-                                    <div class="progress-bar bg-warning" id="carbs-bar" style="width: 0%"></div>
+
+                            <div class="macro-card-nutrition carbs-card-nutrition">
+                                <div class="macro-icon-nutrition">
+                                    <i class="bi bi-lightning-charge"></i>
+                                </div>
+                                <div class="macro-details-nutrition">
+                                    <div class="macro-value-nutrition" id="carbs-text">0g</div>
+                                    <div class="macro-label-nutrition">Carbs</div>
+                                    <div class="macro-goal-nutrition" id="carbs-goal">/ 200g</div>
+                                </div>
+                                <div class="macro-progress-nutrition">
+                                    <div class="progress-circle-nutrition" id="carbs-circle" data-percent="0">
+                                        <span class="percent-text" id="carbs-percent-value">0%</span>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="col-4">
-                                <div class="mb-1"><strong>Fats</strong></div>
-                                <div class="text-info fw-bold" id="fats-text">0g</div>
-                                <small class="text-muted" id="fats-goal">/ 65g</small>
-                                <div class="progress progress-thin mt-1">
-                                    <div class="progress-bar bg-info" id="fats-bar" style="width: 0%"></div>
+
+                            <div class="macro-card-nutrition fats-card-nutrition">
+                                <div class="macro-icon-nutrition">
+                                    <i class="bi bi-droplet"></i>
+                                </div>
+                                <div class="macro-details-nutrition">
+                                    <div class="macro-value-nutrition" id="fats-text">0g</div>
+                                    <div class="macro-label-nutrition">Fats</div>
+                                    <div class="macro-goal-nutrition" id="fats-goal">/ 65g</div>
+                                </div>
+                                <div class="macro-progress-nutrition">
+                                    <div class="progress-circle-nutrition" id="fats-circle" data-percent="0">
+                                        <span class="percent-text" id="fats-percent-value">0%</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Macro Split Percentages -->
-                        <div class="row text-center mt-3">
-                            <div class="col-12">
-                                <small class="text-muted">Macro Split:</small>
-                                <div class="mt-2">
-                                    <span class="badge bg-danger me-2" id="protein-percent">0%</span>
-                                    <span class="badge bg-warning me-2" id="carbs-percent">0%</span>
-                                    <span class="badge bg-info" id="fats-percent">0%</span>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -308,12 +614,12 @@
     </div>
 </div>
 
-<!-- Recent Meals -->
+<!-- Today's Meals -->
 <div class="row">
     <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <strong>Recent Meals</strong>
+                <strong>Today's Meals</strong>
             </div>
             <div class="card-body" id="recent-meals">
                 <p class="text-muted text-center">Loading...</p>
@@ -430,14 +736,23 @@ function loadDailyData() {
 
             // Update progress bars
             document.getElementById('calories-bar').style.width = Math.min(data.percentages.calories, 100) + '%';
-            document.getElementById('protein-bar').style.width = Math.min(data.percentages.protein, 100) + '%';
-            document.getElementById('carbs-bar').style.width = Math.min(data.percentages.carbs, 100) + '%';
-            document.getElementById('fats-bar').style.width = Math.min(data.percentages.fats, 100) + '%';
 
-            // Update macro split percentages
-            document.getElementById('protein-percent').textContent = `Protein ${data.macro_split.protein}%`;
-            document.getElementById('carbs-percent').textContent = `Carbs ${data.macro_split.carbs}%`;
-            document.getElementById('fats-percent').textContent = `Fats ${data.macro_split.fats}%`;
+            // Update circular progress indicators
+            const proteinPercent = Math.min(Math.round(data.percentages.protein), 100);
+            const carbsPercent = Math.min(Math.round(data.percentages.carbs), 100);
+            const fatsPercent = Math.min(Math.round(data.percentages.fats), 100);
+
+            const proteinCircle = document.getElementById('protein-circle');
+            const carbsCircle = document.getElementById('carbs-circle');
+            const fatsCircle = document.getElementById('fats-circle');
+
+            proteinCircle.style.setProperty('--percent', proteinPercent);
+            carbsCircle.style.setProperty('--percent', carbsPercent);
+            fatsCircle.style.setProperty('--percent', fatsPercent);
+
+            document.getElementById('protein-percent-value').textContent = `${proteinPercent}%`;
+            document.getElementById('carbs-percent-value').textContent = `${carbsPercent}%`;
+            document.getElementById('fats-percent-value').textContent = `${fatsPercent}%`;
 
             // Update foods chart
             loadFoodsChart(data.meals);
@@ -661,33 +976,41 @@ document.getElementById('meal-form').addEventListener('submit', function(e) {
     });
 });
 
-// Load recent meals
+// Load today's meals
 function loadRecentMeals() {
     fetch('/api/nutrition')
         .then(response => response.json())
         .then(data => {
             const container = document.getElementById('recent-meals');
-            if (data.length === 0) {
-                container.innerHTML = '<p class="text-muted text-center">No meals logged yet</p>';
+
+            // Filter to only show today's meals
+            const today = new Date().toISOString().split('T')[0];
+            const todaysMeals = data.filter(meal => {
+                const mealDate = new Date(meal.date).toISOString().split('T')[0];
+                return mealDate === today;
+            });
+
+            if (todaysMeals.length === 0) {
+                container.innerHTML = '<p class="text-muted text-center">No meals logged today</p>';
                 return;
             }
 
             let html = '';
-            data.slice(0, 10).forEach(meal => {
+            todaysMeals.forEach(meal => {
                 html += `
-                    <div class="border-bottom pb-2 mb-2">
-                        <div class="d-flex justify-content-between">
-                            <strong>${meal.meal_type}</strong>
-                            <small class="text-muted">${new Date(meal.date).toLocaleString()}</small>
+                    <div class="meal-card">
+                        <div class="meal-header">
+                            <div class="meal-type">${meal.meal_type}</div>
+                            <div class="meal-time">${new Date(meal.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</div>
                         </div>
-                        <div class="small">
+                        <div class="meal-foods">
                             ${meal.food_items.map(item => `${item.name} (${item.quantity}${item.unit})`).join(', ')}
                         </div>
-                        <div class="mt-1">
-                            <span class="badge bg-secondary">${Math.round(meal.totals.calories)} cal</span>
-                            <span class="badge bg-danger">P: ${Math.round(meal.totals.protein)}g</span>
-                            <span class="badge bg-warning text-dark">C: ${Math.round(meal.totals.carbs)}g</span>
-                            <span class="badge bg-info">F: ${Math.round(meal.totals.fats)}g</span>
+                        <div class="meal-macros">
+                            <span class="badge bg-secondary"><i class="bi bi-fire"></i> ${Math.round(meal.totals.calories)} cal</span>
+                            <span class="badge bg-danger"><i class="bi bi-egg"></i> ${Math.round(meal.totals.protein)}g</span>
+                            <span class="badge bg-warning text-dark"><i class="bi bi-lightning-charge"></i> ${Math.round(meal.totals.carbs)}g</span>
+                            <span class="badge bg-info"><i class="bi bi-droplet"></i> ${Math.round(meal.totals.fats)}g</span>
                         </div>
                     </div>
                 `;
