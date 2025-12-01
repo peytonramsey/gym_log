@@ -478,7 +478,7 @@
 
                             <div class="macro-card-nutrition fats-card-nutrition">
                                 <div class="macro-icon-nutrition">
-                                    <i class="bi bi-droplet"></i>
+                                    <i class="bi bi-cake2"></i>
                                 </div>
                                 <div class="macro-details-nutrition">
                                     <div class="macro-value-nutrition" id="fats-text">0g</div>
@@ -526,8 +526,11 @@
                             <button type="button" class="btn btn-primary" onclick="searchFood()">
                                 <i class="bi bi-search"></i> Search
                             </button>
+                            <button type="button" class="btn btn-success" onclick="openBarcodeScanner()">
+                                <i class="bi bi-upc-scan"></i> Scan Barcode
+                            </button>
                         </div>
-                        <small class="text-muted">Search USDA database for nutrition info</small>
+                        <small class="text-muted">Search USDA database or scan a product barcode</small>
                     </div>
 
                     <!-- Search Results -->
@@ -664,14 +667,35 @@
     </div>
 </div>
 
+<!-- Barcode Scanner Modal -->
+<div class="modal fade" id="barcodeScannerModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Scan Product Barcode</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="stopBarcodeScanner()"></button>
+            </div>
+            <div class="modal-body">
+                <div id="barcode-reader" style="width: 100%;"></div>
+                <div id="barcode-result" class="mt-3 text-center"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="stopBarcodeScanner()">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
 let selectedFoods = [];
 let weeklyChart = null;
 let foodsChart = null;
+let html5QrCode = null;
 
 // Load goals
 function loadGoals() {
@@ -1010,7 +1034,7 @@ function loadRecentMeals() {
                             <span class="badge bg-secondary"><i class="bi bi-fire"></i> ${Math.round(meal.totals.calories)} cal</span>
                             <span class="badge bg-danger"><i class="bi bi-egg"></i> ${Math.round(meal.totals.protein)}g</span>
                             <span class="badge bg-warning text-dark"><i class="bi bi-lightning-charge"></i> ${Math.round(meal.totals.carbs)}g</span>
-                            <span class="badge bg-info"><i class="bi bi-droplet"></i> ${Math.round(meal.totals.fats)}g</span>
+                            <span class="badge bg-info"><i class="bi bi-cake2"></i> ${Math.round(meal.totals.fats)}g</span>
                         </div>
                     </div>
                 `;
@@ -1215,6 +1239,168 @@ function deleteSupplement(supplementId) {
         showError('Error deleting supplement');
     });
 }
+
+// ===== BARCODE SCANNER FUNCTIONS =====
+
+// Open barcode scanner modal
+function openBarcodeScanner() {
+    const modal = new bootstrap.Modal(document.getElementById('barcodeScannerModal'));
+    modal.show();
+
+    // Initialize scanner after modal is shown
+    setTimeout(() => {
+        startBarcodeScanner();
+    }, 500);
+}
+
+// Start barcode scanner
+function startBarcodeScanner() {
+    const readerElement = document.getElementById('barcode-reader');
+    readerElement.innerHTML = ''; // Clear previous content
+
+    html5QrCode = new Html5Qrcode("barcode-reader");
+
+    const config = {
+        fps: 10,
+        qrbox: { width: 300, height: 150 },
+        aspectRatio: 1.777778
+    };
+
+    // Start scanning
+    html5QrCode.start(
+        { facingMode: "environment" }, // Use back camera
+        config,
+        onScanSuccess,
+        onScanError
+    ).catch(err => {
+        console.error('Error starting scanner:', err);
+        document.getElementById('barcode-result').innerHTML =
+            '<div class="alert alert-danger">Unable to access camera. Please ensure camera permissions are granted.</div>';
+    });
+}
+
+// Stop barcode scanner
+function stopBarcodeScanner() {
+    if (html5QrCode) {
+        html5QrCode.stop().then(() => {
+            html5QrCode.clear();
+            html5QrCode = null;
+        }).catch(err => {
+            console.error('Error stopping scanner:', err);
+        });
+    }
+}
+
+// Handle successful barcode scan
+function onScanSuccess(decodedText, decodedResult) {
+    console.log(`Barcode detected: ${decodedText}`);
+
+    // Stop scanner immediately after successful scan
+    stopBarcodeScanner();
+
+    // Show loading message
+    document.getElementById('barcode-result').innerHTML =
+        '<div class="alert alert-info"><span class="spinner-border spinner-border-sm me-2"></span>Looking up product...</div>';
+
+    // Look up barcode
+    lookupBarcode(decodedText);
+}
+
+// Handle scan errors (ignore most errors as they're expected during scanning)
+function onScanError(errorMessage) {
+    // Ignore common scanning errors
+    // Only log actual errors
+    if (!errorMessage.includes('NotFoundException')) {
+        console.warn('Scan error:', errorMessage);
+    }
+}
+
+// Lookup barcode in backend
+function lookupBarcode(barcode) {
+    fetch(`/api/food/barcode/${encodeURIComponent(barcode)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.product) {
+                const product = data.product;
+
+                // Show success message with product info
+                document.getElementById('barcode-result').innerHTML = `
+                    <div class="alert alert-success">
+                        <h6 class="mb-2">Product Found!</h6>
+                        <strong>${product.name}</strong>
+                        ${product.brand ? `<br><small class="text-muted">${product.brand}</small>` : ''}
+                        <br><br>
+                        <div class="text-start">
+                            <strong>Nutrition (per 100g):</strong><br>
+                            Calories: ${product.calories} kcal<br>
+                            Protein: ${product.protein}g<br>
+                            Carbs: ${product.carbs}g<br>
+                            Fats: ${product.fats}g
+                        </div>
+                    </div>
+                    <button class="btn btn-primary mt-2" onclick="addScannedProduct()">
+                        <i class="bi bi-plus-circle"></i> Add to Meal
+                    </button>
+                `;
+
+                // Store product data for adding to meal
+                window.scannedProduct = product;
+            } else {
+                document.getElementById('barcode-result').innerHTML =
+                    '<div class="alert alert-warning">Product not found in database. Try searching manually or scan a different product.</div>';
+
+                // Allow user to scan again
+                setTimeout(() => {
+                    startBarcodeScanner();
+                }, 2000);
+            }
+        })
+        .catch(error => {
+            console.error('Error looking up barcode:', error);
+            document.getElementById('barcode-result').innerHTML =
+                '<div class="alert alert-danger">Error looking up product. Please try again.</div>';
+
+            // Allow user to scan again
+            setTimeout(() => {
+                startBarcodeScanner();
+            }, 2000);
+        });
+}
+
+// Add scanned product to selected foods
+function addScannedProduct() {
+    if (window.scannedProduct) {
+        const product = window.scannedProduct;
+
+        // Add to selected foods (same format as USDA search results)
+        selectedFoods.push({
+            name: product.brand ? `${product.brand} ${product.name}` : product.name,
+            calories: product.calories,
+            protein: product.protein,
+            carbs: product.carbs,
+            fats: product.fats,
+            fiber: product.fiber,
+            quantity: 100,
+            unit: 'g'
+        });
+
+        updateSelectedFoods();
+
+        // Close modal
+        bootstrap.Modal.getInstance(document.getElementById('barcodeScannerModal')).hide();
+
+        // Show success message
+        showSuccess('Product added! Adjust quantity if needed.');
+
+        // Clear stored product
+        window.scannedProduct = null;
+    }
+}
+
+// Clean up scanner when modal is closed
+document.getElementById('barcodeScannerModal').addEventListener('hidden.bs.modal', function () {
+    stopBarcodeScanner();
+});
 
 // Load all data on page load
 loadDailyData();

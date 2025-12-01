@@ -69,7 +69,7 @@
         }
 
         body.dark-mode .navbar {
-            background-color: #000000 !important;
+            background: rgba(45, 45, 45, 0.95);
         }
 
         body.dark-mode .bottom-nav {
@@ -114,18 +114,10 @@
 
         /* Logo container styling */
         .logo-container {
-            background: rgba(0, 0, 0, 0.5) !important;
             padding: 8px 16px;
-            border-radius: 8px;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-            transition: all 0.3s ease;
         }
 
-        body.dark-mode .logo-container {
-            background: rgba(255, 255, 255, 0.1) !important;
-            box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
-        }
+
 
         /* Toast Notifications */
         .toast-container {
@@ -208,7 +200,7 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <nav class="navbar navbar-dark bg-dark">
+    <nav class="navbar navbar-dark bg-dark"> 
         <div class="container-fluid">
             <div class="logo-container">
                 <img src="{{ url_for('static', filename='transparent-logo-fitglyph.svg') }}" alt="FitGlyph Logo" class="navbar-brand mb-0" style="height: 35px; object-fit: contain;">

@@ -321,6 +321,46 @@ def search_food(food_name):
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 
+# Barcode lookup using OpenFoodFacts API
+@app.route('/api/food/barcode/<barcode>')
+@login_required
+def search_barcode(barcode):
+    """Look up product nutrition data using barcode via OpenFoodFacts API"""
+    url = f'https://world.openfoodfacts.org/api/v2/product/{barcode}.json'
+
+    try:
+        response = requests.get(url, timeout=5)
+        data = response.json()
+
+        if data.get('status') == 1 and 'product' in data:
+            product = data['product']
+
+            # Extract product name
+            product_name = product.get('product_name', 'Unknown Product')
+
+            # Get nutriments (nutrition data per 100g)
+            nutriments = product.get('nutriments', {})
+
+            # Extract nutrition info (OpenFoodFacts stores per 100g by default)
+            result = {
+                'name': product_name,
+                'brand': product.get('brands', ''),
+                'serving_size': '100g',
+                'calories': round(nutriments.get('energy-kcal_100g', 0), 1),
+                'protein': round(nutriments.get('proteins_100g', 0), 1),
+                'carbs': round(nutriments.get('carbohydrates_100g', 0), 1),
+                'fats': round(nutriments.get('fat_100g', 0), 1),
+                'fiber': round(nutriments.get('fiber_100g', 0), 1),
+                'barcode': barcode
+            }
+
+            return jsonify({'success': True, 'product': result})
+        else:
+            return jsonify({'success': False, 'message': 'Product not found in database'})
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Error looking up barcode: {str(e)}'})
+
 # Log nutrition
 @app.route('/nutrition', methods=['GET', 'POST'])
 @login_required
