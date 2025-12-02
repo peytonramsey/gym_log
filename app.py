@@ -61,8 +61,28 @@ login_manager.login_view = 'login'
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+def create_admin_user():
+    """Create admin user if it doesn't exist"""
+    admin_username = os.getenv('ADMIN_USERNAME', 'admin')
+    admin_email = os.getenv('ADMIN_EMAIL', 'admin@fitglyph.com')
+    admin_password = os.getenv('ADMIN_PASSWORD', 'admin123')
+
+    # Check if admin user already exists
+    existing_admin = User.query.filter_by(username=admin_username).first()
+
+    if not existing_admin:
+        # Create admin user
+        admin = User(username=admin_username, email=admin_email)
+        admin.set_password(admin_password)
+        db.session.add(admin)
+        db.session.commit()
+        print(f"[SUCCESS] Admin user '{admin_username}' created successfully!")
+    else:
+        print(f"[INFO] Admin user '{admin_username}' already exists.")
+
 with app.app_context():
     db.create_all()
+    create_admin_user()
 
 # ===== AUTHENTICATION ROUTES =====
 

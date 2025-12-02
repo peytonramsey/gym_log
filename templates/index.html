@@ -55,6 +55,18 @@
         border: 1px solid rgba(255, 255, 255, 0.08);
     }
 
+    /* Stat value wrapper for consistent sizing */
+    .stat-value {
+        min-height: 38px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .stat-value h3 {
+        margin: 0;
+    }
+
     /* Chart container glassmorphism */
     .chart-container {
         background: rgba(255, 255, 255, 0.05);
@@ -472,13 +484,15 @@
         <div class="row mb-2">
             <div class="col-4">
                 <div class="stat-card text-center">
-                    <h3 id="total-workouts" class="mb-1">0</h3>
+                    <div class="stat-value">
+                        <h3 id="total-workouts" class="mb-1">0</h3>
+                    </div>
                     <small>Total Workouts</small>
                 </div>
             </div>
             <div class="col-4">
                 <div class="stat-card text-center">
-                    <div id="todays-workout-display">
+                    <div class="stat-value" id="todays-workout-display">
                         <div class="spinner-border spinner-border-sm" role="status">
                             <span class="visually-hidden">Loading...</span>
                         </div>
@@ -488,7 +502,7 @@
             </div>
             <div class="col-4">
                 <div class="stat-card text-center">
-                    <div id="consistency-display">
+                    <div class="stat-value" id="consistency-display">
                         <div class="spinner-border spinner-border-sm" role="status">
                             <span class="visually-hidden">Loading...</span>
                         </div>
