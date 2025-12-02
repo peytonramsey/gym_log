@@ -187,12 +187,209 @@
     let timerRunning = false;
     let currentRestTime = 0;
     let templates = [];
+    let autoSaveTimeout = null;
 
     // Set default date/time to now
     document.getElementById('workout-date').value = new Date().toISOString().slice(0, 16);
 
+    // ===== LOCAL STORAGE AUTO-SAVE FUNCTIONS =====
+
+    function saveWorkoutToLocalStorage() {
+        const workoutData = {
+            date: document.getElementById('workout-date').value,
+            notes: document.getElementById('workout-notes').value,
+            exercises: [],
+            exerciseCount: exerciseCount,
+            setCounters: setCounters,
+            timestamp: new Date().toISOString()
+        };
+
+        // Save all exercises
+        for (let i = 1; i <= exerciseCount; i++) {
+            const nameEl = document.getElementById(`name-${i}`);
+            if (!nameEl) continue;
+
+            const name = nameEl.value || '';
+            const rest = document.getElementById(`rest-${i}`)?.value || '60';
+            const sets = getSetsForExercise(i);
+
+            workoutData.exercises.push({
+                id: i,
+                name: name,
+                rest: rest,
+                sets: sets
+            });
+        }
+
+        try {
+            localStorage.setItem('gymlog_workout_draft', JSON.stringify(workoutData));
+            console.log('Workout auto-saved to localStorage');
+        } catch (e) {
+            console.error('Error saving to localStorage:', e);
+        }
+    }
+
+    function restoreWorkoutFromLocalStorage() {
+        try {
+            const savedData = localStorage.getItem('gymlog_workout_draft');
+            if (!savedData) return false;
+
+            const workoutData = JSON.parse(savedData);
+
+            // Check if data is recent (within last 24 hours)
+            const savedTime = new Date(workoutData.timestamp);
+            const hoursSinceSave = (new Date() - savedTime) / (1000 * 60 * 60);
+
+            if (hoursSinceSave > 24) {
+                console.log('Saved workout is too old, clearing');
+                localStorage.removeItem('gymlog_workout_draft');
+                return false;
+            }
+
+            // Restore workout data
+            if (workoutData.date) {
+                document.getElementById('workout-date').value = workoutData.date;
+            }
+            if (workoutData.notes) {
+                document.getElementById('workout-notes').value = workoutData.notes;
+            }
+
+            // Restore exercise count and set counters
+            exerciseCount = workoutData.exerciseCount || 0;
+            setCounters = workoutData.setCounters || {};
+
+            // Restore exercises
+            if (workoutData.exercises && workoutData.exercises.length > 0) {
+                // Clear the default exercise added on page load
+                document.getElementById('exercises-container').innerHTML = '';
+
+                workoutData.exercises.forEach(ex => {
+                    // Recreate exercise card
+                    const container = document.getElementById('exercises-container');
+                    const exerciseDiv = document.createElement('div');
+                    exerciseDiv.className = 'card mb-3';
+                    exerciseDiv.id = `exercise-${ex.id}`;
+                    exerciseDiv.innerHTML = `
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0">Exercise ${ex.id}</h6>
+                                <button class="btn btn-danger btn-sm" onclick="removeExercise(${ex.id})">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                            <div class="mb-3">
+                                <input type="text" class="form-control" placeholder="Exercise name"
+                                       id="name-${ex.id}" value="${ex.name}" onchange="clearPrediction(${ex.id}); scheduleAutoSave()">
+                            </div>
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <small class="text-muted"><strong>Sets</strong></small>
+                                    <button class="btn btn-success btn-sm" onclick="addSet(${ex.id})">
+                                        <i class="bi bi-plus"></i> Add Set
+                                    </button>
+                                </div>
+                                <div id="sets-container-${ex.id}" class="mb-2"></div>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label small">Rest Time (seconds)</label>
+                                <input type="number" class="form-control" placeholder="Rest (s)"
+                                       id="rest-${ex.id}" value="${ex.rest}" onchange="scheduleAutoSave()">
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <button class="btn ml-button btn-sm w-100" onclick="getMLPrediction(${ex.id})" id="ml-btn-${ex.id}">
+                                        <i class="bi bi-magic"></i> Get AI Suggestion
+                                    </button>
+                                </div>
+                                <div class="col-6">
+                                    <button class="btn btn-outline-primary btn-sm w-100" onclick="openTimer(${ex.id})">
+                                        <i class="bi bi-stopwatch"></i> Rest Timer
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="prediction-${ex.id}" class="prediction-pill" style="display: none;">
+                                <div class="text-center">
+                                    <i class="bi bi-lightbulb"></i> <strong>Suggested Weight:</strong>
+                                    <span class="predicted-weight" id="pred-weight-${ex.id}">0</span> lbs
+                                </div>
+                                <div class="confidence-range text-center" id="pred-range-${ex.id}">Range: 0-0 lbs</div>
+                                <div class="text-center mt-2">
+                                    <button class="btn btn-sm btn-success" onclick="acceptPrediction(${ex.id})">
+                                        <i class="bi bi-check"></i> Use This
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(exerciseDiv);
+
+                    // Restore sets for this exercise
+                    ex.sets.forEach(set => {
+                        const setNumber = Object.keys(document.getElementById(`sets-container-${ex.id}`).children).length + 1;
+                        const setContainer = document.getElementById(`sets-container-${ex.id}`);
+                        const setDiv = document.createElement('div');
+                        setDiv.className = 'row g-2 mb-2 align-items-center';
+                        setDiv.id = `exercise-${ex.id}-set-${setNumber}`;
+                        setDiv.innerHTML = `
+                            <div class="col-2">
+                                <strong class="text-muted">Set ${setNumber}</strong>
+                            </div>
+                            <div class="col-4">
+                                <input type="number" class="form-control form-control-sm" placeholder="Reps"
+                                       id="exercise-${ex.id}-set-${setNumber}-reps" value="${set.reps}"
+                                       onchange="scheduleAutoSave()">
+                            </div>
+                            <div class="col-4">
+                                <input type="number" step="0.5" class="form-control form-control-sm" placeholder="Weight (lbs)"
+                                       id="exercise-${ex.id}-set-${setNumber}-weight" value="${set.weight}"
+                                       onchange="scheduleAutoSave()">
+                            </div>
+                            <div class="col-2">
+                                <button class="btn btn-danger btn-sm" onclick="removeSet(${ex.id}, ${setNumber})">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            </div>
+                        `;
+                        setContainer.appendChild(setDiv);
+                    });
+                });
+
+                showInfo('Previous workout draft restored!', 3000);
+                return true;
+            }
+
+            return false;
+        } catch (e) {
+            console.error('Error restoring from localStorage:', e);
+            localStorage.removeItem('gymlog_workout_draft');
+            return false;
+        }
+    }
+
+    function scheduleAutoSave() {
+        // Debounce auto-save to avoid excessive writes
+        if (autoSaveTimeout) {
+            clearTimeout(autoSaveTimeout);
+        }
+        autoSaveTimeout = setTimeout(() => {
+            saveWorkoutToLocalStorage();
+        }, 1000); // Save 1 second after last change
+    }
+
+    function clearWorkoutDraft() {
+        try {
+            localStorage.removeItem('gymlog_workout_draft');
+            console.log('Workout draft cleared from localStorage');
+        } catch (e) {
+            console.error('Error clearing localStorage:', e);
+        }
+    }
+
     // Load templates on page load
     loadTemplates();
+
+    // Try to restore previous workout draft from localStorage
+    const restored = restoreWorkoutFromLocalStorage();
 
     // Check if a template was selected from the Schedule page
     const preselectedTemplateId = localStorage.getItem('selectedTemplateId');
@@ -204,6 +401,10 @@
             loadTemplate();
         }, 500);
     }
+
+    // Add auto-save listeners to date and notes fields
+    document.getElementById('workout-date').addEventListener('change', scheduleAutoSave);
+    document.getElementById('workout-notes').addEventListener('input', scheduleAutoSave);
 
     function loadTemplates() {
         fetch('/api/templates')
@@ -271,7 +472,7 @@
                     </button>
                 </div>
                 <div class="mb-3">
-                    <input type="text" class="form-control" placeholder="Exercise name" id="name-${exerciseCount}" value="${exerciseData ? exerciseData.name : ''}" onchange="clearPrediction(${exerciseCount})">
+                    <input type="text" class="form-control" placeholder="Exercise name" id="name-${exerciseCount}" value="${exerciseData ? exerciseData.name : ''}" onchange="clearPrediction(${exerciseCount}); scheduleAutoSave()">
                 </div>
 
                 <!-- Sets Container -->
@@ -289,7 +490,7 @@
 
                 <div class="mb-2">
                     <label class="form-label small">Rest Time (seconds)</label>
-                    <input type="number" class="form-control" placeholder="Rest (s)" id="rest-${exerciseCount}" value="${exerciseData && exerciseData.rest_time ? exerciseData.rest_time : '60'}">
+                    <input type="number" class="form-control" placeholder="Rest (s)" id="rest-${exerciseCount}" value="${exerciseData && exerciseData.rest_time ? exerciseData.rest_time : '60'}" onchange="scheduleAutoSave()">
                 </div>
 
                 <div class="row g-2">
@@ -341,6 +542,7 @@
 
     function removeExercise(id) {
         document.getElementById(`exercise-${id}`).remove();
+        scheduleAutoSave();
     }
 
     let setCounters = {}; // Track set numbers per exercise
@@ -363,11 +565,11 @@
             </div>
             <div class="col-4">
                 <input type="number" class="form-control form-control-sm" placeholder="Reps"
-                       id="exercise-${exerciseId}-set-${setNumber}-reps" value="${reps}">
+                       id="exercise-${exerciseId}-set-${setNumber}-reps" value="${reps}" onchange="scheduleAutoSave()">
             </div>
             <div class="col-4">
                 <input type="number" step="0.5" class="form-control form-control-sm" placeholder="Weight (lbs)"
-                       id="exercise-${exerciseId}-set-${setNumber}-weight" value="${weight}">
+                       id="exercise-${exerciseId}-set-${setNumber}-weight" value="${weight}" onchange="scheduleAutoSave()">
             </div>
             <div class="col-2">
                 <button class="btn btn-danger btn-sm" onclick="removeSet(${exerciseId}, ${setNumber})">
@@ -386,6 +588,7 @@
         if (setDiv) {
             setDiv.remove();
             clearPrediction(exerciseId);
+            scheduleAutoSave();
         }
     }
 
@@ -604,6 +807,8 @@
         .then(response => response.json())
         .then(result => {
             if (result.success) {
+                // Clear the workout draft from localStorage
+                clearWorkoutDraft();
                 showSuccess('Workout saved successfully!');
                 setTimeout(() => {
                     window.location.href = '/history';
@@ -615,7 +820,9 @@
         });
     }
 
-    // Add first exercise by default
-    addExercise();
+    // Add first exercise by default (only if we didn't restore from localStorage)
+    if (!restored) {
+        addExercise();
+    }
 </script>
 {% endblock %}

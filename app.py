@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from models import db, User, Workout, Exercise, BodyMetrics, Meal, FoodItem, NutritionGoals, Supplement, WorkoutTemplate, TemplateExercise, WeightPrediction
 from datetime import datetime, timedelta
@@ -80,6 +80,9 @@ def login():
 
         if user and user.check_password(password):
             login_user(user, remember=remember_me)
+            # Mark session as permanent if remember_me is checked
+            if remember_me:
+                session.permanent = True
             return redirect(url_for('index'))
         else:
             return render_template('login.html', error='Invalid username or password')
