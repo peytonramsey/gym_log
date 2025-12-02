@@ -330,6 +330,249 @@
         }
     }
 
+    /* Enhanced Log Meal & Supplement Sections */
+    .section-card {
+        background: rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
+    }
+
+    body.dark-mode .section-card {
+        background: rgba(45, 45, 45, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    .section-header {
+        background: linear-gradient(135deg, rgba(13, 110, 253, 0.1) 0%, rgba(13, 110, 253, 0.05) 100%);
+        border-bottom: 1px solid rgba(13, 110, 253, 0.2);
+        padding: 20px 24px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    body.dark-mode .section-header {
+        background: linear-gradient(135deg, rgba(74, 158, 255, 0.15) 0%, rgba(74, 158, 255, 0.05) 100%);
+        border-bottom: 1px solid rgba(74, 158, 255, 0.2);
+    }
+
+    .section-header-icon {
+        width: 40px;
+        height: 40px;
+        background: rgba(13, 110, 253, 0.15);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.3rem;
+        color: #0d6efd;
+    }
+
+    body.dark-mode .section-header-icon {
+        background: rgba(74, 158, 255, 0.2);
+        color: #4a9eff;
+    }
+
+    .section-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin: 0;
+        color: #0d6efd;
+    }
+
+    body.dark-mode .section-title {
+        color: #4a9eff;
+    }
+
+    .section-body {
+        padding: 24px;
+    }
+
+    /* Enhanced Form Styling */
+    .form-label {
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin-bottom: 8px;
+        color: #495057;
+    }
+
+    body.dark-mode .form-label {
+        color: #e0e0e0;
+    }
+
+    .meal-type-selector {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+        margin-bottom: 24px;
+    }
+
+    .meal-type-option {
+        padding: 12px;
+        border: 2px solid rgba(13, 110, 253, 0.2);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.5);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-align: center;
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+
+    body.dark-mode .meal-type-option {
+        background: rgba(45, 45, 45, 0.3);
+        border-color: rgba(74, 158, 255, 0.2);
+        color: #a0a0a0;
+    }
+
+    .meal-type-option:hover {
+        border-color: #0d6efd;
+        background: rgba(13, 110, 253, 0.1);
+        transform: translateY(-2px);
+    }
+
+    body.dark-mode .meal-type-option:hover {
+        border-color: #4a9eff;
+        background: rgba(74, 158, 255, 0.15);
+    }
+
+    .meal-type-option.active {
+        border-color: #0d6efd;
+        background: #0d6efd;
+        color: white;
+    }
+
+    body.dark-mode .meal-type-option.active {
+        border-color: #4a9eff;
+        background: #4a9eff;
+    }
+
+    .search-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .search-actions .btn {
+        flex: 1;
+        font-weight: 600;
+    }
+
+    /* Selected Foods Display */
+    .selected-foods-container {
+        background: rgba(13, 110, 253, 0.05);
+        border: 2px dashed rgba(13, 110, 253, 0.3);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 20px;
+    }
+
+    body.dark-mode .selected-foods-container {
+        background: rgba(74, 158, 255, 0.08);
+        border-color: rgba(74, 158, 255, 0.3);
+    }
+
+    .selected-food-item {
+        background: white;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+        padding: 12px;
+        margin-bottom: 10px;
+        transition: all 0.2s ease;
+    }
+
+    body.dark-mode .selected-food-item {
+        background: rgba(45, 45, 45, 0.6);
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .selected-food-item:hover {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        transform: translateY(-1px);
+    }
+
+    /* Supplement Card Styling */
+    .supplement-form-card {
+        background: rgba(220, 53, 69, 0.05);
+        border: 1px solid rgba(220, 53, 69, 0.2);
+        border-radius: 12px;
+        padding: 20px;
+    }
+
+    body.dark-mode .supplement-form-card {
+        background: rgba(255, 107, 107, 0.08);
+        border-color: rgba(255, 107, 107, 0.2);
+    }
+
+    .supplement-list-card {
+        background: rgba(13, 110, 253, 0.05);
+        border: 1px solid rgba(13, 110, 253, 0.2);
+        border-radius: 12px;
+        padding: 20px;
+        min-height: 200px;
+    }
+
+    body.dark-mode .supplement-list-card {
+        background: rgba(74, 158, 255, 0.08);
+        border-color: rgba(74, 158, 255, 0.2);
+    }
+
+    .supplement-item {
+        background: white;
+        border-left: 4px solid #dc3545;
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin-bottom: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.2s ease;
+    }
+
+    body.dark-mode .supplement-item {
+        background: rgba(45, 45, 45, 0.6);
+        border-left-color: #ff6b6b;
+    }
+
+    .supplement-item:hover {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        transform: translateX(4px);
+    }
+
+    .subsection-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #495057;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    body.dark-mode .subsection-title {
+        color: #e0e0e0;
+    }
+
+    .subsection-title i {
+        font-size: 1.1rem;
+    }
+
+    @media (max-width: 768px) {
+        .meal-type-selector {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .search-actions {
+            flex-direction: column;
+        }
+    }
+
     /* Today's Meals Cards */
     .meal-card {
         background: rgba(255, 255, 255, 0.08);
@@ -509,28 +752,40 @@
             </div>
             <div class="card-body">
                 <form id="meal-form">
-                    <div class="mb-3">
-                        <label class="form-label">Meal Type</label>
-                        <select class="form-select" id="meal-type">
-                            <option value="Breakfast">Breakfast</option>
-                            <option value="Lunch">Lunch</option>
-                            <option value="Dinner">Dinner</option>
-                            <option value="Snack">Snack</option>
-                        </select>
+                    <!-- Meal Type Selector -->
+                    <label class="form-label">
+                        <i class="bi bi-clock"></i> Meal Type
+                    </label>
+                    <div class="meal-type-selector" id="meal-type-selector">
+                        <div class="meal-type-option active" data-meal="Breakfast">
+                            <i class="bi bi-sunrise"></i><br>Breakfast
+                        </div>
+                        <div class="meal-type-option" data-meal="Lunch">
+                            <i class="bi bi-sun"></i><br>Lunch
+                        </div>
+                        <div class="meal-type-option" data-meal="Dinner">
+                            <i class="bi bi-moon-stars"></i><br>Dinner
+                        </div>
+                        <div class="meal-type-option" data-meal="Snack">
+                            <i class="bi bi-cup-straw"></i><br>Snack
+                        </div>
                     </div>
+                    <input type="hidden" id="meal-type" value="Breakfast">
 
+                    <!-- Food Search -->
                     <div class="mb-3">
-                        <label class="form-label">Search Food</label>
-                        <div class="input-group">
-                            <input type="text" class="form-control" id="food-search" placeholder="e.g., chicken breast, banana">
+                        <label class="form-label">
+                            <i class="bi bi-search"></i> Find Food
+                        </label>
+                        <input type="text" class="form-control mb-2" id="food-search" placeholder="Search by name (e.g., chicken breast, banana)">
+                        <div class="search-actions">
                             <button type="button" class="btn btn-primary" onclick="searchFood()">
-                                <i class="bi bi-search"></i> Search
+                                <i class="bi bi-search"></i> Search USDA
                             </button>
                             <button type="button" class="btn btn-success" onclick="openBarcodeScanner()">
                                 <i class="bi bi-upc-scan"></i> Scan Barcode
                             </button>
                         </div>
-                        <small class="text-muted">Search USDA database or scan a product barcode</small>
                     </div>
 
                     <!-- Search Results -->
@@ -539,13 +794,17 @@
                     <!-- Selected Foods -->
                     <div id="selected-foods" class="mb-3"></div>
 
+                    <!-- Meal Notes -->
                     <div class="mb-3">
-                        <label class="form-label">Notes (optional)</label>
-                        <input type="text" class="form-control" id="meal-notes" placeholder="e.g., Post-workout meal">
+                        <label class="form-label">
+                            <i class="bi bi-pencil"></i> Meal Notes (Optional)
+                        </label>
+                        <input type="text" class="form-control" id="meal-notes" placeholder="e.g., Post-workout meal, meal prep">
                     </div>
 
-                    <button type="submit" class="btn btn-success w-100">
-                        <i class="bi bi-check-circle"></i> Save Meal
+                    <!-- Submit Button -->
+                    <button type="submit" class="btn btn-success w-100 py-3" style="font-size: 1.05rem; font-weight: 600; border-radius: 12px;">
+                        <i class="bi bi-check-circle-fill"></i> Save Meal
                     </button>
                 </form>
             </div>
@@ -564,37 +823,47 @@
                 <div class="row">
                     <!-- Left: Add Supplement Form -->
                     <div class="col-md-5">
-                        <h6 class="mb-3">Log Supplement</h6>
-                        <div class="mb-3">
-                            <label class="form-label">Supplement Name</label>
-                            <input type="text" id="supplement-name-input" class="form-control form-control-sm" placeholder="e.g., Creatine, Vitamin D">
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-6">
-                                <label class="form-label">Dosage</label>
-                                <input type="text" id="supplement-dosage-input" class="form-control form-control-sm" placeholder="e.g., 1000mg">
+                        <div class="supplement-form-card">
+                            <h6 class="subsection-title">
+                                <i class="bi bi-plus-circle-fill"></i>
+                                Log Supplement
+                            </h6>
+                            <div class="mb-3">
+                                <label class="form-label">Supplement Name</label>
+                                <input type="text" id="supplement-name-input" class="form-control" placeholder="e.g., Creatine, Vitamin D, Omega-3">
                             </div>
-                            <div class="col-6">
-                                <label class="form-label">Time</label>
-                                <select id="supplement-time-input" class="form-select form-select-sm">
-                                    <option value="">Select time</option>
-                                    <option value="Morning">Morning</option>
-                                    <option value="Afternoon">Afternoon</option>
-                                    <option value="Evening">Evening</option>
-                                    <option value="Night">Night</option>
-                                </select>
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <label class="form-label">Dosage</label>
+                                    <input type="text" id="supplement-dosage-input" class="form-control" placeholder="e.g., 5g, 1000mg">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">Time of Day</label>
+                                    <select id="supplement-time-input" class="form-select">
+                                        <option value="">Select time</option>
+                                        <option value="Morning">🌅 Morning</option>
+                                        <option value="Afternoon">☀️ Afternoon</option>
+                                        <option value="Evening">🌆 Evening</option>
+                                        <option value="Night">🌙 Night</option>
+                                    </select>
+                                </div>
                             </div>
+                            <button class="btn btn-danger w-100 py-2" style="font-weight: 600; border-radius: 10px;" onclick="logSupplement()">
+                                <i class="bi bi-plus-circle-fill"></i> Log Supplement
+                            </button>
                         </div>
-                        <button class="btn btn-primary btn-sm w-100" onclick="logSupplement()">
-                            <i class="bi bi-plus-circle"></i> Log Supplement
-                        </button>
                     </div>
 
                     <!-- Right: Today's Supplements -->
                     <div class="col-md-7">
-                        <h6 class="mb-3">Today's Supplements</h6>
-                        <div id="supplements-list" style="max-height: 250px; overflow-y: auto;">
-                            <p class="text-muted text-center">No supplements logged yet</p>
+                        <div class="supplement-list-card">
+                            <h6 class="subsection-title">
+                                <i class="bi bi-list-check"></i>
+                                Today's Supplements
+                            </h6>
+                            <div id="supplements-list" style="max-height: 250px; overflow-y: auto;">
+                                <p class="text-muted text-center">No supplements logged yet</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -882,7 +1151,7 @@ function updateSelectedFoods() {
         return;
     }
 
-    let html = '<div class="border rounded p-2"><strong>Selected Foods:</strong>';
+    let html = '<div class="selected-foods-container"><strong style="display: block; margin-bottom: 12px; color: #0d6efd;"><i class="bi bi-bag-check"></i> Selected Foods:</strong>';
     selectedFoods.forEach((food, index) => {
         // Calculate scaled nutrition
         const factor = food.quantity / 100; // Since API returns per 100g
@@ -892,10 +1161,15 @@ function updateSelectedFoods() {
         const scaledFats = Math.round(food.fats * factor);
 
         html += `
-            <div class="d-flex justify-content-between align-items-center mt-2 border-bottom pb-2">
+            <div class="selected-food-item d-flex justify-content-between align-items-center">
                 <div class="flex-grow-1">
-                    <div><strong>${food.name}</strong></div>
-                    <small class="text-muted">${scaledCals} cal | P: ${scaledProtein}g | C: ${scaledCarbs}g | F: ${scaledFats}g</small>
+                    <div style="font-weight: 600; margin-bottom: 4px;">${food.name}</div>
+                    <div style="font-size: 0.85rem;">
+                        <span class="badge bg-secondary">${scaledCals} cal</span>
+                        <span class="badge bg-danger">P: ${scaledProtein}g</span>
+                        <span class="badge bg-warning text-dark">C: ${scaledCarbs}g</span>
+                        <span class="badge bg-info">F: ${scaledFats}g</span>
+                    </div>
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     <input type="number" class="form-control form-control-sm" style="width: 80px;"
@@ -914,7 +1188,7 @@ function updateSelectedFoods() {
                         <option value="tbsp" ${food.unit === 'tbsp' ? 'selected' : ''}>tbsp</option>
                         <option value="tsp" ${food.unit === 'tsp' ? 'selected' : ''}>tsp</option>
                     </select>
-                    <button class="btn btn-sm btn-danger" onclick="removeFood(${index})">
+                    <button class="btn btn-sm btn-danger" onclick="removeFood(${index})" style="border-radius: 8px;">
                         <i class="bi bi-trash"></i>
                     </button>
                 </div>
@@ -1154,15 +1428,15 @@ function displaySupplements(supplements) {
     let listHtml = '';
     supplements.forEach(supplement => {
         listHtml += `
-            <div class="d-flex justify-content-between align-items-center pb-2 mb-2 border-bottom">
+            <div class="supplement-item">
                 <div>
-                    <div><strong>${supplement.name}</strong></div>
-                    <div class="small text-muted">
-                        ${supplement.dosage ? `${supplement.dosage}` : ''}
+                    <div style="font-weight: 600; font-size: 0.95rem;">${supplement.name}</div>
+                    <div class="small" style="color: #6c757d;">
+                        ${supplement.dosage ? `<i class="bi bi-capsule-pill"></i> ${supplement.dosage}` : ''}
                         ${supplement.time_of_day ? `<span class="badge bg-secondary ms-2">${supplement.time_of_day}</span>` : ''}
                     </div>
                 </div>
-                <button class="btn btn-sm btn-outline-danger" onclick="deleteSupplement(${supplement.id})">
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteSupplement(${supplement.id})" style="border-radius: 8px;">
                     <i class="bi bi-trash"></i>
                 </button>
             </div>
@@ -1400,6 +1674,24 @@ function addScannedProduct() {
 // Clean up scanner when modal is closed
 document.getElementById('barcodeScannerModal').addEventListener('hidden.bs.modal', function () {
     stopBarcodeScanner();
+});
+
+// ===== MEAL TYPE SELECTOR =====
+// Add click handlers for meal type selector
+document.querySelectorAll('.meal-type-option').forEach(option => {
+    option.addEventListener('click', function() {
+        // Remove active class from all options
+        document.querySelectorAll('.meal-type-option').forEach(opt => {
+            opt.classList.remove('active');
+        });
+
+        // Add active class to clicked option
+        this.classList.add('active');
+
+        // Update hidden input value
+        const mealType = this.getAttribute('data-meal');
+        document.getElementById('meal-type').value = mealType;
+    });
 });
 
 // Load all data on page load
