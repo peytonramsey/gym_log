@@ -1,6 +1,14 @@
 # FitGlyph Version History
 
-## Version 1.0.0 (Current)
+## Version 1.0.1 (Current)
+**Date:** December 1, 2025
+
+### Changes:
+- Increased stat card height from 100px to 120px for better mobile layout
+
+---
+
+## Version 1.0.0
 **Date:** December 1, 2025
 
 ### Features Included:
