@@ -406,45 +406,75 @@
         color: #e0e0e0;
     }
 
+    /* Compact Log Meal Form */
+    #meal-form .form-label {
+        margin-bottom: 6px;
+        margin-top: 0;
+        font-size: 0.85rem;
+    }
+
+    #meal-form .mb-3 {
+        margin-bottom: 1rem !important;
+    }
+
+    #meal-form .form-control {
+        margin-bottom: 0.5rem;
+    }
+
+    /* Card header styling */
+    .card-header {
+        padding: 0.65rem 1rem;
+    }
+
+    .card-header strong {
+        font-size: 0.95rem;
+        font-weight: 700;
+    }
+
     .meal-type-selector {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        display: flex;
         gap: 10px;
-        margin-bottom: 24px;
+        margin-bottom: 12px;
+        justify-content: center;
     }
 
     .meal-type-option {
-        padding: 10px 8px;
-        border: 2px solid rgba(13, 110, 253, 0.3);
-        border-radius: 12px;
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
+        padding: 8px 10px;
+        border: 2px solid rgba(13, 110, 253, 0.4);
+        border-radius: 10px;
+        background: rgba(13, 110, 253, 0.05);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
         cursor: pointer;
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         text-align: center;
         font-weight: 600;
-        font-size: 0.75rem;
-        color: #495057;
-        line-height: 1.4;
+        font-size: 0.8rem;
+        color: #0d6efd;
+        line-height: 1.3;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        min-width: 110px;
+        max-width: 140px;
+        flex: 0 1 auto;
     }
 
     .meal-type-option i {
         font-size: 1.2rem;
         display: block;
-        margin-bottom: 4px;
+        margin-bottom: 3px;
         transition: transform 0.25s ease;
     }
 
     body.dark-mode .meal-type-option {
-        background: linear-gradient(135deg, rgba(45, 45, 45, 0.5) 0%, rgba(35, 35, 35, 0.4) 100%);
-        border-color: rgba(74, 158, 255, 0.3);
-        color: #b0b0b0;
+        background: rgba(74, 158, 255, 0.08);
+        border-color: rgba(74, 158, 255, 0.4);
+        color: #4a9eff;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     }
 
     .meal-type-option:hover {
         border-color: #0d6efd;
-        background: linear-gradient(135deg, rgba(13, 110, 253, 0.12) 0%, rgba(13, 110, 253, 0.08) 100%);
+        background: rgba(13, 110, 253, 0.12);
         transform: translateY(-3px);
         box-shadow: 0 4px 12px rgba(13, 110, 253, 0.25);
     }
@@ -455,45 +485,59 @@
 
     body.dark-mode .meal-type-option:hover {
         border-color: #4a9eff;
-        background: linear-gradient(135deg, rgba(74, 158, 255, 0.18) 0%, rgba(74, 158, 255, 0.12) 100%);
+        background: rgba(74, 158, 255, 0.15);
         box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);
     }
 
     .meal-type-option.active {
         border-color: #0d6efd;
-        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+        background: linear-gradient(135deg, #0d6efd 0%, #0851c4 100%);
         color: white;
-        box-shadow: 0 4px 12px rgba(13, 110, 253, 0.4);
+        box-shadow: 0 4px 12px rgba(13, 110, 253, 0.5);
         transform: translateY(-2px);
+        font-weight: 700;
+        font-size: 0.85rem;
     }
 
     .meal-type-option.active i {
-        transform: scale(1.1);
+        transform: scale(1.15);
+        font-size: 1.3rem;
     }
 
     body.dark-mode .meal-type-option.active {
         border-color: #4a9eff;
-        background: linear-gradient(135deg, #4a9eff 0%, #3d82d9 100%);
-        box-shadow: 0 4px 12px rgba(74, 158, 255, 0.5);
+        background: linear-gradient(135deg, #3d8eeb 0%, #2672d9 100%);
+        box-shadow: 0 4px 12px rgba(74, 158, 255, 0.6);
     }
 
     .search-actions {
         display: flex;
-        gap: 8px;
+        gap: 10px;
     }
 
     .search-actions .btn {
         flex: 1;
         font-weight: 600;
+        border-radius: 6px;
+    }
+
+    .search-actions .btn i {
+        margin-right: 3px;
+    }
+
+    .search-actions .btn-sm {
+        padding: 0.5rem 0.65rem;
+        font-size: 0.85rem;
     }
 
     /* Selected Foods Display */
     .selected-foods-container {
         background: rgba(13, 110, 253, 0.05);
         border: 2px dashed rgba(13, 110, 253, 0.3);
-        border-radius: 12px;
-        padding: 16px;
-        margin-bottom: 20px;
+        border-radius: 10px;
+        padding: 12px;
+        margin-bottom: 0;
+        margin-top: 0.5rem;
     }
 
     body.dark-mode .selected-foods-container {
@@ -504,10 +548,14 @@
     .selected-food-item {
         background: white;
         border: 1px solid rgba(0, 0, 0, 0.1);
-        border-radius: 10px;
-        padding: 12px;
-        margin-bottom: 10px;
+        border-radius: 8px;
+        padding: 10px;
+        margin-bottom: 8px;
         transition: all 0.2s ease;
+    }
+
+    .selected-food-item:last-child {
+        margin-bottom: 0;
     }
 
     body.dark-mode .selected-food-item {
@@ -588,9 +636,37 @@
 
     @media (max-width: 768px) {
         .meal-type-selector {
-            grid-template-columns: repeat(2, 1fr);
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: flex-start !important;
         }
 
+        .meal-type-option {
+            min-width: calc(50% - 4px);
+            max-width: calc(50% - 4px);
+        }
+
+        .search-actions {
+            gap: 8px;
+        }
+
+        .search-actions .btn-sm {
+            font-size: 0.8rem;
+            padding: 0.45rem 0.5rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        #meal-form .row > div {
+            margin-bottom: 0.75rem;
+        }
+
+        .meal-type-selector {
+            margin-bottom: 0 !important;
+        }
+    }
+
+    @media (max-width: 480px) {
         .search-actions {
             flex-direction: column;
         }
@@ -766,128 +842,124 @@
     </div>
 </div>
 
-<!-- Log New Meal -->
+<!-- Log New Meal & Supplements Tracker -->
 <div class="row mb-3">
-    <div class="col-12">
-        <div class="card">
+    <!-- Log Meal (55%) -->
+    <div class="col-lg-7 mb-3 mb-lg-0">
+        <div class="card h-100">
             <div class="card-header">
                 <strong>Log Meal</strong>
             </div>
-            <div class="card-body">
+            <div class="card-body" style="padding: 1rem;">
                 <form id="meal-form">
                     <!-- Meal Type Selector -->
-                    <label class="form-label">
-                        <i class="bi bi-clock"></i> Meal Type
-                    </label>
-                    <div class="meal-type-selector" id="meal-type-selector">
-                        <div class="meal-type-option active" data-meal="Breakfast">
-                            <i class="bi bi-sunrise"></i><br>Breakfast
+                    <div class="mb-2">
+                        <label class="form-label mb-1">
+                            <i class="bi bi-clock"></i> Meal Type
+                        </label>
+                        <div class="meal-type-selector" id="meal-type-selector" style="justify-content: flex-start;">
+                            <div class="meal-type-option active" data-meal="Breakfast">
+                                <i class="bi bi-sunrise"></i><br>Breakfast
+                            </div>
+                            <div class="meal-type-option" data-meal="Lunch">
+                                <i class="bi bi-sun"></i><br>Lunch
+                            </div>
+                            <div class="meal-type-option" data-meal="Dinner">
+                                <i class="bi bi-moon-stars"></i><br>Dinner
+                            </div>
+                            <div class="meal-type-option" data-meal="Snack">
+                                <i class="bi bi-cup-straw"></i><br>Snack
+                            </div>
                         </div>
-                        <div class="meal-type-option" data-meal="Lunch">
-                            <i class="bi bi-sun"></i><br>Lunch
-                        </div>
-                        <div class="meal-type-option" data-meal="Dinner">
-                            <i class="bi bi-moon-stars"></i><br>Dinner
-                        </div>
-                        <div class="meal-type-option" data-meal="Snack">
-                            <i class="bi bi-cup-straw"></i><br>Snack
-                        </div>
+                        <input type="hidden" id="meal-type" value="Breakfast">
                     </div>
-                    <input type="hidden" id="meal-type" value="Breakfast">
 
-                    <!-- Food Search -->
-                    <div class="mb-3">
-                        <label class="form-label">
+                    <!-- Find Food -->
+                    <div class="mb-2">
+                        <label class="form-label mb-1" style="font-size: 0.82rem;">
                             <i class="bi bi-search"></i> Find Food
                         </label>
-                        <input type="text" class="form-control mb-2" id="food-search" placeholder="Search by name (e.g., chicken breast, banana)">
+                        <input type="text" class="form-control form-control-sm" id="food-search" placeholder="Search by name (e.g., chicken breast, banana)" style="margin-bottom: 0.5rem;">
                         <div class="search-actions">
-                            <button type="button" class="btn btn-primary" onclick="searchFood()">
-                                <i class="bi bi-search"></i> Search USDA
+                            <button type="button" class="btn btn-sm btn-primary" onclick="searchFood()">
+                                <i class="bi bi-search"></i> Search
                             </button>
-                            <button type="button" class="btn btn-success" onclick="openBarcodeScanner()">
-                                <i class="bi bi-upc-scan"></i> Scan Barcode
+                            <button type="button" class="btn btn-sm btn-success" onclick="openBarcodeScanner()">
+                                <i class="bi bi-upc-scan"></i> Scan
                             </button>
                         </div>
                     </div>
 
                     <!-- Search Results -->
-                    <div id="search-results" class="mb-3" style="display: none;"></div>
+                    <div id="search-results" class="mb-2" style="display: none;"></div>
 
                     <!-- Selected Foods -->
-                    <div id="selected-foods" class="mb-3"></div>
+                    <div id="selected-foods" class="mb-2"></div>
 
                     <!-- Meal Notes -->
-                    <div class="mb-3">
-                        <label class="form-label">
-                            <i class="bi bi-pencil"></i> Meal Notes (Optional)
+                    <div class="mb-2">
+                        <label class="form-label mb-1" style="font-size: 0.82rem;">
+                            <i class="bi bi-pencil"></i> Notes (Optional)
                         </label>
-                        <input type="text" class="form-control" id="meal-notes" placeholder="e.g., Post-workout meal, meal prep">
+                        <input type="text" class="form-control form-control-sm" id="meal-notes" placeholder="e.g., Post-workout meal">
                     </div>
 
-                    <!-- Submit Button -->
-                    <button type="submit" class="btn btn-success w-100 py-3" style="font-size: 1.05rem; font-weight: 600; border-radius: 12px;">
+                    <!-- Save Meal Button -->
+                    <button type="submit" class="btn btn-success w-100" style="padding: 0.65rem; font-size: 0.9rem; font-weight: 600; border-radius: 8px;">
                         <i class="bi bi-check-circle-fill"></i> Save Meal
                     </button>
                 </form>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Supplements Tracker -->
-<div class="row mb-3">
-    <div class="col-12">
-        <div class="card">
+    <!-- Supplements Tracker (45%) -->
+    <div class="col-lg-5">
+        <div class="card h-100">
             <div class="card-header">
                 <strong>Supplements Tracker</strong>
             </div>
-            <div class="card-body">
-                <div class="row">
-                    <!-- Left: Add Supplement Form -->
-                    <div class="col-md-5">
-                        <div class="supplement-form-card">
-                            <h6 class="subsection-title">
-                                <i class="bi bi-plus-circle-fill"></i>
-                                Log Supplement
-                            </h6>
-                            <div class="mb-3">
-                                <label class="form-label">Supplement Name</label>
-                                <input type="text" id="supplement-name-input" class="form-control" placeholder="e.g., Creatine, Vitamin D, Omega-3">
-                            </div>
-                            <div class="row mb-3">
-                                <div class="col-6">
-                                    <label class="form-label">Dosage</label>
-                                    <input type="text" id="supplement-dosage-input" class="form-control" placeholder="e.g., 5g, 1000mg">
-                                </div>
-                                <div class="col-6">
-                                    <label class="form-label">Time of Day</label>
-                                    <select id="supplement-time-input" class="form-select">
-                                        <option value="">Select time</option>
-                                        <option value="Morning">🌅 Morning</option>
-                                        <option value="Afternoon">☀️ Afternoon</option>
-                                        <option value="Evening">🌆 Evening</option>
-                                        <option value="Night">🌙 Night</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <button class="btn btn-danger w-100 py-2" style="font-weight: 600; border-radius: 10px;" onclick="logSupplement()">
-                                <i class="bi bi-plus-circle-fill"></i> Log Supplement
-                            </button>
-                        </div>
-                    </div>
+            <div class="card-body" style="padding: 1rem;">
+                <!-- Log Supplement Form -->
+                <div class="mb-2">
+                    <label class="form-label mb-1" style="font-size: 0.82rem;">
+                        <i class="bi bi-capsule"></i> Supplement Name
+                    </label>
+                    <input type="text" id="supplement-name-input" class="form-control form-control-sm" placeholder="e.g., Creatine, Vitamin D" style="margin-bottom: 0.5rem;">
+                </div>
 
-                    <!-- Right: Today's Supplements -->
-                    <div class="col-md-7">
-                        <div class="supplement-list-card">
-                            <h6 class="subsection-title">
-                                <i class="bi bi-list-check"></i>
-                                Today's Supplements
-                            </h6>
-                            <div id="supplements-list" style="max-height: 250px; overflow-y: auto;">
-                                <p class="text-muted text-center">No supplements logged yet</p>
-                            </div>
-                        </div>
+                <div class="row mb-2" style="column-gap: 0.5rem;">
+                    <div class="col" style="padding-left: 0; padding-right: 0.25rem;">
+                        <label class="form-label mb-1" style="font-size: 0.82rem;">
+                            <i class="bi bi-prescription2"></i> Dosage
+                        </label>
+                        <input type="text" id="supplement-dosage-input" class="form-control form-control-sm" placeholder="e.g., 5g">
+                    </div>
+                    <div class="col" style="padding-left: 0.25rem; padding-right: 0;">
+                        <label class="form-label mb-1" style="font-size: 0.82rem;">
+                            <i class="bi bi-clock"></i> Time
+                        </label>
+                        <select id="supplement-time-input" class="form-select form-select-sm">
+                            <option value="">Select</option>
+                            <option value="Morning">Morning</option>
+                            <option value="Afternoon">Afternoon</option>
+                            <option value="Evening">Evening</option>
+                            <option value="Night">Night</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button class="btn btn-danger w-100 mb-3" style="padding: 0.6rem; font-size: 0.9rem; font-weight: 600; border-radius: 8px;" onclick="logSupplement()">
+                    <i class="bi bi-plus-circle-fill"></i> Log Supplement
+                </button>
+
+                <!-- Today's Supplements -->
+                <div class="mt-3" style="border-top: 1px solid rgba(0,0,0,0.1); padding-top: 0.75rem;">
+                    <h6 class="mb-2" style="font-size: 0.85rem; font-weight: 600; color: #6c757d;">
+                        <i class="bi bi-list-check"></i> Today's Supplements
+                    </h6>
+                    <div id="supplements-list" style="max-height: 200px; overflow-y: auto;">
+                        <p class="text-muted text-center mb-0" style="font-size: 0.85rem;">No supplements logged yet</p>
                     </div>
                 </div>
             </div>
