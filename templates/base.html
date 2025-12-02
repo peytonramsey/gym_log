@@ -117,8 +117,6 @@
             padding: 8px 16px;
         }
 
-
-
         /* Toast Notifications */
         .toast-container {
             position: fixed;
@@ -200,10 +198,11 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <nav class="navbar navbar-dark bg-dark"> 
+    <nav class="navbar navbar-dark bg-dark">
         <div class="container-fluid">
-            <div class="logo-container">
+            <div class="logo-container d-flex align-items-center gap-2">
                 <img src="{{ url_for('static', filename='transparent-logo-fitglyph.svg') }}" alt="FitGlyph Logo" class="navbar-brand mb-0" style="height: 35px; object-fit: contain;">
+                <span class="badge bg-secondary" style="font-size: 0.65rem; opacity: 0.7;">v{{ app_version }}</span>
             </div>
             <div class="d-flex gap-3 align-items-center">
                 {% if current_user.is_authenticated %}

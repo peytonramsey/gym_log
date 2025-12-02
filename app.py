@@ -9,6 +9,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# App version
+VERSION = "1.0.0"
+
 # Unit conversion factors to grams/ml
 UNIT_CONVERSIONS = {
     'g': 1.0,
@@ -83,6 +86,11 @@ def create_admin_user():
 with app.app_context():
     db.create_all()
     create_admin_user()
+
+# Make version available to all templates
+@app.context_processor
+def inject_version():
+    return {'app_version': VERSION}
 
 # ===== AUTHENTICATION ROUTES =====
 
