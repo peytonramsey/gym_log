@@ -60,9 +60,16 @@ class OnboardingTour {
         ];
     }
 
-    start() {
-        // Check if user has already seen the tour
-        if (localStorage.getItem('onboardingComplete') === 'true') {
+    start(force = false) {
+        // Check if user has already seen the tour (unless forced restart)
+        if (!force && localStorage.getItem('onboardingComplete') === 'true') {
+            return;
+        }
+
+        // Check if user is on login/register pages (tour should not run there)
+        const isAuthPage = window.location.pathname === '/login' ||
+                          window.location.pathname === '/register';
+        if (isAuthPage && !force) {
             return;
         }
 
@@ -250,17 +257,29 @@ class OnboardingTour {
     // Allow users to restart the tour
     restart() {
         localStorage.removeItem('onboardingComplete');
-        this.start();
+        this.start(true);
     }
 }
 
 // Global instance
 const onboardingTour = new OnboardingTour();
 
-// Auto-start on page load if not completed
+// Auto-start on page load ONLY for new users
 document.addEventListener('DOMContentLoaded', function() {
-    // Delay tour start slightly to ensure page is fully loaded
-    setTimeout(() => {
-        onboardingTour.start();
-    }, 500);
+    // Check if this is a new user (URL parameter from registration)
+    const urlParams = new URLSearchParams(window.location.search);
+    const isNewUser = urlParams.get('new_user') === 'true';
+
+    // Only start tour for new users who just registered
+    if (isNewUser) {
+        // Remove the query parameter from URL without reloading
+        const url = new URL(window.location);
+        url.searchParams.delete('new_user');
+        window.history.replaceState({}, '', url);
+
+        // Delay tour start slightly to ensure page is fully loaded
+        setTimeout(() => {
+            onboardingTour.start();
+        }, 500);
+    }
 });

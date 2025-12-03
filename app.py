@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # App version
-VERSION = "1.0.1"
+VERSION = "1.0.2"
 
 # Unit conversion factors to grams/ml
 UNIT_CONVERSIONS = {
@@ -148,7 +148,8 @@ def register():
         db.session.commit()
 
         login_user(user)
-        return redirect(url_for('index'))
+        # Redirect with new_user flag to trigger onboarding tour
+        return redirect(url_for('index', new_user='true'))
 
     return render_template('register.html')
 
@@ -299,22 +300,201 @@ def calendar_data():
 
 # ===== NUTRITION TRACKING =====
 
+# Helper function for relevance scoring
+def calculate_relevance_score(query, food_item, source='openfoodfacts'):
+    """
+    Calculate relevance score for a food item based on query match quality.
+    Higher scores = better matches. Range: 0-100
+    """
+    query = query.lower().strip()
+    query_words = query.split()
+
+    # Extract searchable fields based on source
+    if source == 'openfoodfacts':
+        product_name = food_item.get('product_name', '').lower()
+        brand = food_item.get('brands', '').lower()
+        search_text = f"{product_name} {brand}"
+    else:  # USDA
+        search_text = food_item.get('description', '').lower()
+
+    score = 0
+
+    # SCORING RULES (prioritized by impact):
+
+    # 1. Exact phrase match (highest priority) - +50 points
+    if query in search_text:
+        score += 50
+        # Bonus if it's at the start
+        if search_text.startswith(query):
+            score += 15
+
+    # 2. All query words present - +30 points
+    all_words_present = all(word in search_text for word in query_words)
+    if all_words_present:
+        score += 30
+
+    # 3. Product name vs brand weighting (OpenFoodFacts only)
+    if source == 'openfoodfacts':
+        product_name_matches = sum(word in product_name for word in query_words)
+        brand_matches = sum(word in brand for word in query_words)
+
+        # Product name matches worth more than brand matches
+        score += product_name_matches * 8
+        score += brand_matches * 3
+    else:
+        # USDA: count word matches in description
+        word_matches = sum(word in search_text for word in query_words)
+        score += word_matches * 8
+
+    # 4. Penalize very long names (likely less specific) - up to -10 points
+    word_count = len(search_text.split())
+    if word_count > 10:
+        score -= min(10, (word_count - 10) * 2)
+
+    # 5. Bonus for exact word boundaries (whole word matches) - +5 per word
+    for word in query_words:
+        if f" {word} " in f" {search_text} " or search_text.startswith(f"{word} ") or search_text.endswith(f" {word}"):
+            score += 5
+
+    return max(0, min(100, score))  # Clamp between 0-100
+
+
+def is_valid_nutrition_data(nutriments, source='openfoodfacts'):
+    """Validate that nutrition data is complete and realistic"""
+    if source == 'openfoodfacts':
+        calories = nutriments.get('energy-kcal_100g', 0)
+        protein = nutriments.get('proteins_100g', 0)
+        carbs = nutriments.get('carbohydrates_100g', 0)
+        fats = nutriments.get('fat_100g', 0)
+    else:  # USDA (pass nutrients dict directly)
+        calories = nutriments.get('calories', 0)
+        protein = nutriments.get('protein', 0)
+        carbs = nutriments.get('carbs', 0)
+        fats = nutriments.get('fats', 0)
+
+    # Must have calories
+    if calories <= 0:
+        return False
+
+    # Must have at least one macro (some items might have only one)
+    if protein == 0 and carbs == 0 and fats == 0:
+        return False
+
+    # Sanity check: macros shouldn't exceed calorie-realistic values
+    # Rough check: protein + carbs = ~4 cal/g, fat = ~9 cal/g
+    calculated_calories = (protein * 4) + (carbs * 4) + (fats * 9)
+
+    # Allow 50% deviation (some rounding/fiber issues)
+    if calculated_calories > 0:
+        deviation = abs(calories - calculated_calories) / calculated_calories
+        if deviation > 0.5:
+            return False
+
+    return True
+
+
 # USDA API nutrition lookup
-@app.route('/api/food/search/<food_name>')
-@login_required
-def search_food(food_name):
-    """Search for food nutrition data using USDA API"""
-    # USDA FoodData Central API - reads key from environment or uses DEMO_KEY
-    api_key = os.getenv('USDA_API_KEY', 'DEMO_KEY')
-    url = f'https://api.nal.usda.gov/fdc/v1/foods/search?query={food_name}&pageSize=5&api_key={api_key}'
+def search_openfoodfacts(food_name):
+    """Search OpenFoodFacts API for food by name with relevance scoring"""
+    url = f'https://world.openfoodfacts.org/cgi/search.pl'
+    params = {
+        'search_terms': food_name,
+        'page_size': 20,  # Fetch more to filter client-side
+        'json': 1,
+        'fields': 'product_name,brands,nutriments,nutriscore_grade,completeness',
+        'search_simple': 1,  # Use simple search
+        'sort_by': 'unique_scans_n',  # Sort by popularity
+        'tagtype_0': 'states',
+        'tag_contains_0': 'contains',
+        'tag_0': 'en:nutrition-facts-completed'
+    }
 
     try:
-        response = requests.get(url, timeout=5)
+        response = requests.get(url, params=params, timeout=5)
+        data = response.json()
+
+        if data.get('count', 0) > 0 and 'products' in data:
+            scored_results = []
+
+            # Sort by completeness first to prioritize quality data
+            products = sorted(
+                data['products'][:15],
+                key=lambda p: p.get('completeness', 0),
+                reverse=True
+            )
+
+            for product in products:
+                nutriments = product.get('nutriments', {})
+
+                # Use enhanced nutrition validation
+                if not nutriments or not is_valid_nutrition_data(nutriments, 'openfoodfacts'):
+                    continue
+
+                product_name = product.get('product_name', '')
+                brand = product.get('brands', '')
+
+                # Calculate relevance score
+                score = calculate_relevance_score(food_name, product, 'openfoodfacts')
+
+                # For multi-word queries, require minimum relevance
+                query_words = food_name.lower().split()
+                if len(query_words) > 1 and score < 30:
+                    continue
+
+                display_name = f"{product_name} ({brand})" if brand else product_name
+
+                scored_results.append({
+                    'name': display_name or 'Unknown Product',
+                    'serving_size': '100g',
+                    'calories': round(nutriments.get('energy-kcal_100g', 0), 1),
+                    'protein': round(nutriments.get('proteins_100g', 0), 1),
+                    'carbs': round(nutriments.get('carbohydrates_100g', 0), 1),
+                    'fats': round(nutriments.get('fat_100g', 0), 1),
+                    'fiber': round(nutriments.get('fiber_100g', 0), 1),
+                    'source': 'OpenFoodFacts',
+                    'relevance_score': score
+                })
+
+            # Sort by relevance score (descending)
+            scored_results.sort(key=lambda x: x['relevance_score'], reverse=True)
+
+            # Return top 5 without the score
+            return [
+                {k: v for k, v in r.items() if k != 'relevance_score'}
+                for r in scored_results[:5]
+            ] if scored_results else None
+
+        return None
+    except Exception as e:
+        print(f"OpenFoodFacts error: {e}")
+        return None
+
+def search_usda(food_name):
+    """Search USDA FoodData Central API for food by name with relevance scoring"""
+    api_key = os.getenv('USDA_API_KEY', 'DEMO_KEY')
+
+    # Use params dict for better control
+    url = 'https://api.nal.usda.gov/fdc/v1/foods/search'
+    params = {
+        'query': food_name,
+        'pageSize': 15,  # Fetch more to filter
+        'api_key': api_key,
+        'dataType': ['SR Legacy', 'Foundation', 'Survey (FNDDS)'],
+        'sortBy': 'dataType.keyword'
+    }
+
+    # For multi-word queries, try to require all words
+    if len(food_name.split()) > 1:
+        params['requireAllWords'] = 'true'
+
+    try:
+        response = requests.get(url, params=params, timeout=5)
         data = response.json()
 
         if 'foods' in data and len(data['foods']) > 0:
-            results = []
-            for food in data['foods'][:5]:
+            scored_results = []
+
+            for food in data['foods'][:15]:
                 # Extract nutrients
                 nutrients = {}
                 for nutrient in food.get('foodNutrients', []):
@@ -335,19 +515,73 @@ def search_food(food_name):
                     elif 'fiber' in nutrient_name:
                         nutrients['fiber'] = round(nutrient_value, 1)
 
-                results.append({
+                # Use enhanced nutrition validation
+                if not is_valid_nutrition_data(nutrients, 'usda'):
+                    continue
+
+                # Calculate relevance score
+                score = calculate_relevance_score(food_name, food, 'usda')
+
+                # For multi-word queries, require minimum relevance
+                query_words = food_name.lower().split()
+                if len(query_words) > 1 and score < 30:
+                    continue
+
+                scored_results.append({
                     'name': food.get('description', 'Unknown'),
                     'serving_size': '100g',
                     'calories': nutrients.get('calories', 0),
                     'protein': nutrients.get('protein', 0),
                     'carbs': nutrients.get('carbs', 0),
                     'fats': nutrients.get('fats', 0),
-                    'fiber': nutrients.get('fiber', 0)
+                    'fiber': nutrients.get('fiber', 0),
+                    'source': 'USDA',
+                    'relevance_score': score
                 })
 
-            return jsonify({'success': True, 'results': results})
-        else:
-            return jsonify({'success': False, 'message': 'No foods found'})
+            # Sort by relevance score (descending)
+            scored_results.sort(key=lambda x: x['relevance_score'], reverse=True)
+
+            # Return top 5 without the score
+            return [
+                {k: v for k, v in r.items() if k != 'relevance_score'}
+                for r in scored_results[:5]
+            ] if scored_results else None
+
+        return None
+    except Exception as e:
+        print(f"USDA error: {e}")
+        return None
+
+@app.route('/api/food/search/<food_name>')
+@login_required
+def search_food(food_name):
+    """Multi-API food search: tries OpenFoodFacts first, falls back to USDA"""
+    try:
+        # Try OpenFoodFacts first (free, extensive database)
+        results = search_openfoodfacts(food_name)
+
+        if results and len(results) > 0:
+            return jsonify({
+                'success': True,
+                'results': results,
+                'source': 'OpenFoodFacts'
+            })
+
+        # Fallback to USDA if OpenFoodFacts returns nothing
+        results = search_usda(food_name)
+
+        if results and len(results) > 0:
+            return jsonify({
+                'success': True,
+                'results': results,
+                'source': 'USDA'
+            })
+
+        return jsonify({
+            'success': False,
+            'message': 'No foods found in either database'
+        })
 
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})

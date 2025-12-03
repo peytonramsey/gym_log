@@ -1,6 +1,18 @@
 # FitGlyph Version History
 
-## Version 1.0.1 (Current)
+## Version 1.0.2 (Current)
+**Date:** December 1, 2025
+
+### Changes:
+- Polished nutrition page UI with improved layout
+- Reorganized Log Meal and Supplements Tracker into side-by-side layout (55/45 split)
+- Simplified form layouts with cleaner vertical stacking
+- Improved spacing consistency throughout nutrition page
+- Made form elements more compact
+
+---
+
+## Version 1.0.1
 **Date:** December 1, 2025
 
 ### Changes:
