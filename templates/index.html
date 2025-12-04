@@ -475,11 +475,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Foods Eaten List -->
-            <div id="foods-eaten-list" style="flex: 1; overflow-y: auto;">
-                <p class="text-muted text-center small">No foods logged yet</p>
-            </div>
         </div>
     </div>
 
@@ -781,24 +776,6 @@
             document.getElementById('protein-display').textContent = Math.round(protein) + 'g';
             document.getElementById('carbs-display').textContent = Math.round(carbs) + 'g';
             document.getElementById('fats-display').textContent = Math.round(fats) + 'g';
-
-            // Build foods list (just names)
-            const foodsList = document.getElementById('foods-eaten-list');
-
-            if (meals.length === 0) {
-                foodsList.innerHTML = '<p class="text-muted text-center small">No foods logged yet</p>';
-                return;
-            }
-
-            let listHtml = '<div class="small">';
-            meals.forEach(meal => {
-                meal.food_items.forEach(item => {
-                    listHtml += `<div class="food-item pb-1 mb-1">${item.name}</div>`;
-                });
-            });
-            listHtml += '</div>';
-
-            foodsList.innerHTML = listHtml;
         } catch (error) {
             console.error('Error creating nutrition display:', error);
         }

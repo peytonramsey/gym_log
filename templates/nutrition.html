@@ -99,6 +99,76 @@
         color: #ccc !important;
     }
 
+    /* Modern Macro Badges */
+    .macro-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+        margin-right: 6px;
+        margin-bottom: 4px;
+        transition: all 0.2s ease;
+    }
+
+    .macro-badge:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Calories Badge - Orange/Gray */
+    .badge-calories {
+        background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+        color: white;
+        border: 1px solid rgba(108, 117, 125, 0.3);
+    }
+
+    body.dark-mode .badge-calories {
+        background: linear-gradient(135deg, #495057 0%, #343a40 100%);
+        border-color: rgba(108, 117, 125, 0.5);
+    }
+
+    /* Protein Badge - Red/Pink */
+    .badge-protein {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        color: white;
+        border: 1px solid rgba(220, 53, 69, 0.3);
+    }
+
+    body.dark-mode .badge-protein {
+        background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        border-color: rgba(220, 53, 69, 0.5);
+    }
+
+    /* Carbs Badge - Yellow/Gold */
+    .badge-carbs {
+        background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+        color: #000;
+        border: 1px solid rgba(255, 193, 7, 0.3);
+    }
+
+    body.dark-mode .badge-carbs {
+        background: linear-gradient(135deg, #f39c12 0%, #d68910 100%);
+        color: #000;
+        border-color: rgba(243, 156, 18, 0.5);
+    }
+
+    /* Fats Badge - Cyan/Blue */
+    .badge-fats {
+        background: linear-gradient(135deg, #0dcaf0 0%, #0aa2c0 100%);
+        color: #000;
+        border: 1px solid rgba(13, 202, 240, 0.3);
+    }
+
+    body.dark-mode .badge-fats {
+        background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+        color: white;
+        border-color: rgba(23, 162, 184, 0.5);
+    }
+
     body.dark-mode .card-title {
         color: #ffffff !important;
     }
@@ -1173,10 +1243,10 @@ function loadFoodsChart(meals) {
                         ${item.quantity}${item.unit}
                     </div>
                     <div class="mt-1">
-                        <span class="badge bg-secondary" style="font-size: 0.7rem;">${calories} cal</span>
-                        <span class="badge bg-danger" style="font-size: 0.7rem;">P: ${protein}g</span>
-                        <span class="badge bg-warning text-dark" style="font-size: 0.7rem;">C: ${carbs}g</span>
-                        <span class="badge bg-info" style="font-size: 0.7rem;">F: ${fats}g</span>
+                        <span class="macro-badge badge-calories">${calories} cal</span>
+                        <span class="macro-badge badge-protein">P: ${protein}g</span>
+                        <span class="macro-badge badge-carbs">C: ${carbs}g</span>
+                        <span class="macro-badge badge-fats">F: ${fats}g</span>
                     </div>
                 </div>
             `;
@@ -1260,10 +1330,10 @@ function updateSelectedFoods() {
                 <div class="flex-grow-1">
                     <div style="font-weight: 600; margin-bottom: 4px;">${food.name}</div>
                     <div style="font-size: 0.85rem;">
-                        <span class="badge bg-secondary">${scaledCals} cal</span>
-                        <span class="badge bg-danger">P: ${scaledProtein}g</span>
-                        <span class="badge bg-warning text-dark">C: ${scaledCarbs}g</span>
-                        <span class="badge bg-info">F: ${scaledFats}g</span>
+                        <span class="macro-badge badge-calories">${scaledCals} cal</span>
+                        <span class="macro-badge badge-protein">P: ${scaledProtein}g</span>
+                        <span class="macro-badge badge-carbs">C: ${scaledCarbs}g</span>
+                        <span class="macro-badge badge-fats">F: ${scaledFats}g</span>
                     </div>
                 </div>
                 <div class="d-flex align-items-center gap-2">
@@ -1400,10 +1470,10 @@ function loadRecentMeals() {
                             ${meal.food_items.map(item => `${item.name} (${item.quantity}${item.unit})`).join(', ')}
                         </div>
                         <div class="meal-macros">
-                            <span class="badge bg-secondary"><i class="bi bi-fire"></i> ${Math.round(meal.totals.calories)} cal</span>
-                            <span class="badge bg-danger"><i class="bi bi-egg"></i> ${Math.round(meal.totals.protein)}g</span>
-                            <span class="badge bg-warning text-dark"><i class="bi bi-lightning-charge"></i> ${Math.round(meal.totals.carbs)}g</span>
-                            <span class="badge bg-info"><i class="bi bi-cake2"></i> ${Math.round(meal.totals.fats)}g</span>
+                            <span class="macro-badge badge-calories">${Math.round(meal.totals.calories)} cal</span>
+                            <span class="macro-badge badge-protein">P: ${Math.round(meal.totals.protein)}g</span>
+                            <span class="macro-badge badge-carbs">C: ${Math.round(meal.totals.carbs)}g</span>
+                            <span class="macro-badge badge-fats">F: ${Math.round(meal.totals.fats)}g</span>
                         </div>
                     </div>
                 `;
