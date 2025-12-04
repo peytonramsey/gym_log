@@ -160,8 +160,7 @@ def populate_demo_data(user):
             workout = Workout(
                 user_id=user.id,
                 date=workout_date.date(),
-                name=workout_name,
-                notes=f"Great session! Felt strong today."
+                notes=f"{workout_name} - Great session! Felt strong today."
             )
             db.session.add(workout)
             db.session.flush()
@@ -173,8 +172,7 @@ def populate_demo_data(user):
                         name=ex_name,
                         sets=1,
                         reps=reps[set_num] if set_num < len(reps) else reps[-1],
-                        weight=weights[set_num] if set_num < len(weights) else weights[-1],
-                        unit='lbs'
+                        weight=weights[set_num] if set_num < len(weights) else weights[-1]
                     )
                     db.session.add(exercise)
 
