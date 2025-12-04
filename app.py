@@ -114,8 +114,7 @@ def populate_demo_data(user):
         metrics = BodyMetrics(
             user_id=user.id,
             date=date.date(),
-            weight=round(base_weight + weight_variation, 1),
-            body_fat=round(15.0 - (weight_variation * 0.1), 1)
+            weight=round(base_weight + weight_variation, 1)
         )
         db.session.add(metrics)
 
