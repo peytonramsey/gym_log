@@ -98,10 +98,11 @@ def populate_demo_data(user):
     # Create nutrition goals
     nutrition_goals = NutritionGoals(
         user_id=user.id,
-        daily_calories=2500,
-        daily_protein=180,
-        daily_carbs=250,
-        daily_fats=80
+        calories_goal=2500,
+        protein_goal=180,
+        carbs_goal=250,
+        fats_goal=80,
+        is_active=True
     )
     db.session.add(nutrition_goals)
 
