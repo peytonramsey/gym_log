@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # App version
-VERSION = "1.0.2"
+VERSION = "1.0.3"
 
 # Unit conversion factors to grams/ml
 UNIT_CONVERSIONS = {
@@ -82,6 +82,177 @@ def create_admin_user():
         print(f"[SUCCESS] Admin user '{admin_username}' created successfully!")
     else:
         print(f"[INFO] Admin user '{admin_username}' already exists.")
+
+
+def populate_demo_data(user):
+    """Populate demo user with realistic fitness data"""
+    # Clear existing data for demo user
+    Workout.query.filter_by(user_id=user.id).delete()
+    BodyMetrics.query.filter_by(user_id=user.id).delete()
+    Meal.query.filter_by(user_id=user.id).delete()
+    NutritionGoals.query.filter_by(user_id=user.id).delete()
+    Supplement.query.filter_by(user_id=user.id).delete()
+    WorkoutTemplate.query.filter_by(user_id=user.id).delete()
+    WeightPrediction.query.filter_by(user_id=user.id).delete()
+
+    # Create nutrition goals
+    nutrition_goals = NutritionGoals(
+        user_id=user.id,
+        daily_calories=2500,
+        daily_protein=180,
+        daily_carbs=250,
+        daily_fats=80
+    )
+    db.session.add(nutrition_goals)
+
+    # Create body metrics history (last 90 days)
+    base_weight = 180.0
+    for i in range(90, 0, -7):  # Weekly measurements
+        date = datetime.now() - timedelta(days=i)
+        weight_variation = (90 - i) * 0.05  # Gradual weight gain
+        metrics = BodyMetrics(
+            user_id=user.id,
+            date=date.date(),
+            weight=round(base_weight + weight_variation, 1),
+            body_fat=round(15.0 - (weight_variation * 0.1), 1)
+        )
+        db.session.add(metrics)
+
+    # Create workout history (last 30 days, 4x per week)
+    workout_types = [
+        ('Push Day', [
+            ('Bench Press', 4, [8, 8, 6, 6], [185, 185, 205, 205]),
+            ('Incline Dumbbell Press', 4, [10, 10, 8, 8], [70, 70, 75, 75]),
+            ('Overhead Press', 3, [8, 8, 8], [115, 115, 115]),
+            ('Tricep Pushdowns', 3, [12, 12, 12], [50, 50, 50]),
+            ('Lateral Raises', 3, [15, 15, 15], [20, 20, 20])
+        ]),
+        ('Pull Day', [
+            ('Deadlift', 4, [5, 5, 3, 3], [275, 275, 315, 315]),
+            ('Pull-ups', 4, [10, 8, 8, 6], [0, 0, 0, 0]),
+            ('Barbell Rows', 4, [8, 8, 8, 8], [185, 185, 185, 185]),
+            ('Face Pulls', 3, [15, 15, 15], [40, 40, 40]),
+            ('Hammer Curls', 3, [12, 12, 12], [35, 35, 35])
+        ]),
+        ('Leg Day', [
+            ('Squats', 4, [8, 8, 6, 6], [225, 225, 245, 245]),
+            ('Romanian Deadlifts', 4, [10, 10, 10, 10], [185, 185, 185, 185]),
+            ('Leg Press', 3, [12, 12, 12], [360, 360, 360]),
+            ('Leg Curls', 3, [12, 12, 12], [90, 90, 90]),
+            ('Calf Raises', 4, [15, 15, 15, 15], [135, 135, 135, 135])
+        ]),
+        ('Upper Body', [
+            ('Bench Press', 3, [10, 10, 10], [165, 165, 165]),
+            ('Lat Pulldowns', 3, [10, 10, 10], [140, 140, 140]),
+            ('Dumbbell Rows', 3, [12, 12, 12], [65, 65, 65]),
+            ('Dumbbell Flyes', 3, [12, 12, 12], [30, 30, 30]),
+            ('Cable Curls', 3, [15, 15, 15], [40, 40, 40])
+        ])
+    ]
+
+    workout_schedule = [0, 1, 3, 5]  # Monday, Tuesday, Thursday, Saturday
+    for week in range(4):  # 4 weeks of history
+        for day_offset in workout_schedule:
+            workout_date = datetime.now() - timedelta(days=(21 - week * 7 + day_offset))
+            workout_type_idx = workout_schedule.index(day_offset)
+            workout_name, exercises = workout_types[workout_type_idx]
+
+            workout = Workout(
+                user_id=user.id,
+                date=workout_date.date(),
+                name=workout_name,
+                notes=f"Great session! Felt strong today."
+            )
+            db.session.add(workout)
+            db.session.flush()
+
+            for ex_name, num_sets, reps, weights in exercises:
+                for set_num in range(num_sets):
+                    exercise = Exercise(
+                        workout_id=workout.id,
+                        name=ex_name,
+                        sets=1,
+                        reps=reps[set_num] if set_num < len(reps) else reps[-1],
+                        weight=weights[set_num] if set_num < len(weights) else weights[-1],
+                        unit='lbs'
+                    )
+                    db.session.add(exercise)
+
+    # Create nutrition logs (last 7 days)
+    meal_templates = {
+        'Breakfast': [
+            ('Scrambled Eggs (3 large)', 270, 18, 3, 21),
+            ('Whole Wheat Toast (2 slices)', 160, 6, 28, 3),
+            ('Avocado (1/2)', 120, 1, 6, 11),
+            ('Greek Yogurt', 100, 17, 6, 0)
+        ],
+        'Lunch': [
+            ('Grilled Chicken Breast (6oz)', 280, 53, 0, 6),
+            ('Brown Rice (1 cup)', 215, 5, 45, 2),
+            ('Broccoli (1 cup)', 55, 4, 11, 0),
+            ('Olive Oil (1 tbsp)', 120, 0, 0, 14)
+        ],
+        'Dinner': [
+            ('Salmon Fillet (6oz)', 350, 39, 0, 21),
+            ('Sweet Potato (1 medium)', 180, 4, 41, 0),
+            ('Mixed Vegetables', 80, 3, 15, 1),
+            ('Quinoa (1/2 cup)', 110, 4, 20, 2)
+        ],
+        'Snack': [
+            ('Protein Shake', 220, 40, 8, 3),
+            ('Banana', 105, 1, 27, 0),
+            ('Almonds (1 oz)', 160, 6, 6, 14),
+            ('Apple', 95, 0, 25, 0)
+        ]
+    }
+
+    for days_ago in range(7):
+        meal_date = datetime.now() - timedelta(days=days_ago)
+        for meal_type, foods in meal_templates.items():
+            meal = Meal(
+                user_id=user.id,
+                date=meal_date.date(),
+                meal_type=meal_type,
+                notes=''
+            )
+            db.session.add(meal)
+            db.session.flush()
+
+            for food_name, cals, protein, carbs, fats in foods:
+                food_item = FoodItem(
+                    meal_id=meal.id,
+                    name=food_name,
+                    serving_size='1 serving',
+                    calories=cals,
+                    protein=protein,
+                    carbs=carbs,
+                    fats=fats
+                )
+                db.session.add(food_item)
+
+    # Create supplements log (last 7 days)
+    supplements_daily = [
+        ('Whey Protein', '30g', 'Morning'),
+        ('Creatine Monohydrate', '5g', 'Pre-Workout'),
+        ('Multivitamin', '1 tablet', 'Morning'),
+        ('Fish Oil', '2 capsules', 'Evening'),
+        ('Vitamin D3', '5000 IU', 'Morning')
+    ]
+
+    for days_ago in range(7):
+        supp_date = datetime.now() - timedelta(days=days_ago)
+        for supp_name, dosage, timing in supplements_daily:
+            supplement = Supplement(
+                user_id=user.id,
+                date=supp_date.date(),
+                name=supp_name,
+                dosage=dosage,
+                time_of_day=timing
+            )
+            db.session.add(supplement)
+
+    db.session.commit()
+    print(f"[SUCCESS] Demo data populated for user '{user.username}'")
 
 with app.app_context():
     db.create_all()
@@ -158,6 +329,34 @@ def register():
 def logout():
     logout_user()
     return redirect(url_for('login'))
+
+@app.route('/demo')
+def demo():
+    """Demo mode: Create/reset demo user and auto-login with populated data"""
+    demo_username = 'demo_user'
+    demo_email = 'demo@fitglyph.com'
+    demo_password = 'demo123'
+
+    # Check if demo user exists
+    demo_user = User.query.filter_by(username=demo_username).first()
+
+    if not demo_user:
+        # Create demo user
+        demo_user = User(username=demo_username, email=demo_email)
+        demo_user.set_password(demo_password)
+        db.session.add(demo_user)
+        db.session.commit()
+        print(f"[SUCCESS] Demo user '{demo_username}' created!")
+
+    # Reset demo data every time (keeps it fresh for recruiters)
+    populate_demo_data(demo_user)
+
+    # Auto-login the demo user
+    login_user(demo_user, remember=False)
+    session.permanent = False  # Demo session expires when browser closes
+
+    # Redirect to home with a demo flag
+    return redirect(url_for('index', demo='true'))
 
 # ===== MAIN ROUTES =====
 

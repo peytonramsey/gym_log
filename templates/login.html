@@ -55,6 +55,60 @@
         background-color: #0d6efd;
         border-color: #0d6efd;
     }
+
+    .demo-divider {
+        display: flex;
+        align-items: center;
+        text-align: center;
+        margin: 20px 0;
+        color: #6c757d;
+    }
+
+    .demo-divider::before,
+    .demo-divider::after {
+        content: '';
+        flex: 1;
+        border-bottom: 1px solid rgba(128, 128, 128, 0.3);
+    }
+
+    .demo-divider span {
+        padding: 0 10px;
+        font-size: 0.85rem;
+    }
+
+    body.dark-mode .demo-divider {
+        color: #aaa;
+    }
+
+    body.dark-mode .demo-divider::before,
+    body.dark-mode .demo-divider::after {
+        border-bottom-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-demo {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        transition: all 0.3s ease;
+    }
+
+    .btn-demo:hover {
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .demo-info {
+        font-size: 0.8rem;
+        color: #6c757d;
+        text-align: center;
+        margin-top: 8px;
+    }
+
+    body.dark-mode .demo-info {
+        color: #aaa;
+    }
 </style>
 {% endblock %}
 
@@ -90,7 +144,18 @@
             <button type="submit" class="btn btn-primary w-100 mb-3">Login</button>
         </form>
 
-        <div class="text-center">
+        <div class="demo-divider">
+            <span>OR</span>
+        </div>
+
+        <a href="/demo" class="btn btn-demo w-100 mb-2">
+            <i class="bi bi-eye"></i> View Demo Site
+        </a>
+        <p class="demo-info">
+            <i class="bi bi-info-circle"></i> Perfect for recruiters - No signup required!
+        </p>
+
+        <div class="text-center mt-3">
             <p class="mb-0">Don't have an account? <a href="/register">Sign up</a></p>
         </div>
     </div>
