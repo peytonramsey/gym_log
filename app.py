@@ -347,8 +347,11 @@ def populate_demo_data(user):
     print(f"[SUCCESS] Demo data populated for user '{user.username}'")
 
 with app.app_context():
-    db.create_all()
-    create_admin_user()
+    # db.create_all() - COMMENTED OUT: Using Flask-Migrate now, run "flask db upgrade" instead
+    try:
+        create_admin_user()
+    except Exception:
+        pass  # Database tables may not exist yet if migrations haven't been run
 
 # Make version available to all templates
 @app.context_processor
