@@ -201,17 +201,52 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Schedule for Day</label>
-                        <select class="form-select" id="template-day">
-                            <option value="">Unscheduled</option>
-                            <option value="0">Monday</option>
-                            <option value="1">Tuesday</option>
-                            <option value="2">Wednesday</option>
-                            <option value="3">Thursday</option>
-                            <option value="4">Friday</option>
-                            <option value="5">Saturday</option>
-                            <option value="6">Sunday</option>
-                        </select>
+                        <label class="form-label">Schedule for Days (select one or more)</label>
+                        <div class="row g-2" id="template-days">
+                            <div class="col-6 col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="0" id="day-0">
+                                    <label class="form-check-label" for="day-0">Monday</label>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="1" id="day-1">
+                                    <label class="form-check-label" for="day-1">Tuesday</label>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="2" id="day-2">
+                                    <label class="form-check-label" for="day-2">Wednesday</label>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="3" id="day-3">
+                                    <label class="form-check-label" for="day-3">Thursday</label>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="4" id="day-4">
+                                    <label class="form-check-label" for="day-4">Friday</label>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="5" id="day-5">
+                                    <label class="form-check-label" for="day-5">Saturday</label>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="6" id="day-6">
+                                    <label class="form-check-label" for="day-6">Sunday</label>
+                                </div>
+                            </div>
+                        </div>
+                        <small class="text-muted">Leave all unchecked for unscheduled template</small>
                     </div>
 
                     <hr>
@@ -296,7 +331,13 @@ function displayTemplates() {
 
     let html = '';
     templates.forEach(template => {
-        const scheduledDay = template.day_of_week !== null ? dayNames[template.day_of_week] : 'Unscheduled';
+        // Use new scheduled_days array, or fall back to single day_of_week
+        let scheduledDayText = 'Unscheduled';
+        if (template.scheduled_days && template.scheduled_days.length > 0) {
+            scheduledDayText = template.scheduled_days.map(d => dayNames[d]).join(', ');
+        } else if (template.day_of_week !== null) {
+            scheduledDayText = dayNames[template.day_of_week];
+        }
 
         html += `
             <div class="col-md-6 col-lg-4">
@@ -318,7 +359,7 @@ function displayTemplates() {
 
                         <div class="mb-2">
                             <small class="text-muted">
-                                <i class="bi bi-calendar"></i> ${scheduledDay}
+                                <i class="bi bi-calendar"></i> ${scheduledDayText}
                             </small>
                         </div>
                         <div class="mb-2">
@@ -351,7 +392,12 @@ function showCreateTemplateModal() {
     document.getElementById('template-id').value = '';
     document.getElementById('template-name').value = '';
     document.getElementById('template-description').value = '';
-    document.getElementById('template-day').value = '';
+
+    // Clear all day checkboxes
+    for (let i = 0; i < 7; i++) {
+        document.getElementById(`day-${i}`).checked = false;
+    }
+
     document.getElementById('exercises-container').innerHTML = '';
 
     // Add one default exercise row
@@ -411,7 +457,21 @@ function editTemplate(templateId) {
     document.getElementById('template-id').value = templateId;
     document.getElementById('template-name').value = template.name;
     document.getElementById('template-description').value = template.description || '';
-    document.getElementById('template-day').value = template.day_of_week !== null ? template.day_of_week : '';
+
+    // Clear all checkboxes first
+    for (let i = 0; i < 7; i++) {
+        document.getElementById(`day-${i}`).checked = false;
+    }
+
+    // Set checkboxes based on scheduled_days, or fall back to single day_of_week
+    const scheduledDays = template.scheduled_days && template.scheduled_days.length > 0
+        ? template.scheduled_days
+        : (template.day_of_week !== null ? [template.day_of_week] : []);
+
+    scheduledDays.forEach(day => {
+        document.getElementById(`day-${day}`).checked = true;
+    });
+
     document.getElementById('exercises-container').innerHTML = '';
 
     // Add exercise rows
@@ -458,12 +518,18 @@ function saveTemplate() {
         return;
     }
 
-    const dayOfWeek = document.getElementById('template-day').value;
+    // Collect checked days from checkboxes
+    const scheduledDays = [];
+    for (let i = 0; i < 7; i++) {
+        if (document.getElementById(`day-${i}`).checked) {
+            scheduledDays.push(i);
+        }
+    }
 
     const data = {
         name: name,
         description: description,
-        day_of_week: dayOfWeek !== '' ? parseInt(dayOfWeek) : null,
+        scheduled_days: scheduledDays,
         exercises: exercises
     };
 

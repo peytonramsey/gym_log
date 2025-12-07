@@ -22,7 +22,22 @@
       "Bash(if exist nul del nul)",
       "Bash(git config:*)",
       "Bash(del:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(dir:*)",
+      "Bash(copy \"Vista Logos\\transparent-logo.png\" \"static\\transparent-logo.png\")",
+      "Bash(cp:*)",
+      "Bash(tasklist:*)",
+      "Bash(curl:*)",
+      "Bash(sqlite3:*)",
+      "Bash(mkdir:*)",
+      "Bash(rm instance/gymlog.db)",
+      "Bash(git rm:*)",
+      "Bash(copy \"Vista Logos - FitGlyph\\transparent-logo-fitglyph.svg\" statictransparent-logo-fitglyph.svg)",
+      "Bash(flask db init:*)",
+      "Bash(flask db migrate:*)",
+      "Bash(flask db upgrade:*)",
+      "Bash(if exist instancegymlog.db del instancegymlog.db)",
+      "Bash(flask db:*)"
     ],
     "deny": [],
     "ask": []

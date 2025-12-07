@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from models import db, User, Workout, Exercise, BodyMetrics, Meal, FoodItem, NutritionGoals, Supplement, WorkoutTemplate, TemplateExercise, WeightPrediction
+from flask_migrate import Migrate
+from models import db, User, Workout, Exercise, BodyMetrics, Meal, FoodItem, NutritionGoals, Supplement, WorkoutTemplate, TemplateExercise, TemplateSchedule, WeightPrediction
 from datetime import datetime, timedelta
 from sqlalchemy import func
 import requests
@@ -54,6 +55,9 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True  # Prevent JavaScript access to ses
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # CSRF protection
 
 db.init_app(app)
+
+# Initialize Flask-Migrate for database migrations
+migrate = Migrate(app, db)
 
 # Initialize Flask-Login
 login_manager = LoginManager()
@@ -109,11 +113,11 @@ def populate_demo_data(user):
     # Create body metrics history (last 90 days)
     base_weight = 180.0
     for i in range(90, 0, -7):  # Weekly measurements
-        date = datetime.now() - timedelta(days=i)
+        date = (datetime.now() - timedelta(days=i)).replace(hour=8, minute=0, second=0, microsecond=0)
         weight_variation = (90 - i) * 0.05  # Gradual weight gain
         metrics = BodyMetrics(
             user_id=user.id,
-            date=date.date(),
+            date=date,
             weight=round(base_weight + weight_variation, 1)
         )
         db.session.add(metrics)
@@ -150,66 +154,80 @@ def populate_demo_data(user):
         ])
     ]
 
-    workout_schedule = [0, 1, 3, 5]  # Monday, Tuesday, Thursday, Saturday
-    for week in range(4):  # 4 weeks of history
-        for day_offset in workout_schedule:
-            workout_date = datetime.now() - timedelta(days=(21 - week * 7 + day_offset))
-            workout_type_idx = workout_schedule.index(day_offset)
-            workout_name, exercises = workout_types[workout_type_idx]
+    # Create workouts aligned with scheduled days for consistency tracking
+    # Schedule: Monday (0), Tuesday (1), Thursday (3), Saturday (5)
+    scheduled_days = [0, 1, 3, 5]  # Maps to workout_types indices
 
-            workout = Workout(
-                user_id=user.id,
-                date=workout_date.date(),
-                notes=f"{workout_name} - Great session! Felt strong today."
-            )
-            db.session.add(workout)
-            db.session.flush()
+    # Create workouts for the last 4 weeks on the scheduled days
+    for week in range(4):
+        # Start from 4 weeks ago
+        week_start = datetime.now() - timedelta(weeks=4-week)
+        # Find the Monday of that week
+        days_since_monday = week_start.weekday()
+        monday = week_start - timedelta(days=days_since_monday)
 
-            for ex_name, num_sets, reps, weights in exercises:
-                for set_num in range(num_sets):
-                    exercise = Exercise(
-                        workout_id=workout.id,
-                        name=ex_name,
-                        sets=1,
-                        reps=reps[set_num] if set_num < len(reps) else reps[-1],
-                        weight=weights[set_num] if set_num < len(weights) else weights[-1]
-                    )
-                    db.session.add(exercise)
+        for day_of_week in scheduled_days:
+            workout_date = (monday + timedelta(days=day_of_week)).replace(hour=10, minute=0, second=0, microsecond=0)
 
-    # Create nutrition logs (last 7 days)
+            # Only create if date is in the past
+            if workout_date.date() <= datetime.now().date():
+                workout_type_idx = scheduled_days.index(day_of_week)
+                workout_name, exercises = workout_types[workout_type_idx]
+
+                workout = Workout(
+                    user_id=user.id,
+                    date=workout_date,
+                    notes=f"{workout_name} - Great session! Felt strong today."
+                )
+                db.session.add(workout)
+                db.session.flush()
+
+                for ex_name, num_sets, reps, weights in exercises:
+                    for set_num in range(num_sets):
+                        exercise = Exercise(
+                            workout_id=workout.id,
+                            name=ex_name,
+                            sets=1,
+                            reps=reps[set_num] if set_num < len(reps) else reps[-1],
+                            weight=weights[set_num] if set_num < len(weights) else weights[-1]
+                        )
+                        db.session.add(exercise)
+
+    # Create nutrition logs (last 7 days) with realistic values
     meal_templates = {
         'Breakfast': [
-            ('Scrambled Eggs (3 large)', 270, 18, 3, 21),
-            ('Whole Wheat Toast (2 slices)', 160, 6, 28, 3),
+            ('Scrambled Eggs (3 large)', 210, 18, 2, 15),
+            ('Whole Wheat Toast (2 slices)', 140, 6, 24, 2),
             ('Avocado (1/2)', 120, 1, 6, 11),
-            ('Greek Yogurt', 100, 17, 6, 0)
+            ('Greek Yogurt (1 cup)', 150, 17, 8, 4)
         ],
         'Lunch': [
             ('Grilled Chicken Breast (6oz)', 280, 53, 0, 6),
-            ('Brown Rice (1 cup)', 215, 5, 45, 2),
+            ('Brown Rice (1 cup cooked)', 215, 5, 45, 2),
             ('Broccoli (1 cup)', 55, 4, 11, 0),
             ('Olive Oil (1 tbsp)', 120, 0, 0, 14)
         ],
         'Dinner': [
             ('Salmon Fillet (6oz)', 350, 39, 0, 21),
-            ('Sweet Potato (1 medium)', 180, 4, 41, 0),
-            ('Mixed Vegetables', 80, 3, 15, 1),
-            ('Quinoa (1/2 cup)', 110, 4, 20, 2)
+            ('Sweet Potato (1 medium)', 103, 2, 24, 0),
+            ('Green Beans (1 cup)', 44, 2, 10, 0),
+            ('Quinoa (1/2 cup cooked)', 111, 4, 20, 2)
         ],
         'Snack': [
-            ('Protein Shake', 220, 40, 8, 3),
+            ('Protein Shake', 160, 30, 5, 3),
             ('Banana', 105, 1, 27, 0),
-            ('Almonds (1 oz)', 160, 6, 6, 14),
-            ('Apple', 95, 0, 25, 0)
+            ('Almonds (1 oz)', 164, 6, 6, 14)
         ]
     }
 
     for days_ago in range(7):
-        meal_date = datetime.now() - timedelta(days=days_ago)
+        # Create a date for each day (not datetime to avoid time issues)
+        meal_date = (datetime.now() - timedelta(days=days_ago)).replace(hour=12, minute=0, second=0, microsecond=0)
+
         for meal_type, foods in meal_templates.items():
             meal = Meal(
                 user_id=user.id,
-                date=meal_date.date(),
+                date=meal_date,
                 meal_type=meal_type,
                 notes=''
             )
@@ -221,6 +239,8 @@ def populate_demo_data(user):
                     meal_id=meal.id,
                     name=food_name,
                     serving_size='1 serving',
+                    quantity=1.0,
+                    unit='serving',
                     calories=cals,
                     protein=protein,
                     carbs=carbs,
@@ -238,16 +258,90 @@ def populate_demo_data(user):
     ]
 
     for days_ago in range(7):
-        supp_date = datetime.now() - timedelta(days=days_ago)
+        supp_date = (datetime.now() - timedelta(days=days_ago)).replace(hour=12, minute=0, second=0, microsecond=0)
         for supp_name, dosage, timing in supplements_daily:
             supplement = Supplement(
                 user_id=user.id,
-                date=supp_date.date(),
+                date=supp_date,
                 name=supp_name,
                 dosage=dosage,
                 time_of_day=timing
             )
             db.session.add(supplement)
+
+    # Create workout templates for "My Schedule" (matches the workout history pattern)
+    workout_templates_data = [
+        {
+            'name': 'Push Day',
+            'day_of_week': 0,  # Monday
+            'description': 'Chest, Shoulders, and Triceps',
+            'exercises': [
+                ('Bench Press', 4, 8, 185, 180),
+                ('Incline Dumbbell Press', 4, 10, 70, 90),
+                ('Overhead Press', 3, 8, 115, 120),
+                ('Tricep Pushdowns', 3, 12, 50, 90),
+                ('Lateral Raises', 3, 15, 20, 60)
+            ]
+        },
+        {
+            'name': 'Pull Day',
+            'day_of_week': 1,  # Tuesday
+            'description': 'Back and Biceps',
+            'exercises': [
+                ('Deadlift', 4, 5, 275, 240),
+                ('Pull-ups', 4, 10, 0, 120),
+                ('Barbell Rows', 4, 8, 185, 120),
+                ('Face Pulls', 3, 15, 40, 90),
+                ('Hammer Curls', 3, 12, 35, 90)
+            ]
+        },
+        {
+            'name': 'Leg Day',
+            'day_of_week': 3,  # Thursday
+            'description': 'Quads, Hamstrings, and Calves',
+            'exercises': [
+                ('Squats', 4, 8, 225, 180),
+                ('Romanian Deadlifts', 4, 10, 185, 120),
+                ('Leg Press', 3, 12, 360, 90),
+                ('Leg Curls', 3, 12, 90, 90),
+                ('Calf Raises', 4, 15, 135, 60)
+            ]
+        },
+        {
+            'name': 'Upper Body',
+            'day_of_week': 5,  # Saturday
+            'description': 'Full Upper Body',
+            'exercises': [
+                ('Bench Press', 3, 10, 165, 120),
+                ('Lat Pulldowns', 3, 10, 140, 90),
+                ('Dumbbell Rows', 3, 12, 65, 90),
+                ('Dumbbell Flyes', 3, 12, 30, 90),
+                ('Cable Curls', 3, 15, 40, 60)
+            ]
+        }
+    ]
+
+    for template_data in workout_templates_data:
+        template = WorkoutTemplate(
+            user_id=user.id,
+            name=template_data['name'],
+            description=template_data['description'],
+            day_of_week=template_data['day_of_week']
+        )
+        db.session.add(template)
+        db.session.flush()
+
+        for idx, (ex_name, sets, reps, weight, rest) in enumerate(template_data['exercises']):
+            template_exercise = TemplateExercise(
+                template_id=template.id,
+                name=ex_name,
+                sets=sets,
+                reps=reps,
+                weight=weight,
+                rest_time=rest,
+                order=idx
+            )
+            db.session.add(template_exercise)
 
     db.session.commit()
     print(f"[SUCCESS] Demo data populated for user '{user.username}'")
@@ -1112,14 +1206,30 @@ def get_template(template_id):
 def create_template():
     data = request.get_json()
 
+    # Support both old single day and new multiple days
+    scheduled_days = data.get('scheduled_days', [])
+    single_day = data.get('day_of_week')
+
+    # For backwards compatibility: if old single day is provided, convert to array
+    if not scheduled_days and single_day is not None and single_day != '':
+        scheduled_days = [int(single_day)]
+
     template = WorkoutTemplate(
         user_id=current_user.id,
         name=data['name'],
         description=data.get('description', ''),
-        day_of_week=data.get('day_of_week')
+        day_of_week=scheduled_days[0] if len(scheduled_days) == 1 else None  # Keep old field for backwards compat
     )
     db.session.add(template)
     db.session.flush()
+
+    # Add scheduled days to association table
+    for day in scheduled_days:
+        schedule = TemplateSchedule(
+            template_id=template.id,
+            day_of_week=int(day)
+        )
+        db.session.add(schedule)
 
     # Add exercises to template
     for idx, ex in enumerate(data.get('exercises', [])):
@@ -1146,7 +1256,28 @@ def update_template(template_id):
 
     template.name = data.get('name', template.name)
     template.description = data.get('description', template.description)
-    template.day_of_week = data.get('day_of_week', template.day_of_week)
+
+    # Support both old single day and new multiple days
+    scheduled_days = data.get('scheduled_days', [])
+    single_day = data.get('day_of_week')
+
+    # For backwards compatibility: if old single day is provided, convert to array
+    if not scheduled_days and single_day is not None and single_day != '':
+        scheduled_days = [int(single_day)]
+
+    # Update old field for backwards compatibility
+    template.day_of_week = scheduled_days[0] if len(scheduled_days) == 1 else None
+
+    # Delete existing scheduled days
+    TemplateSchedule.query.filter_by(template_id=template.id).delete()
+
+    # Add updated scheduled days
+    for day in scheduled_days:
+        schedule = TemplateSchedule(
+            template_id=template.id,
+            day_of_week=int(day)
+        )
+        db.session.add(schedule)
 
     # Delete existing exercises
     TemplateExercise.query.filter_by(template_id=template.id).delete()
@@ -1184,17 +1315,28 @@ def get_todays_workout():
     # Get current day of week (0=Monday, 6=Sunday)
     today = datetime.now().weekday()
 
-    # Find template scheduled for today
-    template = WorkoutTemplate.query.filter_by(
-        user_id=current_user.id,
-        day_of_week=today
+    # Find template scheduled for today - check both new and old methods
+    # First try the new TemplateSchedule table
+    scheduled_template = db.session.query(WorkoutTemplate).join(
+        TemplateSchedule,
+        WorkoutTemplate.id == TemplateSchedule.template_id
+    ).filter(
+        WorkoutTemplate.user_id == current_user.id,
+        TemplateSchedule.day_of_week == today
     ).first()
 
-    if template:
+    # Fall back to old single day_of_week field for backwards compatibility
+    if not scheduled_template:
+        scheduled_template = WorkoutTemplate.query.filter_by(
+            user_id=current_user.id,
+            day_of_week=today
+        ).first()
+
+    if scheduled_template:
         return jsonify({
             'success': True,
             'scheduled': True,
-            'template': template.to_dict()
+            'template': scheduled_template.to_dict()
         })
     else:
         return jsonify({
@@ -1228,13 +1370,30 @@ def get_consistency():
     # Get number of days to look back (default 30)
     days = int(request.args.get('days', 30))
 
-    # Get all scheduled templates
-    scheduled_templates = WorkoutTemplate.query.filter_by(
+    # Build a set of scheduled day_of_week values from both old and new methods
+    scheduled_days_of_week = set()
+
+    # Get scheduled days from new TemplateSchedule table
+    template_schedules = db.session.query(TemplateSchedule).join(
+        WorkoutTemplate,
+        TemplateSchedule.template_id == WorkoutTemplate.id
+    ).filter(
+        WorkoutTemplate.user_id == current_user.id
+    ).all()
+
+    for schedule in template_schedules:
+        scheduled_days_of_week.add(schedule.day_of_week)
+
+    # Also check old day_of_week field for backwards compatibility
+    old_scheduled_templates = WorkoutTemplate.query.filter_by(
         user_id=current_user.id
     ).filter(WorkoutTemplate.day_of_week.isnot(None)).all()
 
+    for template in old_scheduled_templates:
+        scheduled_days_of_week.add(template.day_of_week)
+
     # If no scheduled workouts, return 0%
-    if not scheduled_templates:
+    if not scheduled_days_of_week:
         return jsonify({
             'adherence_percentage': 0,
             'scheduled_days': 0,
@@ -1242,9 +1401,6 @@ def get_consistency():
             'total_workouts': 0,
             'message': 'No workouts scheduled'
         })
-
-    # Build a set of scheduled day_of_week values
-    scheduled_days_of_week = set(t.day_of_week for t in scheduled_templates)
 
     # Get all workouts in the date range
     end_date = datetime.now()

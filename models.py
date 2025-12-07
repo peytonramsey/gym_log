@@ -6,6 +6,8 @@ from datetime import datetime
 db = SQLAlchemy()
 
 class User(UserMixin, db.Model):
+    __tablename__ = 'users'  # Avoid PostgreSQL reserved word 'user'
+
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -35,7 +37,7 @@ class User(UserMixin, db.Model):
 
 class BodyMetrics(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     weight = db.Column(db.Float, nullable=True)
     height = db.Column(db.Float, nullable=True)
@@ -50,7 +52,7 @@ class BodyMetrics(db.Model):
 
 class Workout(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     notes = db.Column(db.String(500))
     exercises = db.relationship('Exercise', backref='workout', lazy=True, cascade='all, delete-orphan')
@@ -87,7 +89,7 @@ class Exercise(db.Model):
 
 class Meal(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     meal_type = db.Column(db.String(20))  # Breakfast, Lunch, Dinner, Snack
     notes = db.Column(db.String(200))
@@ -145,7 +147,7 @@ class FoodItem(db.Model):
 
 class NutritionGoals(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
     # Daily goals
@@ -170,7 +172,7 @@ class NutritionGoals(db.Model):
 
 class Supplement(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     name = db.Column(db.String(100), nullable=False)
     dosage = db.Column(db.String(50))  # e.g., "1000mg", "2 capsules"
@@ -189,23 +191,45 @@ class Supplement(db.Model):
             'notes': self.notes
         }
 
-class WorkoutTemplate(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    name = db.Column(db.String(100), nullable=False)  # e.g., "Push Day 1", "Pull Day"
-    description = db.Column(db.String(500))
-    day_of_week = db.Column(db.Integer, nullable=True)  # 0=Monday, 1=Tuesday, ..., 6=Sunday, None=Unscheduled
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+class TemplateSchedule(db.Model):
+    """Association table for templates and their scheduled days"""
+    __tablename__ = 'template_schedule'
 
-    # Relationship with template exercises
-    template_exercises = db.relationship('TemplateExercise', backref='template', lazy=True, cascade='all, delete-orphan')
+    id = db.Column(db.Integer, primary_key=True)
+    template_id = db.Column(db.Integer, db.ForeignKey('workout_template.id', ondelete='CASCADE'), nullable=False)
+    day_of_week = db.Column(db.Integer, nullable=False)  # 0=Monday, 1=Tuesday, ..., 6=Sunday
 
     def to_dict(self):
         return {
             'id': self.id,
+            'template_id': self.template_id,
+            'day_of_week': self.day_of_week
+        }
+
+class WorkoutTemplate(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)  # e.g., "Push Day 1", "Pull Day"
+    description = db.Column(db.String(500))
+    day_of_week = db.Column(db.Integer, nullable=True)  # DEPRECATED: Use scheduled_days instead
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relationships
+    template_exercises = db.relationship('TemplateExercise', backref='template', lazy=True, cascade='all, delete-orphan')
+    scheduled_days = db.relationship('TemplateSchedule', backref='template', lazy=True, cascade='all, delete-orphan')
+
+    def to_dict(self):
+        # Get scheduled days from new table, or fall back to old single day field for backwards compatibility
+        days_list = [s.day_of_week for s in self.scheduled_days] if self.scheduled_days else (
+            [self.day_of_week] if self.day_of_week is not None else []
+        )
+
+        return {
+            'id': self.id,
             'name': self.name,
             'description': self.description,
-            'day_of_week': self.day_of_week,
+            'day_of_week': self.day_of_week,  # Keep for backwards compatibility
+            'scheduled_days': sorted(days_list),  # New field: array of days
             'created_at': self.created_at.strftime('%Y-%m-%d'),
             'exercises': [ex.to_dict() for ex in self.template_exercises]
         }
@@ -234,7 +258,7 @@ class TemplateExercise(db.Model):
 class WeightPrediction(db.Model):
     """Track ML predictions vs actual outcomes for model improvement"""
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     exercise_name = db.Column(db.String(100), nullable=False)
     predicted_weight = db.Column(db.Float, nullable=False)
     confidence_lower = db.Column(db.Float, nullable=True)  # Lower bound of confidence interval
