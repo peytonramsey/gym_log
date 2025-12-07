@@ -584,8 +584,10 @@ def calendar_data():
             data[date_str] = []
         data[date_str].append({
             'id': w.id,
-            'exercises': len(w.exercises),
-            'notes': w.notes
+            'exercises': [ex.to_dict() for ex in w.exercises],  # Include full exercise details
+            'exercise_count': len(w.exercises),
+            'notes': w.notes,
+            'date': w.date.strftime('%Y-%m-%d %H:%M')
         })
     return jsonify(data)
 
