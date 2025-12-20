@@ -522,6 +522,40 @@ def delete_workout(workout_id):
     db.session.commit()
     return jsonify({'success': True})
 
+@app.route('/api/workouts/<int:workout_id>', methods=['PUT'])
+@login_required
+def update_workout(workout_id):
+    workout = Workout.query.filter_by(id=workout_id, user_id=current_user.id).first_or_404()
+    data = request.get_json()
+
+    # Update workout date and notes
+    if 'date' in data:
+        workout.date = datetime.fromisoformat(data['date'])
+    if 'notes' in data:
+        workout.notes = data['notes']
+
+    # Update exercises if provided
+    if 'exercises' in data:
+        # Delete existing exercises
+        Exercise.query.filter_by(workout_id=workout.id).delete()
+
+        # Add updated exercises
+        for ex in data['exercises']:
+            import json
+            exercise = Exercise(
+                workout_id=workout.id,
+                name=ex['name'],
+                sets=int(ex['sets']),
+                reps=int(ex['reps']),
+                weight=float(ex['weight']),
+                rest_time=int(ex.get('rest_time', 0)),
+                set_data=json.dumps(ex.get('set_data')) if ex.get('set_data') else None
+            )
+            db.session.add(exercise)
+
+    db.session.commit()
+    return jsonify({'success': True, 'workout': workout.to_dict()})
+
 @app.route('/progress')
 @login_required
 def progress():

@@ -112,6 +112,37 @@
         color: #ffffff;
         border-color: #404040;
     }
+
+    /* Auto-save status indicator */
+    #auto-save-status {
+        transition: all 0.3s ease;
+        font-weight: 500;
+    }
+
+    #auto-save-status.saving {
+        color: #fd7e14 !important;
+    }
+
+    #auto-save-status.saved {
+        color: #198754 !important;
+    }
+
+    body.dark-mode #auto-save-status.saving {
+        color: #ff922b !important;
+    }
+
+    body.dark-mode #auto-save-status.saved {
+        color: #28a745 !important;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+
+    #auto-save-status.saving {
+        animation: pulse 1.5s ease-in-out infinite;
+    }
 </style>
 {% endblock %}
 
@@ -153,6 +184,11 @@
 <div id="exercises-container"></div>
 
 <div class="mt-3 mb-3">
+    <div class="d-flex align-items-center justify-content-between mb-2">
+        <small id="auto-save-status" class="text-muted">
+            <i class="bi bi-cloud-check"></i> Auto-save enabled
+        </small>
+    </div>
     <button class="btn btn-success w-100" onclick="saveWorkout()">
         <i class="bi bi-check-circle"></i> Save Workout
     </button>
@@ -224,8 +260,36 @@
         try {
             localStorage.setItem('gymlog_workout_draft', JSON.stringify(workoutData));
             console.log('Workout auto-saved to localStorage');
+
+            // Update status indicator
+            updateSaveStatus('saved');
         } catch (e) {
             console.error('Error saving to localStorage:', e);
+            updateSaveStatus('error');
+        }
+    }
+
+    function updateSaveStatus(status) {
+        const statusEl = document.getElementById('auto-save-status');
+        if (!statusEl) return;
+
+        statusEl.className = 'text-muted';
+
+        if (status === 'saving') {
+            statusEl.className = 'saving';
+            statusEl.innerHTML = '<i class="bi bi-cloud-arrow-up"></i> Saving...';
+        } else if (status === 'saved') {
+            statusEl.className = 'saved';
+            statusEl.innerHTML = '<i class="bi bi-cloud-check-fill"></i> Saved';
+
+            // Reset to default after 3 seconds
+            setTimeout(() => {
+                statusEl.className = 'text-muted';
+                statusEl.innerHTML = '<i class="bi bi-cloud-check"></i> Auto-save enabled';
+            }, 3000);
+        } else if (status === 'error') {
+            statusEl.className = 'text-danger';
+            statusEl.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Save failed';
         }
     }
 
@@ -367,13 +431,16 @@
     }
 
     function scheduleAutoSave() {
+        // Show "saving" status immediately
+        updateSaveStatus('saving');
+
         // Debounce auto-save to avoid excessive writes
         if (autoSaveTimeout) {
             clearTimeout(autoSaveTimeout);
         }
         autoSaveTimeout = setTimeout(() => {
             saveWorkoutToLocalStorage();
-        }, 1000); // Save 1 second after last change
+        }, 500); // Save 500ms after last change (reduced from 1000ms)
     }
 
     function clearWorkoutDraft() {
@@ -405,6 +472,30 @@
     // Add auto-save listeners to date and notes fields
     document.getElementById('workout-date').addEventListener('change', scheduleAutoSave);
     document.getElementById('workout-notes').addEventListener('input', scheduleAutoSave);
+
+    // Periodic auto-save every 30 seconds
+    setInterval(() => {
+        // Only save if there are exercises
+        if (exerciseCount > 0) {
+            saveWorkoutToLocalStorage();
+        }
+    }, 30000); // 30 seconds
+
+    // Warn user before leaving page if there's unsaved workout data
+    let workoutSaved = false;
+    window.addEventListener('beforeunload', (e) => {
+        // Check if there's any workout data
+        const hasData = exerciseCount > 0 ||
+                       document.getElementById('workout-notes').value.trim() !== '';
+
+        // If there's data and it hasn't been saved to the server
+        if (hasData && !workoutSaved) {
+            // Most modern browsers ignore custom messages, but setting returnValue triggers the warning
+            e.preventDefault();
+            e.returnValue = '';
+            return '';
+        }
+    });
 
     function loadTemplates() {
         fetch('/api/templates')
@@ -807,6 +898,9 @@
         .then(response => response.json())
         .then(result => {
             if (result.success) {
+                // Mark workout as saved (prevents beforeunload warning)
+                workoutSaved = true;
+
                 // Clear the workout draft from localStorage
                 clearWorkoutDraft();
                 showSuccess('Workout saved successfully!');
