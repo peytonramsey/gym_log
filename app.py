@@ -427,30 +427,42 @@ def logout():
 @app.route('/demo')
 def demo():
     """Demo mode: Create/reset demo user and auto-login with populated data"""
-    demo_username = 'demo_user'
-    demo_email = 'demo@fitglyph.com'
-    demo_password = 'demo123'
+    try:
+        demo_username = 'demo_user'
+        demo_email = 'demo@fitglyph.com'
+        demo_password = 'demo123'
 
-    # Check if demo user exists
-    demo_user = User.query.filter_by(username=demo_username).first()
+        # Check if demo user exists
+        demo_user = User.query.filter_by(username=demo_username).first()
 
-    if not demo_user:
-        # Create demo user
-        demo_user = User(username=demo_username, email=demo_email)
-        demo_user.set_password(demo_password)
-        db.session.add(demo_user)
-        db.session.commit()
-        print(f"[SUCCESS] Demo user '{demo_username}' created!")
+        if not demo_user:
+            # Create demo user
+            demo_user = User(username=demo_username, email=demo_email)
+            demo_user.set_password(demo_password)
+            db.session.add(demo_user)
+            db.session.commit()
+            print(f"[SUCCESS] Demo user '{demo_username}' created!")
 
-    # Reset demo data every time (keeps it fresh for recruiters)
-    populate_demo_data(demo_user)
+        # Reset demo data every time (keeps it fresh for recruiters)
+        try:
+            populate_demo_data(demo_user)
+        except Exception as e:
+            print(f"[ERROR] Failed to populate demo data: {e}")
+            # Continue anyway - user can still be logged in even if demo data fails
+            db.session.rollback()
 
-    # Auto-login the demo user
-    login_user(demo_user, remember=False)
-    session.permanent = False  # Demo session expires when browser closes
+        # Auto-login the demo user
+        login_user(demo_user, remember=False)
+        session.permanent = False  # Demo session expires when browser closes
 
-    # Redirect to home with a demo flag
-    return redirect(url_for('index', demo='true'))
+        # Redirect to home with a demo flag
+        return redirect(url_for('index', demo='true'))
+
+    except Exception as e:
+        print(f"[ERROR] Demo mode failed: {e}")
+        db.session.rollback()
+        flash('Demo mode encountered an error. Please try again or register a new account.', 'error')
+        return redirect(url_for('login'))
 
 # ===== MAIN ROUTES =====
 

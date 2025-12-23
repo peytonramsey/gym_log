@@ -16,6 +16,14 @@
         margin-bottom: 30px;
     }
 
+    /* Mobile responsive adjustments */
+    @media (max-width: 768px) {
+        .calendar-container {
+            padding: 10px;
+            border-radius: 10px;
+        }
+    }
+
     body.dark-mode .calendar-container {
         background: rgba(45, 45, 45, 0.3);
         border: 1px solid rgba(255, 255, 255, 0.1);
@@ -29,6 +37,13 @@
         margin-top: 15px;
     }
 
+    /* Mobile: reduce gap between calendar cells */
+    @media (max-width: 768px) {
+        .calendar {
+            gap: 4px;
+        }
+    }
+
     .calendar-header {
         text-align: center;
         font-weight: 600;
@@ -37,6 +52,14 @@
         border-radius: 8px;
         font-size: 0.85rem;
         color: #0d6efd;
+    }
+
+    /* Mobile: smaller header text and padding */
+    @media (max-width: 768px) {
+        .calendar-header {
+            font-size: 0.7rem;
+            padding: 6px 2px;
+        }
     }
 
     body.dark-mode .calendar-header {
@@ -59,6 +82,15 @@
         justify-content: center;
         align-items: center;
         font-weight: 500;
+    }
+
+    /* Mobile: smaller padding and font size */
+    @media (max-width: 768px) {
+        .calendar-day {
+            padding: 4px 2px;
+            font-size: 0.85rem;
+            border-radius: 4px;
+        }
     }
 
     body.dark-mode .calendar-day {
@@ -179,6 +211,22 @@
         background: #ff922b;
     }
 
+    /* Mobile: smaller indicators */
+    @media (max-width: 768px) {
+        .activity-indicators {
+            top: 2px;
+            right: 2px;
+            gap: 2px;
+        }
+
+        .workout-indicator,
+        .nutrition-indicator {
+            width: 14px;
+            height: 14px;
+            font-size: 0.55rem;
+        }
+    }
+
     .calendar-nav {
         display: flex;
         justify-content: space-between;
@@ -196,6 +244,13 @@
         color: #ffffff;
     }
 
+    /* Mobile: smaller title */
+    @media (max-width: 768px) {
+        .calendar-title {
+            font-size: 1.1rem;
+        }
+    }
+
     .month-nav-btn {
         width: 40px;
         height: 40px;
@@ -208,6 +263,15 @@
 
     .month-nav-btn:hover {
         transform: scale(1.1);
+    }
+
+    /* Mobile: smaller navigation buttons */
+    @media (max-width: 768px) {
+        .month-nav-btn {
+            width: 32px;
+            height: 32px;
+            font-size: 0.85rem;
+        }
     }
 
     /* Modal styling */
