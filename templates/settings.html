@@ -115,6 +115,40 @@
 
         <div class="settings-item">
             <div style="flex: 1;">
+                <div class="settings-label">Timezone Offset</div>
+                <div class="settings-description">Adjust time display to your local timezone</div>
+            </div>
+            <select class="form-select" id="timezoneOffset" style="width: 180px;" onchange="saveTimezoneOffset()">
+                <option value="-12">UTC-12:00</option>
+                <option value="-11">UTC-11:00</option>
+                <option value="-10">UTC-10:00 (Hawaii)</option>
+                <option value="-9">UTC-09:00 (Alaska)</option>
+                <option value="-8">UTC-08:00 (Pacific)</option>
+                <option value="-7">UTC-07:00 (Mountain)</option>
+                <option value="-6">UTC-06:00 (Central)</option>
+                <option value="-5">UTC-05:00 (Eastern)</option>
+                <option value="-4">UTC-04:00 (Atlantic)</option>
+                <option value="-3">UTC-03:00</option>
+                <option value="-2">UTC-02:00</option>
+                <option value="-1">UTC-01:00</option>
+                <option value="0">UTC+00:00 (GMT)</option>
+                <option value="1">UTC+01:00</option>
+                <option value="2">UTC+02:00</option>
+                <option value="3">UTC+03:00</option>
+                <option value="4">UTC+04:00</option>
+                <option value="5">UTC+05:00</option>
+                <option value="6">UTC+06:00</option>
+                <option value="7">UTC+07:00</option>
+                <option value="8">UTC+08:00</option>
+                <option value="9">UTC+09:00</option>
+                <option value="10">UTC+10:00</option>
+                <option value="11">UTC+11:00</option>
+                <option value="12">UTC+12:00</option>
+            </select>
+        </div>
+
+        <div class="settings-item">
+            <div style="flex: 1;">
                 <div class="settings-label">Weight Unit</div>
                 <div class="settings-description">Choose your preferred weight measurement</div>
             </div>
@@ -254,6 +288,21 @@
         const savedTheme = localStorage.getItem('theme');
         document.getElementById('darkModeSwitch').checked = (savedTheme === 'dark');
 
+        // Load timezone offset from server
+        fetch('/api/user/timezone')
+            .then(r => r.json())
+            .then(data => {
+                const offset = data.timezone_offset || 0;
+                document.getElementById('timezoneOffset').value = offset;
+                // Store in localStorage for frontend use
+                localStorage.setItem('timezoneOffset', offset);
+            })
+            .catch(err => {
+                console.error('Failed to load timezone:', err);
+                // Default to UTC if error
+                document.getElementById('timezoneOffset').value = 0;
+            });
+
         // Load weight unit
         const savedWeightUnit = localStorage.getItem('weightUnit') || 'lbs';
         document.getElementById('weightUnit').value = savedWeightUnit;
@@ -270,6 +319,35 @@
             day: 'numeric'
         });
     });
+
+    function saveTimezoneOffset() {
+        const offset = parseInt(document.getElementById('timezoneOffset').value);
+
+        // Save to server
+        fetch('/api/user/timezone', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ timezone_offset: offset })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                // Store in localStorage for frontend use
+                localStorage.setItem('timezoneOffset', offset);
+                showSuccess('Timezone updated! Page will reload.');
+                // Reload page to apply new timezone to all displayed times
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showError('Failed to save timezone');
+            }
+        })
+        .catch(err => {
+            console.error('Error saving timezone:', err);
+            showError('Failed to save timezone');
+        });
+    }
 
     function saveWeightUnit() {
         const unit = document.getElementById('weightUnit').value;

@@ -298,6 +298,24 @@
                 document.body.classList.add('dark-mode');
                 themeIcon.className = 'bi bi-sun-fill';
             }
+
+            // Load timezone from server if user is authenticated
+            {% if current_user.is_authenticated %}
+            fetch('/api/user/timezone')
+                .then(r => r.json())
+                .then(data => {
+                    const offset = data.timezone_offset || 0;
+                    // Store in localStorage for frontend use
+                    localStorage.setItem('timezoneOffset', offset);
+                })
+                .catch(err => {
+                    console.error('Failed to load timezone:', err);
+                    // Default to UTC if error
+                    if (!localStorage.getItem('timezoneOffset')) {
+                        localStorage.setItem('timezoneOffset', '0');
+                    }
+                });
+            {% endif %}
         });
 
         // Toast Notification System
@@ -363,6 +381,90 @@
         function showInfo(message, duration) {
             showToast(message, 'info', duration);
         }
+
+        // Timezone utility functions
+        function getTimezoneOffset() {
+            // Get timezone offset from localStorage (set by settings page)
+            const offset = parseInt(localStorage.getItem('timezoneOffset') || '0');
+            return offset;
+        }
+
+        function applyTimezoneOffset(utcDateString) {
+            // Parse the UTC date string and apply timezone offset
+            // The date comes from server as ISO format with 'Z' (UTC marker)
+            const date = new Date(utcDateString);
+            const offsetHours = getTimezoneOffset();
+
+            // Add offset hours to the UTC time to get user's local time
+            date.setUTCHours(date.getUTCHours() + offsetHours);
+
+            return date;
+        }
+
+        function formatDateWithTimezone(utcDateString, includeTime = true) {
+            // Format a UTC date string with timezone offset applied
+            const date = applyTimezoneOffset(utcDateString);
+
+            if (includeTime) {
+                // Use UTC methods since we've already applied the offset
+                return date.toLocaleString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true,
+                    timeZone: 'UTC'  // Display as UTC since we've already applied offset
+                });
+            } else {
+                return date.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    timeZone: 'UTC'  // Display as UTC since we've already applied offset
+                });
+            }
+        }
+
+        function dateToLocalInputValue(utcDateString) {
+            // Convert UTC date string to format for datetime-local input
+            const date = applyTimezoneOffset(utcDateString);
+
+            // Format: YYYY-MM-DDTHH:MM using UTC methods since we've already applied offset
+            const year = date.getUTCFullYear();
+            const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(date.getUTCDate()).padStart(2, '0');
+            const hours = String(date.getUTCHours()).padStart(2, '0');
+            const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+
+        function localInputValueToUTC(localDateTimeValue) {
+        // Convert datetime-local input value to UTC for server
+        // The datetime-local input represents time in the USER'S SELECTED timezone
+        
+        // Parse the datetime-local value (format: YYYY-MM-DDTHH:MM)
+        const parts = localDateTimeValue.split('T');
+        const dateParts = parts[0].split('-');
+        const timeParts = parts[1].split(':');
+        
+        // Create a Date object in UTC with the input values
+        const date = new Date(Date.UTC(
+            parseInt(dateParts[0]),
+            parseInt(dateParts[1]) - 1,  // Month is 0-indexed
+            parseInt(dateParts[2]),
+            parseInt(timeParts[0]),
+            parseInt(timeParts[1])
+        ));
+        
+        // Subtract the user's timezone offset to convert to actual UTC
+        const offsetHours = getTimezoneOffset();
+        date.setUTCHours(date.getUTCHours() - offsetHours);
+        
+        return date.toISOString();
+    }
+
     </script>
 
     {% block extra_js %}{% endblock %}

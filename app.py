@@ -59,6 +59,25 @@ db.init_app(app)
 # Initialize Flask-Migrate for database migrations
 migrate = Migrate(app, db)
 
+def cleanup_old_drafts():
+    """Delete draft workouts older than 24 hours"""
+    try:
+        cutoff = datetime.now() - timedelta(hours=24)
+        old_drafts = Workout.query.filter(
+            Workout.is_draft == True,
+            Workout.date < cutoff
+        ).all()
+
+        for draft in old_drafts:
+            db.session.delete(draft)
+
+        if old_drafts:
+            db.session.commit()
+            print(f"[CLEANUP] Deleted {len(old_drafts)} old draft workouts")
+    except Exception as e:
+        # Column may not exist yet if migration hasn't run
+        print(f"[CLEANUP] Skipped draft cleanup (migration may be pending): {e}")
+
 # Initialize Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -351,6 +370,8 @@ with app.app_context():
     # Migration system will handle schema updates after initial creation
     db.create_all()
     create_admin_user()
+    # Clean up old draft workouts (older than 24 hours)
+    cleanup_old_drafts()
 
 # Make version available to all templates
 @app.context_processor
@@ -480,19 +501,27 @@ def log_workout():
         workout = Workout(
             user_id=current_user.id,
             date=datetime.fromisoformat(data.get('date', datetime.now().isoformat())),
-            notes=data.get('notes', '')
+            notes=data.get('notes', ''),
+            template_id=data.get('template_id')
         )
         db.session.add(workout)
         db.session.flush()
 
         for ex in data.get('exercises', []):
             import json
+            # Handle weight being optional for bodyweight exercises
+            weight_value = ex.get('weight')
+            if weight_value is not None and weight_value != '':
+                weight_value = float(weight_value)
+            else:
+                weight_value = None
+
             exercise = Exercise(
                 workout_id=workout.id,
                 name=ex['name'],
                 sets=int(ex['sets']),
                 reps=int(ex['reps']),
-                weight=float(ex['weight']),
+                weight=weight_value,
                 rest_time=int(ex.get('rest_time', 0)),
                 set_data=json.dumps(ex.get('set_data')) if ex.get('set_data') else None
             )
@@ -506,18 +535,15 @@ def log_workout():
 @app.route('/history')
 @login_required
 def history():
-    workouts = Workout.query.filter_by(user_id=current_user.id).order_by(Workout.date.desc()).all()
+    # Exclude draft workouts from history
+    workouts = Workout.query.filter_by(user_id=current_user.id, is_draft=False).order_by(Workout.date.desc()).all()
     return render_template('history.html', workouts=workouts)
-
-@app.route('/calendar')
-@login_required
-def calendar():
-    return render_template('calendar.html')
 
 @app.route('/api/workouts')
 @login_required
 def get_workouts():
-    workouts = Workout.query.filter_by(user_id=current_user.id).order_by(Workout.date.desc()).all()
+    # Exclude draft workouts
+    workouts = Workout.query.filter_by(user_id=current_user.id, is_draft=False).order_by(Workout.date.desc()).all()
     return jsonify([w.to_dict() for w in workouts])
 
 @app.route('/api/workouts/<int:workout_id>')
@@ -554,12 +580,19 @@ def update_workout(workout_id):
         # Add updated exercises
         for ex in data['exercises']:
             import json
+            # Handle weight being optional for bodyweight exercises
+            weight_value = ex.get('weight')
+            if weight_value is not None and weight_value != '':
+                weight_value = float(weight_value)
+            else:
+                weight_value = None
+
             exercise = Exercise(
                 workout_id=workout.id,
                 name=ex['name'],
                 sets=int(ex['sets']),
                 reps=int(ex['reps']),
-                weight=float(ex['weight']),
+                weight=weight_value,
                 rest_time=int(ex.get('rest_time', 0)),
                 set_data=json.dumps(ex.get('set_data')) if ex.get('set_data') else None
             )
@@ -567,6 +600,134 @@ def update_workout(workout_id):
 
     db.session.commit()
     return jsonify({'success': True, 'workout': workout.to_dict()})
+
+# ===== DRAFT WORKOUT API =====
+
+@app.route('/api/workouts/draft', methods=['GET'])
+@login_required
+def get_draft_workout():
+    """Get the current user's draft workout (if any)"""
+    draft = Workout.query.filter_by(user_id=current_user.id, is_draft=True).first()
+
+    if draft:
+        return jsonify({'success': True, 'has_draft': True, 'workout': draft.to_dict()})
+    else:
+        return jsonify({'success': True, 'has_draft': False, 'workout': None})
+
+@app.route('/api/workouts/draft', methods=['POST'])
+@login_required
+def save_draft_workout():
+    """Create or update a draft workout"""
+    import json
+    data = request.get_json()
+
+    # Check for existing draft
+    draft = Workout.query.filter_by(user_id=current_user.id, is_draft=True).first()
+
+    if draft:
+        # Update existing draft
+        if 'date' in data:
+            draft.date = datetime.fromisoformat(data['date'])
+        if 'notes' in data:
+            draft.notes = data.get('notes', '')
+        if 'template_id' in data:
+            draft.template_id = data.get('template_id')
+
+        # Delete existing exercises and re-add
+        Exercise.query.filter_by(workout_id=draft.id).delete()
+    else:
+        # Create new draft
+        draft = Workout(
+            user_id=current_user.id,
+            date=datetime.fromisoformat(data.get('date', datetime.now().isoformat())),
+            notes=data.get('notes', ''),
+            is_draft=True,
+            template_id=data.get('template_id')
+        )
+        db.session.add(draft)
+        db.session.flush()  # Get the ID
+
+    # Add exercises
+    for ex in data.get('exercises', []):
+        # Handle weight being optional for bodyweight exercises
+        weight_value = ex.get('weight')
+        if weight_value is not None and weight_value != '':
+            weight_value = float(weight_value)
+        else:
+            weight_value = None
+
+        exercise = Exercise(
+            workout_id=draft.id,
+            name=ex['name'],
+            sets=int(ex.get('sets', 1)),
+            reps=int(ex.get('reps', 0)),
+            weight=weight_value,
+            rest_time=int(ex.get('rest_time', 0)),
+            set_data=json.dumps(ex.get('set_data')) if ex.get('set_data') else None
+        )
+        db.session.add(exercise)
+
+    db.session.commit()
+    return jsonify({'success': True, 'workout': draft.to_dict()})
+
+@app.route('/api/workouts/draft/complete', methods=['POST'])
+@login_required
+def complete_draft_workout():
+    """Convert a draft workout to a completed workout"""
+    import json
+    data = request.get_json()
+
+    draft = Workout.query.filter_by(user_id=current_user.id, is_draft=True).first()
+
+    if not draft:
+        return jsonify({'success': False, 'message': 'No draft workout found'}), 404
+
+    # Update with final data if provided
+    if 'date' in data:
+        draft.date = datetime.fromisoformat(data['date'])
+    if 'notes' in data:
+        draft.notes = data.get('notes', '')
+
+    # Update exercises if provided
+    if 'exercises' in data:
+        Exercise.query.filter_by(workout_id=draft.id).delete()
+
+        for ex in data.get('exercises', []):
+            weight_value = ex.get('weight')
+            if weight_value is not None and weight_value != '':
+                weight_value = float(weight_value)
+            else:
+                weight_value = None
+
+            exercise = Exercise(
+                workout_id=draft.id,
+                name=ex['name'],
+                sets=int(ex.get('sets', 1)),
+                reps=int(ex.get('reps', 0)),
+                weight=weight_value,
+                rest_time=int(ex.get('rest_time', 0)),
+                set_data=json.dumps(ex.get('set_data')) if ex.get('set_data') else None
+            )
+            db.session.add(exercise)
+
+    # Mark as complete (no longer a draft)
+    draft.is_draft = False
+    db.session.commit()
+
+    return jsonify({'success': True, 'workout_id': draft.id, 'workout': draft.to_dict()})
+
+@app.route('/api/workouts/draft', methods=['DELETE'])
+@login_required
+def delete_draft_workout():
+    """Discard/delete the current draft workout"""
+    draft = Workout.query.filter_by(user_id=current_user.id, is_draft=True).first()
+
+    if draft:
+        db.session.delete(draft)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Draft discarded'})
+    else:
+        return jsonify({'success': True, 'message': 'No draft to discard'})
 
 @app.route('/progress')
 @login_required
@@ -624,7 +785,8 @@ def get_body_metrics():
 @app.route('/api/calendar_data')
 @login_required
 def calendar_data():
-    workouts = Workout.query.filter_by(user_id=current_user.id).all()
+    # Exclude draft workouts from calendar
+    workouts = Workout.query.filter_by(user_id=current_user.id, is_draft=False).all()
     data = {}
     for w in workouts:
         date_str = w.date.strftime('%Y-%m-%d')
@@ -635,7 +797,10 @@ def calendar_data():
             'exercises': [ex.to_dict() for ex in w.exercises],  # Include full exercise details
             'exercise_count': len(w.exercises),
             'notes': w.notes,
-            'date': w.date.strftime('%Y-%m-%d %H:%M')
+            'date': w.date.isoformat() + 'Z',  # Return as ISO format with UTC marker
+            'template_id': w.template_id,
+            'template_color': w.template.color if w.template else None,
+            'template_name': w.template.name if w.template else None
         })
     return jsonify(data)
 
@@ -1268,6 +1433,7 @@ def create_template():
         user_id=current_user.id,
         name=data['name'],
         description=data.get('description', ''),
+        color=data.get('color', '#198754'),
         day_of_week=scheduled_days[0] if len(scheduled_days) == 1 else None  # Keep old field for backwards compat
     )
     db.session.add(template)
@@ -1306,6 +1472,8 @@ def update_template(template_id):
 
     template.name = data.get('name', template.name)
     template.description = data.get('description', template.description)
+    if 'color' in data:
+        template.color = data.get('color')
 
     # Support both old single day and new multiple days
     scheduled_days = data.get('scheduled_days', [])
@@ -1407,6 +1575,32 @@ def schedule():
 def settings():
     return render_template('settings.html')
 
+# User timezone settings API
+@app.route('/api/user/timezone', methods=['GET'])
+@login_required
+def get_timezone():
+    """Get the current user's timezone offset"""
+    return jsonify({
+        'timezone_offset': current_user.timezone_offset
+    })
+
+@app.route('/api/user/timezone', methods=['POST'])
+@login_required
+def update_timezone():
+    """Update the current user's timezone offset"""
+    data = request.get_json()
+    timezone_offset = data.get('timezone_offset', 0)
+
+    # Validate timezone offset is within valid range
+    if timezone_offset < -12 or timezone_offset > 12:
+        return jsonify({'success': False, 'error': 'Invalid timezone offset'}), 400
+
+    # Update user's timezone offset
+    current_user.timezone_offset = timezone_offset
+    db.session.commit()
+
+    return jsonify({'success': True, 'timezone_offset': timezone_offset})
+
 # Consistency tracking endpoint
 @app.route('/api/consistency')
 @login_required
@@ -1452,12 +1646,13 @@ def get_consistency():
             'message': 'No workouts scheduled'
         })
 
-    # Get all workouts in the date range
+    # Get all workouts in the date range (exclude drafts)
     end_date = datetime.now()
     start_date = end_date - timedelta(days=days)
 
     workouts = Workout.query.filter(
         Workout.user_id == current_user.id,
+        Workout.is_draft == False,
         Workout.date >= start_date,
         Workout.date <= end_date
     ).all()

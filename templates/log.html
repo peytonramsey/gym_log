@@ -225,12 +225,120 @@
     let templates = [];
     let autoSaveTimeout = null;
 
-    // Set default date/time to now
-    document.getElementById('workout-date').value = new Date().toISOString().slice(0, 16);
+    // Set default date/time to browser's current local time
+    // The datetime-local input works in the browser's timezone
+    function setDefaultWorkoutDate() {
+    // Get current time in UTC
+    const now = new Date();
+    
+    // Apply user's selected timezone offset
+    const offset = getTimezoneOffset(); // This is defined in base.html
+    now.setUTCHours(now.getUTCHours() + offset);
+    
+    // Format as datetime-local value (YYYY-MM-DDTHH:MM)
+    const year = now.getUTCFullYear();
+    const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(now.getUTCDate()).padStart(2, '0');
+    const hours = String(now.getUTCHours()).padStart(2, '0');
+    const minutes = String(now.getUTCMinutes()).padStart(2, '0');
 
-    // ===== LOCAL STORAGE AUTO-SAVE FUNCTIONS =====
+    document.getElementById('workout-date').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+
+    // Set default date immediately
+    setDefaultWorkoutDate();
+
+    // ===== SERVER-SIDE DRAFT AUTO-SAVE FUNCTIONS =====
+
+    let currentDraftId = null;  // Track current draft workout ID
+    let currentTemplateId = null;  // Track which template is being used
+
+    function getWorkoutDataForSave() {
+        const exercises = [];
+        for (let i = 1; i <= exerciseCount; i++) {
+            const nameEl = document.getElementById(`name-${i}`);
+            if (!nameEl) continue;
+
+            const name = nameEl.value;
+            const rest = document.getElementById(`rest-${i}`).value || 0;
+            const sets = getSetsForExercise(i);
+
+            if (name || sets.length > 0) {
+                // Calculate totals for backward compatibility
+                const totalSets = sets.length || 1;
+                const avgReps = sets.length > 0 ? Math.round(sets.reduce((sum, s) => sum + s.reps, 0) / sets.length) : 0;
+
+                // Calculate avgWeight only from sets that have weight
+                const setsWithWeight = sets.filter(s => s.weight !== null);
+                const avgWeight = setsWithWeight.length > 0
+                    ? Math.round(setsWithWeight.reduce((sum, s) => sum + s.weight, 0) / setsWithWeight.length * 10) / 10
+                    : null;
+
+                exercises.push({
+                    name: name || 'Unnamed Exercise',
+                    sets: totalSets,
+                    reps: avgReps,
+                    weight: avgWeight,
+                    rest_time: rest,
+                    set_data: sets
+                });
+            }
+        }
+
+        // Get the datetime-local value and convert to UTC for server
+        const localDateValue = document.getElementById('workout-date').value;
+        const utcDate = localInputValueToUTC(localDateValue);
+
+        return {
+            date: utcDate,
+            notes: document.getElementById('workout-notes').value,
+            exercises: exercises,
+            template_id: currentTemplateId
+        };
+    }
+
+    async function saveDraftToServer() {
+        const workoutData = getWorkoutDataForSave();
+
+        // Don't save if no meaningful data
+        if (workoutData.exercises.length === 0 && !workoutData.notes) {
+            updateSaveStatus('saved');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/workouts/draft', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(workoutData)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                currentDraftId = result.workout.id;
+                console.log('Draft saved to server, ID:', currentDraftId);
+                updateSaveStatus('saved');
+
+                // Also save to localStorage as backup
+                saveWorkoutToLocalStorage();
+            } else {
+                console.error('Server draft save failed:', result.message);
+                updateSaveStatus('error');
+                // Fall back to localStorage
+                saveWorkoutToLocalStorage();
+            }
+        } catch (e) {
+            console.error('Error saving draft to server:', e);
+            updateSaveStatus('error');
+            // Fall back to localStorage
+            saveWorkoutToLocalStorage();
+        }
+    }
 
     function saveWorkoutToLocalStorage() {
+        // Backup to localStorage in case server is unavailable
         const workoutData = {
             date: document.getElementById('workout-date').value,
             notes: document.getElementById('workout-notes').value,
@@ -240,7 +348,6 @@
             timestamp: new Date().toISOString()
         };
 
-        // Save all exercises
         for (let i = 1; i <= exerciseCount; i++) {
             const nameEl = document.getElementById(`name-${i}`);
             if (!nameEl) continue;
@@ -259,13 +366,8 @@
 
         try {
             localStorage.setItem('gymlog_workout_draft', JSON.stringify(workoutData));
-            console.log('Workout auto-saved to localStorage');
-
-            // Update status indicator
-            updateSaveStatus('saved');
         } catch (e) {
             console.error('Error saving to localStorage:', e);
-            updateSaveStatus('error');
         }
     }
 
@@ -280,7 +382,7 @@
             statusEl.innerHTML = '<i class="bi bi-cloud-arrow-up"></i> Saving...';
         } else if (status === 'saved') {
             statusEl.className = 'saved';
-            statusEl.innerHTML = '<i class="bi bi-cloud-check-fill"></i> Saved';
+            statusEl.innerHTML = '<i class="bi bi-cloud-check-fill"></i> Draft saved';
 
             // Reset to default after 3 seconds
             setTimeout(() => {
@@ -289,11 +391,80 @@
             }, 3000);
         } else if (status === 'error') {
             statusEl.className = 'text-danger';
-            statusEl.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Save failed';
+            statusEl.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Save failed (using local backup)';
+        }
+    }
+
+    async function loadDraftFromServer() {
+        try {
+            const response = await fetch('/api/workouts/draft');
+            const result = await response.json();
+
+            if (result.success && result.has_draft && result.workout) {
+                const draft = result.workout;
+                currentDraftId = draft.id;
+                currentTemplateId = draft.template_id || null;
+
+                // Clear existing exercises container
+                document.getElementById('exercises-container').innerHTML = '';
+                exerciseCount = 0;
+                setCounters = {};
+
+                // Restore date (convert from UTC to local)
+                if (draft.date) {
+                    const utcDate = new Date(draft.date);
+                    const offset = getTimezoneOffset();
+                    utcDate.setUTCHours(utcDate.getUTCHours() + offset);
+
+                    const year = utcDate.getUTCFullYear();
+                    const month = String(utcDate.getUTCMonth() + 1).padStart(2, '0');
+                    const day = String(utcDate.getUTCDate()).padStart(2, '0');
+                    const hours = String(utcDate.getUTCHours()).padStart(2, '0');
+                    const minutes = String(utcDate.getUTCMinutes()).padStart(2, '0');
+
+                    document.getElementById('workout-date').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+                }
+
+                // Restore notes
+                if (draft.notes) {
+                    document.getElementById('workout-notes').value = draft.notes;
+                }
+
+                // Restore exercises
+                if (draft.exercises && draft.exercises.length > 0) {
+                    for (const ex of draft.exercises) {
+                        // Use set_data if available, otherwise create from sets/reps/weight
+                        if (ex.set_data && ex.set_data.length > 0) {
+                            addExercise({
+                                name: ex.name,
+                                rest_time: ex.rest_time,
+                                set_data: ex.set_data
+                            });
+                        } else {
+                            addExercise({
+                                name: ex.name,
+                                sets: ex.sets,
+                                reps: ex.reps,
+                                weight: ex.weight,
+                                rest_time: ex.rest_time
+                            });
+                        }
+                    }
+
+                    showInfo('Draft workout restored!', 3000);
+                    return true;
+                }
+            }
+
+            return false;
+        } catch (e) {
+            console.error('Error loading draft from server:', e);
+            return false;
         }
     }
 
     function restoreWorkoutFromLocalStorage() {
+        // Fallback: restore from localStorage if server draft not available
         try {
             const savedData = localStorage.getItem('gymlog_workout_draft');
             if (!savedData) return false;
@@ -324,11 +495,9 @@
 
             // Restore exercises
             if (workoutData.exercises && workoutData.exercises.length > 0) {
-                // Clear the default exercise added on page load
                 document.getElementById('exercises-container').innerHTML = '';
 
                 workoutData.exercises.forEach(ex => {
-                    // Recreate exercise card
                     const container = document.getElementById('exercises-container');
                     const exerciseDiv = document.createElement('div');
                     exerciseDiv.className = 'card mb-3';
@@ -387,7 +556,6 @@
                     `;
                     container.appendChild(exerciseDiv);
 
-                    // Restore sets for this exercise
                     ex.sets.forEach(set => {
                         const setNumber = Object.keys(document.getElementById(`sets-container-${ex.id}`).children).length + 1;
                         const setContainer = document.getElementById(`sets-container-${ex.id}`);
@@ -404,7 +572,7 @@
                                        onchange="scheduleAutoSave()">
                             </div>
                             <div class="col-4">
-                                <input type="number" step="0.5" class="form-control form-control-sm" placeholder="Weight (lbs)"
+                                <input type="number" step="0.5" class="form-control form-control-sm" placeholder="Weight (optional)"
                                        id="exercise-${ex.id}-set-${setNumber}-weight" value="${set.weight}"
                                        onchange="scheduleAutoSave()">
                             </div>
@@ -418,7 +586,7 @@
                     });
                 });
 
-                showInfo('Previous workout draft restored!', 3000);
+                showInfo('Previous workout draft restored from backup!', 3000);
                 return true;
             }
 
@@ -439,8 +607,8 @@
             clearTimeout(autoSaveTimeout);
         }
         autoSaveTimeout = setTimeout(() => {
-            saveWorkoutToLocalStorage();
-        }, 500); // Save 500ms after last change (reduced from 1000ms)
+            saveDraftToServer();
+        }, 1000); // Save 1 second after last change
     }
 
     function clearWorkoutDraft() {
@@ -450,34 +618,66 @@
         } catch (e) {
             console.error('Error clearing localStorage:', e);
         }
+
+        // Also delete server draft
+        fetch('/api/workouts/draft', { method: 'DELETE' })
+            .then(response => response.json())
+            .then(result => {
+                console.log('Server draft cleared:', result.message);
+                currentDraftId = null;
+            })
+            .catch(e => console.error('Error clearing server draft:', e));
     }
 
     // Load templates on page load
     loadTemplates();
 
-    // Try to restore previous workout draft from localStorage
-    const restored = restoreWorkoutFromLocalStorage();
+    // Initialize: Try to load draft from server first, then fall back to localStorage
+    let restored = false;
 
-    // Check if a template was selected from the Schedule page
-    const preselectedTemplateId = localStorage.getItem('selectedTemplateId');
-    if (preselectedTemplateId) {
-        localStorage.removeItem('selectedTemplateId');
-        // Wait for templates to load, then auto-load the selected template
-        setTimeout(() => {
-            document.getElementById('template-select').value = preselectedTemplateId;
-            loadTemplate();
-        }, 500);
+    async function initializePage() {
+        // Check if a template was selected from the Schedule page
+        const preselectedTemplateId = localStorage.getItem('selectedTemplateId');
+
+        if (preselectedTemplateId) {
+            // If there's a preselected template, clear any existing draft and load the template
+            localStorage.removeItem('selectedTemplateId');
+            await fetch('/api/workouts/draft', { method: 'DELETE' }); // Clear server draft
+            localStorage.removeItem('gymlog_workout_draft'); // Clear local draft
+
+            // Wait for templates to load, then auto-load the selected template
+            setTimeout(() => {
+                document.getElementById('template-select').value = preselectedTemplateId;
+                loadTemplate();
+            }, 500);
+        } else {
+            // Try to restore from server draft first
+            restored = await loadDraftFromServer();
+
+            // If no server draft, try localStorage as fallback
+            if (!restored) {
+                restored = restoreWorkoutFromLocalStorage();
+            }
+
+            // If nothing was restored, add a default empty exercise
+            if (!restored) {
+                addExercise();
+            }
+        }
     }
+
+    // Run initialization
+    initializePage();
 
     // Add auto-save listeners to date and notes fields
     document.getElementById('workout-date').addEventListener('change', scheduleAutoSave);
     document.getElementById('workout-notes').addEventListener('input', scheduleAutoSave);
 
-    // Periodic auto-save every 30 seconds
+    // Periodic auto-save every 30 seconds to server
     setInterval(() => {
         // Only save if there are exercises
         if (exerciseCount > 0) {
-            saveWorkoutToLocalStorage();
+            saveDraftToServer();
         }
     }, 30000); // 30 seconds
 
@@ -528,6 +728,9 @@
             showError('Template not found');
             return;
         }
+
+        // Track which template is being used
+        currentTemplateId = parseInt(templateId);
 
         // Clear existing exercises
         document.getElementById('exercises-container').innerHTML = '';
@@ -659,7 +862,7 @@
                        id="exercise-${exerciseId}-set-${setNumber}-reps" value="${reps}" onchange="scheduleAutoSave()">
             </div>
             <div class="col-4">
-                <input type="number" step="0.5" class="form-control form-control-sm" placeholder="Weight (lbs)"
+                <input type="number" step="0.5" class="form-control form-control-sm" placeholder="Weight (optional)"
                        id="exercise-${exerciseId}-set-${setNumber}-weight" value="${weight}" onchange="scheduleAutoSave()">
             </div>
             <div class="col-2">
@@ -839,11 +1042,12 @@
             const repsInput = document.getElementById(`${setId}-reps`);
             const weightInput = document.getElementById(`${setId}-weight`);
 
-            if (repsInput && weightInput) {
+            if (repsInput) {
                 const reps = parseInt(repsInput.value);
-                const weight = parseFloat(weightInput.value);
+                // Weight is optional for bodyweight exercises
+                const weight = weightInput && weightInput.value ? parseFloat(weightInput.value) : null;
 
-                if (reps && weight) {
+                if (reps) {
                     sets.push({ reps, weight });
                 }
             }
@@ -866,7 +1070,12 @@
                 // Calculate totals for backward compatibility
                 const totalSets = sets.length;
                 const avgReps = Math.round(sets.reduce((sum, s) => sum + s.reps, 0) / sets.length);
-                const avgWeight = Math.round(sets.reduce((sum, s) => sum + s.weight, 0) / sets.length * 10) / 10;
+
+                // Calculate avgWeight only from sets that have weight (for bodyweight exercises)
+                const setsWithWeight = sets.filter(s => s.weight !== null);
+                const avgWeight = setsWithWeight.length > 0
+                    ? Math.round(setsWithWeight.reduce((sum, s) => sum + s.weight, 0) / setsWithWeight.length * 10) / 10
+                    : null;
 
                 exercises.push({
                     name,
@@ -884,13 +1093,21 @@
             return;
         }
 
+        // Get the datetime-local value and convert to UTC for server
+        const localDateValue = document.getElementById('workout-date').value;
+        const utcDate = localInputValueToUTC(localDateValue);
+
         const data = {
-            date: document.getElementById('workout-date').value,
+            date: utcDate,
             notes: document.getElementById('workout-notes').value,
-            exercises: exercises
+            exercises: exercises,
+            template_id: currentTemplateId
         };
 
-        fetch('/log', {
+        // Use draft completion endpoint if we have a draft, otherwise use regular save
+        const endpoint = currentDraftId ? '/api/workouts/draft/complete' : '/log';
+
+        fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
@@ -901,12 +1118,16 @@
                 // Mark workout as saved (prevents beforeunload warning)
                 workoutSaved = true;
 
-                // Clear the workout draft from localStorage
-                clearWorkoutDraft();
+                // Clear the workout draft from localStorage (server draft is already converted)
+                localStorage.removeItem('gymlog_workout_draft');
+                currentDraftId = null;
+
                 showSuccess('Workout saved successfully!');
                 setTimeout(() => {
                     window.location.href = '/history';
                 }, 1000);
+            } else {
+                showError('Error saving workout: ' + (result.message || 'Unknown error'));
             }
         })
         .catch(error => {
@@ -914,9 +1135,6 @@
         });
     }
 
-    // Add first exercise by default (only if we didn't restore from localStorage)
-    if (!restored) {
-        addExercise();
-    }
+    // Note: First exercise is added in initializePage() if no draft is restored
 </script>
 {% endblock %}

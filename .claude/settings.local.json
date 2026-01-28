@@ -37,7 +37,8 @@
       "Bash(flask db migrate:*)",
       "Bash(flask db upgrade:*)",
       "Bash(if exist instancegymlog.db del instancegymlog.db)",
-      "Bash(flask db:*)"
+      "Bash(flask db:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

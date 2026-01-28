@@ -156,6 +156,40 @@
     body.dark-mode input::placeholder {
         color: #888 !important;
     }
+
+    /* Color picker styles */
+    .color-option {
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .color-option:hover {
+        transform: scale(1.1);
+    }
+
+    .color-option.selected {
+        border-color: #fff !important;
+        box-shadow: 0 0 0 2px #0d6efd;
+    }
+
+    /* Template card color indicator */
+    .template-color-bar {
+        width: 4px;
+        border-radius: 4px 0 0 4px;
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+    }
+
+    .template-card {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .template-card .card-body {
+        padding-left: 20px;
+    }
 </style>
 {% endblock %}
 
@@ -198,6 +232,21 @@
                     <div class="mb-3">
                         <label class="form-label">Description (optional)</label>
                         <textarea class="form-control" id="template-description" rows="2" placeholder="Notes about this workout"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Color (for calendar)</label>
+                        <div class="d-flex flex-wrap gap-2" id="color-picker">
+                            <button type="button" class="btn color-option" data-color="#198754" style="background-color: #198754; width: 36px; height: 36px; border-radius: 8px; border: 2px solid transparent;" title="Green"></button>
+                            <button type="button" class="btn color-option" data-color="#0d6efd" style="background-color: #0d6efd; width: 36px; height: 36px; border-radius: 8px; border: 2px solid transparent;" title="Blue"></button>
+                            <button type="button" class="btn color-option" data-color="#dc3545" style="background-color: #dc3545; width: 36px; height: 36px; border-radius: 8px; border: 2px solid transparent;" title="Red"></button>
+                            <button type="button" class="btn color-option" data-color="#fd7e14" style="background-color: #fd7e14; width: 36px; height: 36px; border-radius: 8px; border: 2px solid transparent;" title="Orange"></button>
+                            <button type="button" class="btn color-option" data-color="#ffc107" style="background-color: #ffc107; width: 36px; height: 36px; border-radius: 8px; border: 2px solid transparent;" title="Yellow"></button>
+                            <button type="button" class="btn color-option" data-color="#20c997" style="background-color: #20c997; width: 36px; height: 36px; border-radius: 8px; border: 2px solid transparent;" title="Teal"></button>
+                            <button type="button" class="btn color-option" data-color="#6f42c1" style="background-color: #6f42c1; width: 36px; height: 36px; border-radius: 8px; border: 2px solid transparent;" title="Purple"></button>
+                            <button type="button" class="btn color-option" data-color="#e83e8c" style="background-color: #e83e8c; width: 36px; height: 36px; border-radius: 8px; border: 2px solid transparent;" title="Pink"></button>
+                        </div>
+                        <input type="hidden" id="template-color" value="#198754">
                     </div>
 
                     <div class="mb-3">
@@ -297,6 +346,23 @@
 <script>
 let templates = [];
 let editingTemplateId = null;
+let selectedColor = '#198754';
+
+// Initialize color picker
+document.querySelectorAll('.color-option').forEach(btn => {
+    btn.addEventListener('click', function() {
+        // Remove selected from all
+        document.querySelectorAll('.color-option').forEach(b => b.classList.remove('selected'));
+        // Add selected to clicked
+        this.classList.add('selected');
+        // Update hidden input
+        selectedColor = this.dataset.color;
+        document.getElementById('template-color').value = selectedColor;
+    });
+});
+
+// Set default color as selected
+document.querySelector('.color-option[data-color="#198754"]').classList.add('selected');
 
 // Load all templates
 function loadTemplates() {
@@ -339,9 +405,11 @@ function displayTemplates() {
             scheduledDayText = dayNames[template.day_of_week];
         }
 
+        const templateColor = template.color || '#198754';
         html += `
             <div class="col-md-6 col-lg-4">
                 <div class="template-card">
+                    <div class="template-color-bar" style="background-color: ${templateColor};"></div>
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start mb-2">
                             <h6 class="card-title mb-0">${template.name}</h6>
@@ -392,6 +460,12 @@ function showCreateTemplateModal() {
     document.getElementById('template-id').value = '';
     document.getElementById('template-name').value = '';
     document.getElementById('template-description').value = '';
+
+    // Reset color to default
+    selectedColor = '#198754';
+    document.getElementById('template-color').value = selectedColor;
+    document.querySelectorAll('.color-option').forEach(b => b.classList.remove('selected'));
+    document.querySelector('.color-option[data-color="#198754"]').classList.add('selected');
 
     // Clear all day checkboxes
     for (let i = 0; i < 7; i++) {
@@ -457,6 +531,18 @@ function editTemplate(templateId) {
     document.getElementById('template-id').value = templateId;
     document.getElementById('template-name').value = template.name;
     document.getElementById('template-description').value = template.description || '';
+
+    // Set color
+    selectedColor = template.color || '#198754';
+    document.getElementById('template-color').value = selectedColor;
+    document.querySelectorAll('.color-option').forEach(b => b.classList.remove('selected'));
+    const colorBtn = document.querySelector(`.color-option[data-color="${selectedColor}"]`);
+    if (colorBtn) {
+        colorBtn.classList.add('selected');
+    } else {
+        // If color not in predefined options, select first one
+        document.querySelector('.color-option').classList.add('selected');
+    }
 
     // Clear all checkboxes first
     for (let i = 0; i < 7; i++) {
@@ -529,6 +615,7 @@ function saveTemplate() {
     const data = {
         name: name,
         description: description,
+        color: selectedColor,
         scheduled_days: scheduledDays,
         exercises: exercises
     };

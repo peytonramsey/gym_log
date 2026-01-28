@@ -13,6 +13,7 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    timezone_offset = db.Column(db.Integer, default=0)  # Hours offset from UTC (e.g., -5 for EST)
 
     # Relationships
     workouts = db.relationship('Workout', backref='user', lazy=True, cascade='all, delete-orphan')
@@ -55,13 +56,20 @@ class Workout(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     notes = db.Column(db.String(500))
+    is_draft = db.Column(db.Boolean, default=False, nullable=False)  # Draft workouts are auto-saved in progress
+    template_id = db.Column(db.Integer, db.ForeignKey('workout_template.id'), nullable=True)  # Track which template was used
     exercises = db.relationship('Exercise', backref='workout', lazy=True, cascade='all, delete-orphan')
+    template = db.relationship('WorkoutTemplate', backref='workouts')
 
     def to_dict(self):
         return {
             'id': self.id,
-            'date': self.date.strftime('%Y-%m-%d %H:%M'),
+            'date': self.date.isoformat() + 'Z',  # Return as ISO format with UTC marker
             'notes': self.notes,
+            'is_draft': self.is_draft,
+            'template_id': self.template_id,
+            'template_color': self.template.color if self.template else None,
+            'template_name': self.template.name if self.template else None,
             'exercises': [ex.to_dict() for ex in self.exercises]
         }
 
@@ -71,7 +79,7 @@ class Exercise(db.Model):
     name = db.Column(db.String(100), nullable=False)
     sets = db.Column(db.Integer, nullable=False)
     reps = db.Column(db.Integer, nullable=False)
-    weight = db.Column(db.Float, nullable=False)
+    weight = db.Column(db.Float, nullable=True)  # Nullable for bodyweight exercises
     rest_time = db.Column(db.Integer, nullable=True)  # rest time in seconds
     set_data = db.Column(db.Text, nullable=True)  # JSON array of individual sets: [{"set_number": 1, "reps": 10, "weight": 135}, ...]
 
@@ -100,7 +108,7 @@ class Meal(db.Model):
     def to_dict(self):
         return {
             'id': self.id,
-            'date': self.date.strftime('%Y-%m-%d %H:%M'),
+            'date': self.date.isoformat() + 'Z',  # Return as ISO format with UTC marker
             'meal_type': self.meal_type,
             'notes': self.notes,
             'food_items': [item.to_dict() for item in self.food_items],
@@ -212,6 +220,7 @@ class WorkoutTemplate(db.Model):
     name = db.Column(db.String(100), nullable=False)  # e.g., "Push Day 1", "Pull Day"
     description = db.Column(db.String(500))
     day_of_week = db.Column(db.Integer, nullable=True)  # DEPRECATED: Use scheduled_days instead
+    color = db.Column(db.String(7), default='#198754')  # Hex color code for calendar display
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relationships
@@ -230,6 +239,7 @@ class WorkoutTemplate(db.Model):
             'description': self.description,
             'day_of_week': self.day_of_week,  # Keep for backwards compatibility
             'scheduled_days': sorted(days_list),  # New field: array of days
+            'color': self.color or '#198754',  # Default green if not set
             'created_at': self.created_at.strftime('%Y-%m-%d'),
             'exercises': [ex.to_dict() for ex in self.template_exercises]
         }
