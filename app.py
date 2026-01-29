@@ -365,13 +365,17 @@ def populate_demo_data(user):
     db.session.commit()
     print(f"[SUCCESS] Demo data populated for user '{user.username}'")
 
-with app.app_context():
-    # Create tables if they don't exist (for initial deployment)
-    # Migration system will handle schema updates after initial creation
-    db.create_all()
-    create_admin_user()
-    # Clean up old draft workouts (older than 24 hours)
-    cleanup_old_drafts()
+# Initialization moved to run only when app starts, not when imported
+# This prevents issues during migration runs
+def initialize_app():
+    """Initialize app on first startup - create admin user and cleanup old drafts"""
+    with app.app_context():
+        create_admin_user()
+        cleanup_old_drafts()
+
+# Only run initialization when the app is run directly (not during imports/migrations)
+if __name__ == '__main__':
+    initialize_app()
 
 # Make version available to all templates
 @app.context_processor
