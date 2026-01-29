@@ -6,5 +6,8 @@ set -o errexit
 # Install Python dependencies
 pip install -r requirements.txt
 
-# Initialize database tables
-python init_db.py
+# Run database migrations
+echo "Running database migrations..."
+flask db upgrade
+
+echo "✓ Build completed successfully!"
