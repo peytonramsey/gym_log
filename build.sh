@@ -6,8 +6,8 @@ set -o errexit
 # Install Python dependencies
 pip install -r requirements.txt
 
-# Run database migrations
+# Run database migrations using Python script (more reliable than flask CLI)
 echo "Running database migrations..."
-flask db upgrade
+python run_migrations.py
 
 echo "✓ Build completed successfully!"
