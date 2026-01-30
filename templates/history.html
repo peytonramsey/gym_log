@@ -670,16 +670,49 @@
                     html += '<div class="ms-3">';
                     w.exercises.forEach(ex => {
                         html += `<div class="mb-3">`;
-                        html += `<div><strong>${ex.name}</strong></div>`;
+
+                        // Show superset badge and dual exercise names if it's a superset
+                        if (ex.is_superset) {
+                            html += `
+                                <div>
+                                    <span class="badge bg-primary me-2">Superset</span>
+                                    <strong>${ex.name} / ${ex.superset_exercise_name || 'Exercise B'}</strong>
+                                </div>
+                            `;
+                        } else {
+                            html += `<div><strong>${ex.name}</strong></div>`;
+                        }
 
                         // Show individual sets if set_data exists, otherwise show summary
                         if (ex.set_data && ex.set_data.length > 0) {
                             html += '<div class="ms-2 mt-1">';
                             ex.set_data.forEach((set, setIdx) => {
-                                const weightDisplay = set.weight !== null && set.weight !== undefined ? ` @ ${set.weight} lbs` : '';
+                                let displayText = '';
+                                let dropSetBadge = '';
+
+                                if (ex.is_superset) {
+                                    // Show dual reps and weights for superset
+                                    const repsA = set.reps_a || set.reps || '-';
+                                    const repsB = set.reps_b || set.reps || '-';
+                                    const weightA = set.weight_a !== null && set.weight_a !== undefined ? set.weight_a : '-';
+                                    const weightB = set.weight_b !== null && set.weight_b !== undefined ? set.weight_b : '-';
+                                    displayText = `${repsA} reps @ ${weightA} lbs / ${repsB} reps @ ${weightB} lbs`;
+                                } else if (set.is_drop_set && set.stages && set.stages.length > 0) {
+                                    // Show drop set stages with arrows
+                                    const stageTexts = set.stages.map(stage => {
+                                        const weight = stage.weight !== null && stage.weight !== undefined ? `${stage.weight}` : 'BW';
+                                        return `${stage.reps} @ ${weight}`;
+                                    });
+                                    displayText = stageTexts.join(' → ') + ' lbs';
+                                    dropSetBadge = '<span class="badge bg-warning text-dark me-1">Drop Set</span>';
+                                } else {
+                                    // Show single reps and weight for normal exercise
+                                    const weightDisplay = set.weight !== null && set.weight !== undefined ? ` @ ${set.weight} lbs` : '';
+                                    displayText = `${set.reps} reps${weightDisplay}`;
+                                }
                                 html += `
                                     <small class="d-block text-muted">
-                                        Set ${set.set_number || setIdx + 1}: ${set.reps} reps${weightDisplay}
+                                        ${dropSetBadge}Set ${set.set_number || setIdx + 1}: ${displayText}
                                     </small>
                                 `;
                             });

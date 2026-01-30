@@ -4,55 +4,6 @@
 
 {% block extra_css %}
 <style>
-    .prediction-pill {
-        background: rgba(102, 126, 234, 0.1);
-        border: 1px solid rgba(102, 126, 234, 0.3);
-        padding: 8px 12px;
-        border-radius: 8px;
-        margin-top: 8px;
-        font-size: 0.9rem;
-    }
-
-    body.dark-mode .prediction-pill {
-        background: rgba(102, 126, 234, 0.2);
-        border: 1px solid rgba(102, 126, 234, 0.4);
-    }
-
-    .prediction-pill .predicted-weight {
-        font-weight: bold;
-        color: #667eea;
-        font-size: 1.1rem;
-    }
-
-    .confidence-range {
-        font-size: 0.8rem;
-        color: #888;
-        margin-top: 2px;
-    }
-
-    body.dark-mode .confidence-range {
-        color: #aaa;
-    }
-
-    .ml-button {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border: none;
-        color: white;
-        transition: all 0.3s ease;
-    }
-
-    .ml-button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        color: white;
-    }
-
-    .ml-button:disabled {
-        background: #ccc;
-        transform: none;
-        box-shadow: none;
-    }
-
     body.dark-mode .card {
         background: rgba(45, 45, 45, 0.3);
         border: 1px solid rgba(255, 255, 255, 0.1);
@@ -61,6 +12,182 @@
 
     body.dark-mode .card-body {
         color: #ffffff;
+    }
+
+    /* Superset styling */
+    .superset-card {
+        border-left: 4px solid #667eea;
+        background: rgba(102, 126, 234, 0.05);
+    }
+
+    body.dark-mode .superset-card {
+        background: rgba(102, 126, 234, 0.1);
+    }
+
+    .superset-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        border-radius: 20px;
+        background: rgba(102, 126, 234, 0.1);
+        border: 1px solid rgba(102, 126, 234, 0.3);
+        transition: all 0.2s ease;
+        cursor: pointer;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+
+    .superset-toggle:hover {
+        background: rgba(102, 126, 234, 0.15);
+        border-color: rgba(102, 126, 234, 0.5);
+    }
+
+    body.dark-mode .superset-toggle {
+        background: rgba(102, 126, 234, 0.15);
+        border-color: rgba(102, 126, 234, 0.4);
+    }
+
+    body.dark-mode .superset-toggle:hover {
+        background: rgba(102, 126, 234, 0.2);
+        border-color: rgba(102, 126, 234, 0.6);
+    }
+
+    .superset-toggle.active {
+        background: rgba(102, 126, 234, 0.25);
+        border-color: #667eea;
+    }
+
+    body.dark-mode .superset-toggle.active {
+        background: rgba(102, 126, 234, 0.3);
+        border-color: #8b9ff0;
+    }
+
+    .superset-toggle input[type="checkbox"] {
+        display: none;
+    }
+
+    .superset-toggle-icon {
+        font-size: 0.9rem;
+        transition: transform 0.2s ease;
+    }
+
+    .superset-toggle.active .superset-toggle-icon {
+        transform: scale(1.1);
+    }
+
+    .superset-name-container {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .exercise-name-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #667eea;
+        margin-bottom: 2px;
+    }
+
+    body.dark-mode .exercise-name-label {
+        color: #8b9ff0;
+    }
+
+    .superset-weight-header {
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-align: center;
+        color: #666;
+    }
+
+    body.dark-mode .superset-weight-header {
+        color: #aaa;
+    }
+
+    /* Drop set styling */
+    .drop-set-container {
+        border-left: 3px solid #f59e0b;
+        padding-left: 10px;
+        margin-left: 5px;
+        margin-top: 8px;
+        background: rgba(245, 158, 11, 0.05);
+        border-radius: 4px;
+        padding: 8px 10px;
+    }
+
+    body.dark-mode .drop-set-container {
+        background: rgba(245, 158, 11, 0.1);
+    }
+
+    .drop-stage {
+        padding: 4px 0;
+        border-bottom: 1px dashed rgba(245, 158, 11, 0.2);
+    }
+
+    .drop-stage:last-child {
+        border-bottom: none;
+    }
+
+    .drop-stage-label {
+        font-size: 0.7rem;
+        color: #f59e0b;
+        font-weight: 600;
+    }
+
+    body.dark-mode .drop-stage-label {
+        color: #fbbf24;
+    }
+
+    .drop-set-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 8px;
+        border-radius: 12px;
+        background: rgba(245, 158, 11, 0.1);
+        border: 1px solid rgba(245, 158, 11, 0.3);
+        transition: all 0.2s ease;
+        cursor: pointer;
+        font-size: 0.7rem;
+        font-weight: 500;
+    }
+
+    .drop-set-toggle:hover {
+        background: rgba(245, 158, 11, 0.15);
+        border-color: rgba(245, 158, 11, 0.5);
+    }
+
+    body.dark-mode .drop-set-toggle {
+        background: rgba(245, 158, 11, 0.15);
+        border-color: rgba(245, 158, 11, 0.4);
+    }
+
+    body.dark-mode .drop-set-toggle:hover {
+        background: rgba(245, 158, 11, 0.2);
+        border-color: rgba(245, 158, 11, 0.6);
+    }
+
+    .drop-set-toggle.active {
+        background: rgba(245, 158, 11, 0.25);
+        border-color: #f59e0b;
+    }
+
+    body.dark-mode .drop-set-toggle.active {
+        background: rgba(245, 158, 11, 0.3);
+        border-color: #fbbf24;
+    }
+
+    .drop-set-toggle input[type="checkbox"] {
+        display: none;
+    }
+
+    .drop-set-toggle-icon {
+        font-size: 0.75rem;
+        transition: transform 0.2s ease;
+    }
+
+    .drop-set-toggle.active .drop-set-toggle-icon {
+        transform: rotate(180deg);
     }
 
     body.dark-mode .form-control,
@@ -263,17 +390,29 @@
             const name = nameEl.value;
             const rest = document.getElementById(`rest-${i}`).value || 0;
             const sets = getSetsForExercise(i);
+            const isSuperset = document.getElementById(`superset-toggle-${i}`)?.checked || false;
+            const supersetExerciseName = isSuperset ? document.getElementById(`name-b-${i}`)?.value : null;
 
             if (name || sets.length > 0) {
                 // Calculate totals for backward compatibility
                 const totalSets = sets.length || 1;
-                const avgReps = sets.length > 0 ? Math.round(sets.reduce((sum, s) => sum + s.reps, 0) / sets.length) : 0;
+                let avgReps = 0;
+                let avgWeight = null;
 
-                // Calculate avgWeight only from sets that have weight
-                const setsWithWeight = sets.filter(s => s.weight !== null);
-                const avgWeight = setsWithWeight.length > 0
-                    ? Math.round(setsWithWeight.reduce((sum, s) => sum + s.weight, 0) / setsWithWeight.length * 10) / 10
-                    : null;
+                if (isSuperset) {
+                    // For supersets, average reps_a and weight_a for backward compatibility
+                    avgReps = sets.length > 0 ? Math.round(sets.reduce((sum, s) => sum + (s.reps_a || 0), 0) / sets.length) : 0;
+                    const setsWithWeight = sets.filter(s => s.weight_a !== null);
+                    avgWeight = setsWithWeight.length > 0
+                        ? Math.round(setsWithWeight.reduce((sum, s) => sum + s.weight_a, 0) / setsWithWeight.length * 10) / 10
+                        : null;
+                } else {
+                    avgReps = sets.length > 0 ? Math.round(sets.reduce((sum, s) => sum + s.reps, 0) / sets.length) : 0;
+                    const setsWithWeight = sets.filter(s => s.weight !== null);
+                    avgWeight = setsWithWeight.length > 0
+                        ? Math.round(setsWithWeight.reduce((sum, s) => sum + s.weight, 0) / setsWithWeight.length * 10) / 10
+                        : null;
+                }
 
                 exercises.push({
                     name: name || 'Unnamed Exercise',
@@ -281,7 +420,9 @@
                     reps: avgReps,
                     weight: avgWeight,
                     rest_time: rest,
-                    set_data: sets
+                    set_data: sets,
+                    is_superset: isSuperset,
+                    superset_exercise_name: supersetExerciseName
                 });
             }
         }
@@ -512,7 +653,7 @@
                             </div>
                             <div class="mb-3">
                                 <input type="text" class="form-control" placeholder="Exercise name"
-                                       id="name-${ex.id}" value="${ex.name}" onchange="clearPrediction(${ex.id}); scheduleAutoSave()">
+                                       id="name-${ex.id}" value="${ex.name}" onchange="scheduleAutoSave()">
                             </div>
                             <div class="mb-2">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
@@ -529,26 +670,9 @@
                                        id="rest-${ex.id}" value="${ex.rest}" onchange="scheduleAutoSave()">
                             </div>
                             <div class="row g-2">
-                                <div class="col-6">
-                                    <button class="btn ml-button btn-sm w-100" onclick="getMLPrediction(${ex.id})" id="ml-btn-${ex.id}">
-                                        <i class="bi bi-magic"></i> Get AI Suggestion
-                                    </button>
-                                </div>
-                                <div class="col-6">
+                                <div class="col-12">
                                     <button class="btn btn-outline-primary btn-sm w-100" onclick="openTimer(${ex.id})">
                                         <i class="bi bi-stopwatch"></i> Rest Timer
-                                    </button>
-                                </div>
-                            </div>
-                            <div id="prediction-${ex.id}" class="prediction-pill" style="display: none;">
-                                <div class="text-center">
-                                    <i class="bi bi-lightbulb"></i> <strong>Suggested Weight:</strong>
-                                    <span class="predicted-weight" id="pred-weight-${ex.id}">0</span> lbs
-                                </div>
-                                <div class="confidence-range text-center" id="pred-range-${ex.id}">Range: 0-0 lbs</div>
-                                <div class="text-center mt-2">
-                                    <button class="btn btn-sm btn-success" onclick="acceptPrediction(${ex.id})">
-                                        <i class="bi bi-check"></i> Use This
                                     </button>
                                 </div>
                             </div>
@@ -758,15 +882,30 @@
         exerciseDiv.innerHTML = `
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="mb-0">
-                        Exercise ${exerciseCount}
-                    </h6>
+                    <div class="d-flex align-items-center gap-3">
+                        <h6 class="mb-0" id="exercise-header-${exerciseCount}">
+                            Exercise ${exerciseCount}
+                        </h6>
+                        <label class="superset-toggle" for="superset-toggle-${exerciseCount}" id="superset-toggle-label-${exerciseCount}">
+                            <input type="checkbox" id="superset-toggle-${exerciseCount}"
+                                   onchange="toggleSuperset(${exerciseCount})">
+                            <i class="bi bi-layers superset-toggle-icon"></i>
+                            <span>Superset</span>
+                        </label>
+                    </div>
                     <button class="btn btn-danger btn-sm" onclick="removeExercise(${exerciseCount})">
                         <i class="bi bi-trash"></i>
                     </button>
                 </div>
-                <div class="mb-3">
-                    <input type="text" class="form-control" placeholder="Exercise name" id="name-${exerciseCount}" value="${exerciseData ? exerciseData.name : ''}" onchange="clearPrediction(${exerciseCount}); scheduleAutoSave()">
+                <div class="mb-3 superset-name-container" id="names-container-${exerciseCount}">
+                    <div>
+                        <div class="exercise-name-label" id="name-label-a-${exerciseCount}" style="display: none;">Exercise A</div>
+                        <input type="text" class="form-control" placeholder="Exercise name" id="name-${exerciseCount}" value="${exerciseData ? exerciseData.name : ''}" onchange="scheduleAutoSave()">
+                    </div>
+                    <div id="name-b-container-${exerciseCount}" style="display: none;">
+                        <div class="exercise-name-label">Exercise B</div>
+                        <input type="text" class="form-control" placeholder="Second exercise name" id="name-b-${exerciseCount}" value="${exerciseData && exerciseData.superset_exercise_name ? exerciseData.superset_exercise_name : ''}" onchange="scheduleAutoSave()">
+                    </div>
                 </div>
 
                 <!-- Sets Container -->
@@ -788,28 +927,9 @@
                 </div>
 
                 <div class="row g-2">
-                    <div class="col-6">
-                        <button class="btn ml-button btn-sm w-100" onclick="getMLPrediction(${exerciseCount})" id="ml-btn-${exerciseCount}">
-                            <i class="bi bi-magic"></i> Get AI Suggestion
-                        </button>
-                    </div>
-                    <div class="col-6">
+                    <div class="col-12">
                         <button class="btn btn-outline-primary btn-sm w-100" onclick="openTimer(${exerciseCount})">
                             <i class="bi bi-stopwatch"></i> Rest Timer
-                        </button>
-                    </div>
-                </div>
-                <div id="prediction-${exerciseCount}" class="prediction-pill" style="display: none;">
-                    <div class="text-center">
-                        <i class="bi bi-lightbulb"></i> <strong>Suggested Weight:</strong>
-                        <span class="predicted-weight" id="pred-weight-${exerciseCount}">0</span> lbs
-                    </div>
-                    <div class="confidence-range text-center" id="pred-range-${exerciseCount}">
-                        Range: 0-0 lbs
-                    </div>
-                    <div class="text-center mt-2">
-                        <button class="btn btn-sm btn-success" onclick="acceptPrediction(${exerciseCount})">
-                            <i class="bi bi-check"></i> Use This
                         </button>
                     </div>
                 </div>
@@ -817,11 +937,21 @@
         `;
         container.appendChild(exerciseDiv);
 
+        // If this is a superset, enable superset mode
+        if (exerciseData && exerciseData.is_superset) {
+            document.getElementById(`superset-toggle-${exerciseCount}`).checked = true;
+            toggleSuperset(exerciseCount, true); // true = skip auto-save on init
+        }
+
         // Add initial set or load from template
         if (exerciseData && exerciseData.set_data) {
             // Load sets from existing data
             exerciseData.set_data.forEach(set => {
-                addSet(exerciseCount, set.reps, set.weight);
+                if (exerciseData.is_superset) {
+                    addSet(exerciseCount, set.reps_a || set.reps, set.weight_a, set.reps_b || set.reps, set.weight_b);
+                } else {
+                    addSet(exerciseCount, set.reps, set.weight);
+                }
             });
         } else if (exerciseData) {
             // Convert old format (single sets/reps/weight) to new format
@@ -839,9 +969,128 @@
         scheduleAutoSave();
     }
 
+    function toggleSuperset(exerciseId, skipSave = false) {
+        const isChecked = document.getElementById(`superset-toggle-${exerciseId}`).checked;
+        const nameB = document.getElementById(`name-b-container-${exerciseId}`);
+        const labelA = document.getElementById(`name-label-a-${exerciseId}`);
+        const header = document.getElementById(`exercise-header-${exerciseId}`);
+        const card = document.getElementById(`exercise-${exerciseId}`);
+        const setsContainer = document.getElementById(`sets-container-${exerciseId}`);
+        const toggleLabel = document.getElementById(`superset-toggle-label-${exerciseId}`);
+
+        if (isChecked) {
+            // Enable superset mode
+            nameB.style.display = 'block';
+            labelA.style.display = 'block';
+            card.classList.add('superset-card');
+            header.textContent = `Superset ${exerciseId}A & ${exerciseId}B`;
+            if (toggleLabel) toggleLabel.classList.add('active');
+
+            // Convert existing sets to dual weight format
+            const setDivs = setsContainer.querySelectorAll('[id^="exercise-' + exerciseId + '-set-"]');
+            setDivs.forEach(setDiv => {
+                const setId = setDiv.id;
+                const match = setId.match(/set-(\d+)$/);
+                if (match) {
+                    const setNumber = match[1];
+                    const repsInput = document.getElementById(`${setId}-reps`);
+                    const weightInput = document.getElementById(`${setId}-weight`);
+                    const currentReps = repsInput ? repsInput.value : '';
+                    const currentWeight = weightInput ? weightInput.value : '';
+
+                    // Replace single reps/weight with dual reps/weights
+                    setDiv.innerHTML = `
+                        <div class="col-1">
+                            <strong class="text-muted" style="font-size: 0.8rem;">Set ${setNumber}</strong>
+                        </div>
+                        <div class="col-2">
+                            <div class="superset-weight-header">Reps A</div>
+                            <input type="number" class="form-control form-control-sm" placeholder="Reps"
+                                   id="${setId}-reps-a" value="${currentReps}" onchange="scheduleAutoSave()">
+                        </div>
+                        <div class="col-2">
+                            <div class="superset-weight-header">Weight A</div>
+                            <input type="number" step="0.5" class="form-control form-control-sm" placeholder="Wt"
+                                   id="${setId}-weight-a" value="${currentWeight}" onchange="scheduleAutoSave()">
+                        </div>
+                        <div class="col-2">
+                            <div class="superset-weight-header">Reps B</div>
+                            <input type="number" class="form-control form-control-sm" placeholder="Reps"
+                                   id="${setId}-reps-b" value="${currentReps}" onchange="scheduleAutoSave()">
+                        </div>
+                        <div class="col-2">
+                            <div class="superset-weight-header">Weight B</div>
+                            <input type="number" step="0.5" class="form-control form-control-sm" placeholder="Wt"
+                                   id="${setId}-weight-b" value="" onchange="scheduleAutoSave()">
+                        </div>
+                        <div class="col-1">
+                            <button class="btn btn-danger btn-sm" onclick="removeSet(${exerciseId}, ${setNumber})">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </div>
+                    `;
+                }
+            });
+        } else {
+            // Disable superset mode
+            nameB.style.display = 'none';
+            labelA.style.display = 'none';
+            card.classList.remove('superset-card');
+            header.textContent = `Exercise ${exerciseId}`;
+            document.getElementById(`name-b-${exerciseId}`).value = '';
+            if (toggleLabel) toggleLabel.classList.remove('active');
+
+            // Convert dual weights back to single weight
+            const setDivs = setsContainer.querySelectorAll('[id^="exercise-' + exerciseId + '-set-"]');
+            setDivs.forEach(setDiv => {
+                const setId = setDiv.id;
+                const match = setId.match(/set-(\d+)$/);
+                if (match) {
+                    const setNumber = match[1];
+                    const repsAInput = document.getElementById(`${setId}-reps-a`);
+                    const weightAInput = document.getElementById(`${setId}-weight-a`);
+                    const currentReps = repsAInput ? repsAInput.value : '';
+                    const currentWeight = weightAInput ? weightAInput.value : '';
+
+                    // Replace dual reps/weights with single reps/weight
+                    setDiv.innerHTML = `
+                        <div class="col-2">
+                            <strong class="text-muted">Set ${setNumber}</strong>
+                        </div>
+                        <div class="col-3">
+                            <input type="number" class="form-control form-control-sm" placeholder="Reps"
+                                   id="${setId}-reps" value="${currentReps}" onchange="scheduleAutoSave()">
+                        </div>
+                        <div class="col-3">
+                            <input type="number" step="0.5" class="form-control form-control-sm" placeholder="Weight (optional)"
+                                   id="${setId}-weight" value="${currentWeight}" onchange="scheduleAutoSave()">
+                        </div>
+                        <div class="col-2 d-flex align-items-center justify-content-center">
+                            <label class="drop-set-toggle" for="${setId}-dropset" id="drop-toggle-label-${exerciseId}-${setNumber}">
+                                <input type="checkbox" id="${setId}-dropset"
+                                       onchange="toggleDropSet(${exerciseId}, ${setNumber})">
+                                <i class="bi bi-chevron-down drop-set-toggle-icon"></i>
+                                <span>Drop</span>
+                            </label>
+                        </div>
+                        <div class="col-2">
+                            <button class="btn btn-danger btn-sm" onclick="removeSet(${exerciseId}, ${setNumber})">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </div>
+                    `;
+                }
+            });
+        }
+
+        if (!skipSave) {
+            scheduleAutoSave();
+        }
+    }
+
     let setCounters = {}; // Track set numbers per exercise
 
-    function addSet(exerciseId, reps = '', weight = '') {
+    function addSet(exerciseId, reps_a = '', weight_a = '', reps_b = '', weight_b = '') {
         if (!setCounters[exerciseId]) {
             setCounters[exerciseId] = 0;
         }
@@ -849,39 +1098,179 @@
 
         const setNumber = setCounters[exerciseId];
         const container = document.getElementById(`sets-container-${exerciseId}`);
+        const isSuperset = document.getElementById(`superset-toggle-${exerciseId}`)?.checked;
+
+        // Create wrapper for set and its drop stages
+        const setWrapper = document.createElement('div');
+        setWrapper.className = 'mb-2';
+        setWrapper.id = `exercise-${exerciseId}-set-${setNumber}-wrapper`;
 
         const setDiv = document.createElement('div');
-        setDiv.className = 'row g-2 mb-2 align-items-center';
+        setDiv.className = 'row g-2 mb-1 align-items-center';
         setDiv.id = `exercise-${exerciseId}-set-${setNumber}`;
-        setDiv.innerHTML = `
+
+        if (isSuperset) {
+            // Superset mode: dual reps and weight columns
+            setDiv.innerHTML = `
+                <div class="col-1">
+                    <strong class="text-muted" style="font-size: 0.8rem;">Set ${setNumber}</strong>
+                </div>
+                <div class="col-2">
+                    <div class="superset-weight-header">Reps A</div>
+                    <input type="number" class="form-control form-control-sm" placeholder="Reps"
+                           id="exercise-${exerciseId}-set-${setNumber}-reps-a" value="${reps_a}" onchange="scheduleAutoSave()">
+                </div>
+                <div class="col-2">
+                    <div class="superset-weight-header">Weight A</div>
+                    <input type="number" step="0.5" class="form-control form-control-sm" placeholder="Wt"
+                           id="exercise-${exerciseId}-set-${setNumber}-weight-a" value="${weight_a}" onchange="scheduleAutoSave()">
+                </div>
+                <div class="col-2">
+                    <div class="superset-weight-header">Reps B</div>
+                    <input type="number" class="form-control form-control-sm" placeholder="Reps"
+                           id="exercise-${exerciseId}-set-${setNumber}-reps-b" value="${reps_b}" onchange="scheduleAutoSave()">
+                </div>
+                <div class="col-2">
+                    <div class="superset-weight-header">Weight B</div>
+                    <input type="number" step="0.5" class="form-control form-control-sm" placeholder="Wt"
+                           id="exercise-${exerciseId}-set-${setNumber}-weight-b" value="${weight_b}" onchange="scheduleAutoSave()">
+                </div>
+                <div class="col-1">
+                    <button class="btn btn-danger btn-sm btn-sm" onclick="removeSet(${exerciseId}, ${setNumber})">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
+            `;
+        } else {
+            // Normal mode: single reps and weight column
+            setDiv.innerHTML = `
+                <div class="col-2">
+                    <strong class="text-muted">Set ${setNumber}</strong>
+                </div>
+                <div class="col-3">
+                    <input type="number" class="form-control form-control-sm" placeholder="Reps"
+                           id="exercise-${exerciseId}-set-${setNumber}-reps" value="${reps_a || ''}" onchange="scheduleAutoSave()">
+                </div>
+                <div class="col-3">
+                    <input type="number" step="0.5" class="form-control form-control-sm" placeholder="Weight (optional)"
+                           id="exercise-${exerciseId}-set-${setNumber}-weight" value="${weight_a || ''}" onchange="scheduleAutoSave()">
+                </div>
+                <div class="col-2 d-flex align-items-center justify-content-center">
+                    <label class="drop-set-toggle" for="exercise-${exerciseId}-set-${setNumber}-dropset" id="drop-toggle-label-${exerciseId}-${setNumber}">
+                        <input type="checkbox" id="exercise-${exerciseId}-set-${setNumber}-dropset"
+                               onchange="toggleDropSet(${exerciseId}, ${setNumber})">
+                        <i class="bi bi-chevron-down drop-set-toggle-icon"></i>
+                        <span>Dropset</span>
+                    </label>
+                </div>
+                <div class="col-2">
+                    <button class="btn btn-danger btn-sm" onclick="removeSet(${exerciseId}, ${setNumber})">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
+            `;
+        }
+
+        // Add container for drop stages
+        const dropContainer = document.createElement('div');
+        dropContainer.id = `exercise-${exerciseId}-set-${setNumber}-drops`;
+        dropContainer.className = 'drop-set-container mt-1';
+        dropContainer.style.display = 'none';
+
+        setWrapper.appendChild(setDiv);
+        setWrapper.appendChild(dropContainer);
+        container.appendChild(setWrapper);
+    }
+
+    function removeSet(exerciseId, setNumber) {
+        const setWrapper = document.getElementById(`exercise-${exerciseId}-set-${setNumber}-wrapper`);
+        if (setWrapper) {
+            setWrapper.remove();
+            scheduleAutoSave();
+        }
+    }
+
+    let dropStageCounters = {}; // Track drop stage numbers per set
+
+    function toggleDropSet(exerciseId, setNumber) {
+        const isChecked = document.getElementById(`exercise-${exerciseId}-set-${setNumber}-dropset`)?.checked;
+        const dropContainer = document.getElementById(`exercise-${exerciseId}-set-${setNumber}-drops`);
+        const toggleLabel = document.getElementById(`drop-toggle-label-${exerciseId}-${setNumber}`);
+
+        if (isChecked) {
+            // Enable drop set mode
+            dropContainer.style.display = 'block';
+            if (toggleLabel) toggleLabel.classList.add('active');
+
+            // Initialize drop stage counter
+            const setKey = `${exerciseId}-${setNumber}`;
+            if (!dropStageCounters[setKey]) {
+                dropStageCounters[setKey] = 0;
+            }
+
+            // Add "+ Add Drop Stage" button if not already present
+            if (!document.getElementById(`exercise-${exerciseId}-set-${setNumber}-add-drop`)) {
+                const addDropBtn = document.createElement('button');
+                addDropBtn.className = 'btn btn-outline-warning btn-sm mt-1 w-100';
+                addDropBtn.id = `exercise-${exerciseId}-set-${setNumber}-add-drop`;
+                addDropBtn.innerHTML = '<i class="bi bi-plus"></i> Add Drop Stage';
+                addDropBtn.onclick = () => addDropStage(exerciseId, setNumber);
+                dropContainer.appendChild(addDropBtn);
+            }
+        } else {
+            // Disable drop set mode
+            dropContainer.style.display = 'none';
+            dropContainer.innerHTML = ''; // Clear all drop stages
+            if (toggleLabel) toggleLabel.classList.remove('active');
+            const setKey = `${exerciseId}-${setNumber}`;
+            dropStageCounters[setKey] = 0;
+        }
+
+        scheduleAutoSave();
+    }
+
+    function addDropStage(exerciseId, setNumber, reps = '', weight = '') {
+        const setKey = `${exerciseId}-${setNumber}`;
+        if (!dropStageCounters[setKey]) {
+            dropStageCounters[setKey] = 0;
+        }
+        dropStageCounters[setKey]++;
+
+        const dropStageNum = dropStageCounters[setKey];
+        const dropContainer = document.getElementById(`exercise-${exerciseId}-set-${setNumber}-drops`);
+        const addDropBtn = document.getElementById(`exercise-${exerciseId}-set-${setNumber}-add-drop`);
+
+        const dropStage = document.createElement('div');
+        dropStage.className = 'drop-stage row g-2 align-items-center mb-1';
+        dropStage.id = `exercise-${exerciseId}-set-${setNumber}-drop-${dropStageNum}`;
+        dropStage.innerHTML = `
             <div class="col-2">
-                <strong class="text-muted">Set ${setNumber}</strong>
+                <span class="drop-stage-label">Drop ${dropStageNum}</span>
             </div>
             <div class="col-4">
                 <input type="number" class="form-control form-control-sm" placeholder="Reps"
-                       id="exercise-${exerciseId}-set-${setNumber}-reps" value="${reps}" onchange="scheduleAutoSave()">
+                       id="exercise-${exerciseId}-set-${setNumber}-drop-${dropStageNum}-reps" value="${reps}" onchange="scheduleAutoSave()">
             </div>
             <div class="col-4">
-                <input type="number" step="0.5" class="form-control form-control-sm" placeholder="Weight (optional)"
-                       id="exercise-${exerciseId}-set-${setNumber}-weight" value="${weight}" onchange="scheduleAutoSave()">
+                <input type="number" step="0.5" class="form-control form-control-sm" placeholder="Weight"
+                       id="exercise-${exerciseId}-set-${setNumber}-drop-${dropStageNum}-weight" value="${weight}" onchange="scheduleAutoSave()">
             </div>
             <div class="col-2">
-                <button class="btn btn-danger btn-sm" onclick="removeSet(${exerciseId}, ${setNumber})">
+                <button class="btn btn-danger btn-sm" onclick="removeDropStage(${exerciseId}, ${setNumber}, ${dropStageNum})">
                     <i class="bi bi-x"></i>
                 </button>
             </div>
         `;
-        container.appendChild(setDiv);
 
-        // Clear prediction when sets change
-        clearPrediction(exerciseId);
+        // Insert before the add button
+        dropContainer.insertBefore(dropStage, addDropBtn);
+        scheduleAutoSave();
     }
 
-    function removeSet(exerciseId, setNumber) {
-        const setDiv = document.getElementById(`exercise-${exerciseId}-set-${setNumber}`);
-        if (setDiv) {
-            setDiv.remove();
-            clearPrediction(exerciseId);
+    function removeDropStage(exerciseId, setNumber, dropStageNum) {
+        const dropStage = document.getElementById(`exercise-${exerciseId}-set-${setNumber}-drop-${dropStageNum}`);
+        if (dropStage) {
+            dropStage.remove();
             scheduleAutoSave();
         }
     }
@@ -943,112 +1332,79 @@
             `${minutes}:${seconds.toString().padStart(2, '0')}`;
     }
 
-    // ML Prediction Functions
-    function getMLPrediction(exerciseId) {
-        const exerciseName = document.getElementById(`name-${exerciseId}`).value;
-
-        // Validation
-        if (!exerciseName) {
-            showWarning('Please enter an exercise name first');
-            return;
-        }
-
-        // Get all sets for this exercise
-        const sets = getSetsForExercise(exerciseId);
-        if (sets.length === 0) {
-            showWarning('Please add at least one set first');
-            return;
-        }
-
-        // Calculate average reps for prediction
-        const avgReps = Math.round(sets.reduce((sum, set) => sum + set.reps, 0) / sets.length);
-        const numSets = sets.length;
-
-        const button = document.getElementById(`ml-btn-${exerciseId}`);
-        button.disabled = true;
-        button.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Loading...';
-
-        // Fetch prediction from backend
-        fetch(`/api/ml/predict/weight/${encodeURIComponent(exerciseName)}?sets=${numSets}&reps=${avgReps}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Show prediction
-                    const predictionDiv = document.getElementById(`prediction-${exerciseId}`);
-                    const weightSpan = document.getElementById(`pred-weight-${exerciseId}`);
-                    const rangeSpan = document.getElementById(`pred-range-${exerciseId}`);
-
-                    weightSpan.textContent = data.predicted_weight;
-                    rangeSpan.textContent = `Range: ${data.confidence_interval.lower}-${data.confidence_interval.upper} lbs`;
-
-                    // Store prediction ID for feedback later
-                    predictionDiv.dataset.predictionId = data.prediction_id;
-                    predictionDiv.dataset.predictedWeight = data.predicted_weight;
-
-                    predictionDiv.style.display = 'block';
-
-                    // Show info about training status
-                    if (!data.is_trained) {
-                        const trainingMsg = document.createElement('div');
-                        trainingMsg.className = 'alert alert-info mt-2 small';
-                        trainingMsg.innerHTML = '<i class="bi bi-info-circle"></i> Using basic heuristics. Log more workouts to improve AI accuracy!';
-                        predictionDiv.appendChild(trainingMsg);
-                    }
-                } else {
-                    showWarning('Could not get prediction. Try logging more workouts first!');
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching prediction:', error);
-                showError('Error getting AI suggestion. Please try again.');
-            })
-            .finally(() => {
-                button.disabled = false;
-                button.innerHTML = '<i class="bi bi-magic"></i> Get AI Suggestion';
-            });
-    }
-
-    function acceptPrediction(exerciseId) {
-        const predictionDiv = document.getElementById(`prediction-${exerciseId}`);
-        const predictedWeight = predictionDiv.dataset.predictedWeight;
-
-        if (predictedWeight) {
-            // Apply to all sets for this exercise
-            const container = document.getElementById(`sets-container-${exerciseId}`);
-            const weightInputs = container.querySelectorAll('input[id*="weight"]');
-            weightInputs.forEach(input => {
-                input.value = predictedWeight;
-            });
-            showSuccess('Weight updated to AI suggestion for all sets!');
-        }
-    }
-
-    function clearPrediction(exerciseId) {
-        const predictionDiv = document.getElementById(`prediction-${exerciseId}`);
-        if (predictionDiv) {
-            predictionDiv.style.display = 'none';
-        }
-    }
-
     function getSetsForExercise(exerciseId) {
         const container = document.getElementById(`sets-container-${exerciseId}`);
         if (!container) return [];
 
         const sets = [];
         const setDivs = container.querySelectorAll('[id^="exercise-' + exerciseId + '-set-"]');
+        const isSuperset = document.getElementById(`superset-toggle-${exerciseId}`)?.checked;
 
         setDivs.forEach(setDiv => {
             const setId = setDiv.id;
-            const repsInput = document.getElementById(`${setId}-reps`);
-            const weightInput = document.getElementById(`${setId}-weight`);
+            const isDropSet = document.getElementById(`${setId}-dropset`)?.checked;
 
-            if (repsInput) {
-                const reps = parseInt(repsInput.value);
-                // Weight is optional for bodyweight exercises
-                const weight = weightInput && weightInput.value ? parseFloat(weightInput.value) : null;
+            if (isSuperset) {
+                // Get dual reps and weights for superset
+                const repsAInput = document.getElementById(`${setId}-reps-a`);
+                const weightAInput = document.getElementById(`${setId}-weight-a`);
+                const repsBInput = document.getElementById(`${setId}-reps-b`);
+                const weightBInput = document.getElementById(`${setId}-weight-b`);
 
-                if (reps) {
-                    sets.push({ reps, weight });
+                if (repsAInput && repsBInput) {
+                    const reps_a = parseInt(repsAInput.value);
+                    const reps_b = parseInt(repsBInput.value);
+                    const weight_a = weightAInput && weightAInput.value ? parseFloat(weightAInput.value) : null;
+                    const weight_b = weightBInput && weightBInput.value ? parseFloat(weightBInput.value) : null;
+
+                    if (reps_a || reps_b) {
+                        sets.push({ reps_a, weight_a, reps_b, weight_b });
+                    }
+                }
+            } else {
+                // Get single reps and weight for normal exercise
+                const repsInput = document.getElementById(`${setId}-reps`);
+                const weightInput = document.getElementById(`${setId}-weight`);
+
+                if (isDropSet) {
+                    // Collect drop set data
+                    const stages = [];
+                    const mainReps = repsInput ? parseInt(repsInput.value) : 0;
+                    const mainWeight = weightInput && weightInput.value ? parseFloat(weightInput.value) : null;
+
+                    if (mainReps) {
+                        stages.push({ reps: mainReps, weight: mainWeight });
+                    }
+
+                    // Get all drop stages
+                    const dropContainer = document.getElementById(`${setId}-drops`);
+                    if (dropContainer) {
+                        const dropStages = dropContainer.querySelectorAll('[id$="-reps"]');
+                        dropStages.forEach(dropRepsInput => {
+                            const dropId = dropRepsInput.id.replace('-reps', '');
+                            const dropWeightInput = document.getElementById(`${dropId}-weight`);
+                            const dropReps = parseInt(dropRepsInput.value);
+                            const dropWeight = dropWeightInput && dropWeightInput.value ? parseFloat(dropWeightInput.value) : null;
+
+                            if (dropReps) {
+                                stages.push({ reps: dropReps, weight: dropWeight });
+                            }
+                        });
+                    }
+
+                    if (stages.length > 0) {
+                        sets.push({ is_drop_set: true, stages });
+                    }
+                } else {
+                    // Regular set
+                    if (repsInput) {
+                        const reps = parseInt(repsInput.value);
+                        const weight = weightInput && weightInput.value ? parseFloat(weightInput.value) : null;
+
+                        if (reps) {
+                            sets.push({ reps, weight });
+                        }
+                    }
                 }
             }
         });
@@ -1065,17 +1421,29 @@
             const name = nameEl.value;
             const rest = document.getElementById(`rest-${i}`).value || 0;
             const sets = getSetsForExercise(i);
+            const isSuperset = document.getElementById(`superset-toggle-${i}`)?.checked || false;
+            const supersetExerciseName = isSuperset ? document.getElementById(`name-b-${i}`)?.value : null;
 
             if (name && sets.length > 0) {
                 // Calculate totals for backward compatibility
                 const totalSets = sets.length;
-                const avgReps = Math.round(sets.reduce((sum, s) => sum + s.reps, 0) / sets.length);
+                let avgReps = 0;
+                let avgWeight = null;
 
-                // Calculate avgWeight only from sets that have weight (for bodyweight exercises)
-                const setsWithWeight = sets.filter(s => s.weight !== null);
-                const avgWeight = setsWithWeight.length > 0
-                    ? Math.round(setsWithWeight.reduce((sum, s) => sum + s.weight, 0) / setsWithWeight.length * 10) / 10
-                    : null;
+                if (isSuperset) {
+                    // For supersets, average reps_a and weight_a for backward compatibility
+                    avgReps = Math.round(sets.reduce((sum, s) => sum + (s.reps_a || 0), 0) / sets.length);
+                    const setsWithWeight = sets.filter(s => s.weight_a !== null);
+                    avgWeight = setsWithWeight.length > 0
+                        ? Math.round(setsWithWeight.reduce((sum, s) => sum + s.weight_a, 0) / setsWithWeight.length * 10) / 10
+                        : null;
+                } else {
+                    avgReps = Math.round(sets.reduce((sum, s) => sum + s.reps, 0) / sets.length);
+                    const setsWithWeight = sets.filter(s => s.weight !== null);
+                    avgWeight = setsWithWeight.length > 0
+                        ? Math.round(setsWithWeight.reduce((sum, s) => sum + s.weight, 0) / setsWithWeight.length * 10) / 10
+                        : null;
+                }
 
                 exercises.push({
                     name,
@@ -1083,7 +1451,9 @@
                     reps: avgReps,
                     weight: avgWeight,
                     rest_time: rest,
-                    set_data: sets
+                    set_data: sets,
+                    is_superset: isSuperset,
+                    superset_exercise_name: supersetExerciseName
                 });
             }
         }

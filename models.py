@@ -82,6 +82,8 @@ class Exercise(db.Model):
     weight = db.Column(db.Float, nullable=True)  # Nullable for bodyweight exercises
     rest_time = db.Column(db.Integer, nullable=True)  # rest time in seconds
     set_data = db.Column(db.Text, nullable=True)  # JSON array of individual sets: [{"set_number": 1, "reps": 10, "weight": 135}, ...]
+    is_superset = db.Column(db.Boolean, default=False)  # Whether this is a superset exercise
+    superset_exercise_name = db.Column(db.String(100), nullable=True)  # Name of the second exercise in superset
 
     def to_dict(self):
         import json
@@ -92,7 +94,9 @@ class Exercise(db.Model):
             'reps': self.reps,
             'weight': self.weight,
             'rest_time': self.rest_time,
-            'set_data': json.loads(self.set_data) if self.set_data else None
+            'set_data': json.loads(self.set_data) if self.set_data else None,
+            'is_superset': self.is_superset,
+            'superset_exercise_name': self.superset_exercise_name
         }
 
 class Meal(db.Model):
@@ -253,6 +257,8 @@ class TemplateExercise(db.Model):
     weight = db.Column(db.Float, default=0)  # Default weight (optional)
     rest_time = db.Column(db.Integer, nullable=True)  # rest time in seconds
     order = db.Column(db.Integer, default=0)  # order of exercise in the workout
+    is_superset = db.Column(db.Boolean, default=False)  # Whether this is a superset exercise
+    superset_exercise_name = db.Column(db.String(100), nullable=True)  # Name of the second exercise in superset
 
     def to_dict(self):
         return {
@@ -262,7 +268,9 @@ class TemplateExercise(db.Model):
             'reps': self.reps,
             'weight': self.weight,
             'rest_time': self.rest_time,
-            'order': self.order
+            'order': self.order,
+            'is_superset': self.is_superset,
+            'superset_exercise_name': self.superset_exercise_name
         }
 
 class WeightPrediction(db.Model):
