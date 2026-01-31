@@ -316,9 +316,18 @@
             <i class="bi bi-cloud-check"></i> Auto-save enabled
         </small>
     </div>
-    <button class="btn btn-success w-100" onclick="saveWorkout()">
-        <i class="bi bi-check-circle"></i> Save Workout
-    </button>
+    <div class="row g-2">
+        <div class="col-6">
+            <button class="btn btn-outline-danger w-100" onclick="clearWorkout()">
+                <i class="bi bi-trash"></i> Clear
+            </button>
+        </div>
+        <div class="col-6">
+            <button class="btn btn-success w-100" onclick="saveWorkout()">
+                <i class="bi bi-check-circle"></i> Save Workout
+            </button>
+        </div>
+    </div>
 </div>
 
 <!-- Rest Timer Modal -->
@@ -1503,6 +1512,36 @@
         .catch(error => {
             showError('Error saving workout: ' + error);
         });
+    }
+
+    function clearWorkout() {
+        // Confirm before clearing
+        if (!confirm('Are you sure you want to clear all workout data? This cannot be undone.')) {
+            return;
+        }
+
+        // Clear all exercises
+        document.getElementById('exercises-container').innerHTML = '';
+        exerciseCount = 0;
+        setCounters = {};
+
+        // Clear notes
+        document.getElementById('workout-notes').value = '';
+
+        // Clear template selection
+        document.getElementById('template-select').value = '';
+        currentTemplateId = null;
+
+        // Reset date/time to current
+        setDefaultWorkoutDate();
+
+        // Clear drafts
+        clearWorkoutDraft();
+
+        // Add one empty exercise
+        addExercise();
+
+        showSuccess('Workout cleared!');
     }
 
     // Note: First exercise is added in initializePage() if no draft is restored
