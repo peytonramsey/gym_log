@@ -214,6 +214,29 @@
         </div>
     </div>
 
+    <!-- Exercise Management Section -->
+    <div class="settings-section">
+        <h5 class="mb-3">Exercise Management</h5>
+
+        <div class="settings-item">
+            <div>
+                <div class="settings-label">Normalize Exercise Names</div>
+                <div class="settings-description">Clean up inconsistent exercise names (e.g., "db press" → "Dumbbell Press")</div>
+                <div class="settings-description text-primary mt-2" id="normalization-preview" style="display: none;">
+                    <small><i class="bi bi-info-circle"></i> <span id="preview-text"></span></small>
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-info" onclick="previewNormalization()" id="preview-btn">
+                    <i class="bi bi-eye"></i> Preview
+                </button>
+                <button class="btn btn-sm btn-outline-success" onclick="executeNormalization()" id="normalize-btn" disabled>
+                    <i class="bi bi-magic"></i> Normalize
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Danger Zone -->
     <div class="settings-section danger-zone">
         <h5 class="mb-3 text-danger">Danger Zone</h5>
@@ -408,6 +431,139 @@
         setTimeout(() => {
             window.location.href = '/';
         }, 1500);
+    }
+
+    // Exercise normalization functions
+    let normalizationChanges = [];
+
+    function previewNormalization() {
+        const previewBtn = document.getElementById('preview-btn');
+        const normalizeBtn = document.getElementById('normalize-btn');
+        const previewDiv = document.getElementById('normalization-preview');
+        const previewText = document.getElementById('preview-text');
+
+        // Disable button and show loading
+        previewBtn.disabled = true;
+        previewBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Loading...';
+
+        fetch('/api/exercises/normalize/preview')
+            .then(r => r.json())
+            .then(data => {
+                normalizationChanges = data.changes;
+
+                if (data.total_changes === 0) {
+                    previewDiv.style.display = 'block';
+                    previewText.innerHTML = 'No exercises need normalization. All exercise names are already clean!';
+                    normalizeBtn.disabled = true;
+                } else {
+                    previewDiv.style.display = 'block';
+
+                    // Show summary
+                    const totalAffected = data.changes.reduce((sum, change) => sum + change.total_count, 0);
+                    previewText.innerHTML = `Found ${data.total_changes} exercise name(s) to normalize, affecting ${totalAffected} workout(s)/template(s). <a href="#" onclick="showNormalizationDetails(event)">View details</a>`;
+
+                    normalizeBtn.disabled = false;
+                }
+
+                // Re-enable preview button
+                previewBtn.disabled = false;
+                previewBtn.innerHTML = '<i class="bi bi-eye"></i> Preview';
+            })
+            .catch(err => {
+                console.error('Error previewing normalization:', err);
+                showError('Failed to preview normalization');
+                previewBtn.disabled = false;
+                previewBtn.innerHTML = '<i class="bi bi-eye"></i> Preview';
+            });
+    }
+
+    function showNormalizationDetails(event) {
+        event.preventDefault();
+
+        if (normalizationChanges.length === 0) return;
+
+        // Build detailed list
+        let html = '<div class="alert alert-info"><h6>Normalization Preview</h6>';
+        html += '<small class="d-block mb-2">The following changes will be made:</small>';
+        html += '<table class="table table-sm" style="font-size: 0.85rem;"><thead><tr><th>Current Name</th><th>→</th><th>Normalized Name</th><th>Uses</th></tr></thead><tbody>';
+
+        normalizationChanges.forEach(change => {
+            html += `<tr>
+                <td><code>${change.original}</code></td>
+                <td>→</td>
+                <td><strong>${change.normalized}</strong></td>
+                <td><span class="badge bg-secondary">${change.total_count}</span></td>
+            </tr>`;
+        });
+
+        html += '</tbody></table></div>';
+
+        // Show in a modal-like alert
+        const modal = document.createElement('div');
+        modal.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 9999; max-width: 600px; max-height: 80vh; overflow-y: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);';
+
+        if (document.body.classList.contains('dark-mode')) {
+            modal.style.background = '#2d2d2d';
+            modal.style.color = '#fff';
+        }
+
+        modal.innerHTML = html + '<button class="btn btn-sm btn-secondary mt-2" onclick="this.parentElement.remove(); document.getElementById(\'modal-backdrop\').remove()">Close</button>';
+
+        // Add backdrop
+        const backdrop = document.createElement('div');
+        backdrop.id = 'modal-backdrop';
+        backdrop.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9998;';
+        backdrop.onclick = () => {
+            modal.remove();
+            backdrop.remove();
+        };
+
+        document.body.appendChild(backdrop);
+        document.body.appendChild(modal);
+    }
+
+    function executeNormalization() {
+        if (normalizationChanges.length === 0) {
+            showWarning('Please preview changes first');
+            return;
+        }
+
+        const totalAffected = normalizationChanges.reduce((sum, change) => sum + change.total_count, 0);
+
+        if (!confirm(`This will normalize ${normalizationChanges.length} exercise name(s) affecting ${totalAffected} workout(s)/template(s). This cannot be undone. Continue?`)) {
+            return;
+        }
+
+        const normalizeBtn = document.getElementById('normalize-btn');
+        normalizeBtn.disabled = true;
+        normalizeBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Normalizing...';
+
+        fetch('/api/exercises/normalize/execute', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showSuccess(data.message);
+
+                    // Reset state
+                    normalizationChanges = [];
+                    document.getElementById('normalization-preview').style.display = 'none';
+                    normalizeBtn.disabled = true;
+                    normalizeBtn.innerHTML = '<i class="bi bi-magic"></i> Normalize';
+                } else {
+                    showError(data.message);
+                    normalizeBtn.disabled = false;
+                    normalizeBtn.innerHTML = '<i class="bi bi-magic"></i> Normalize';
+                }
+            })
+            .catch(err => {
+                console.error('Error executing normalization:', err);
+                showError('Failed to normalize exercises');
+                normalizeBtn.disabled = false;
+                normalizeBtn.innerHTML = '<i class="bi bi-magic"></i> Normalize';
+            });
     }
 </script>
 {% endblock %}

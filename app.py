@@ -1,12 +1,13 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_migrate import Migrate
-from models import db, User, Workout, Exercise, BodyMetrics, Meal, FoodItem, NutritionGoals, Supplement, WorkoutTemplate, TemplateExercise, TemplateSchedule
+from models import db, User, Workout, Exercise, BodyMetrics, Meal, FoodItem, NutritionGoals, Supplement, WorkoutTemplate, TemplateExercise, TemplateSchedule, WeightPrediction
 from datetime import datetime, timedelta
 from sqlalchemy import func
 import requests
 import os
 from dotenv import load_dotenv
+from utils import normalize_exercise_name
 
 load_dotenv()
 
@@ -109,14 +110,30 @@ def create_admin_user():
 
 def populate_demo_data(user):
     """Populate demo user with realistic fitness data"""
-    # Clear existing data for demo user
-    Workout.query.filter_by(user_id=user.id).delete()
+    import json
+
+    # Clear existing data for demo user - use simple iteration to avoid subquery issues
+    # Delete all meals (cascade will delete food items)
+    for meal in Meal.query.filter_by(user_id=user.id).all():
+        db.session.delete(meal)
+
+    # Delete all workouts (cascade will delete exercises)
+    for workout in Workout.query.filter_by(user_id=user.id).all():
+        db.session.delete(workout)
+
+    # Delete all templates (cascade will delete template exercises and schedules)
+    for template in WorkoutTemplate.query.filter_by(user_id=user.id).all():
+        db.session.delete(template)
+
+    # Delete other records
     BodyMetrics.query.filter_by(user_id=user.id).delete()
-    Meal.query.filter_by(user_id=user.id).delete()
     NutritionGoals.query.filter_by(user_id=user.id).delete()
     Supplement.query.filter_by(user_id=user.id).delete()
-    WorkoutTemplate.query.filter_by(user_id=user.id).delete()
     WeightPrediction.query.filter_by(user_id=user.id).delete()
+
+    # Commit deletions before adding new data
+    db.session.commit()
+    print(f"[DEBUG] Cleared all existing demo data for user '{user.username}'")
 
     # Create nutrition goals
     nutrition_goals = NutritionGoals(
@@ -141,109 +158,634 @@ def populate_demo_data(user):
         )
         db.session.add(metrics)
 
-    # Create workout history (last 30 days, 4x per week)
-    workout_types = [
-        ('Push Day', [
-            ('Bench Press', 4, [8, 8, 6, 6], [185, 185, 205, 205]),
-            ('Incline Dumbbell Press', 4, [10, 10, 8, 8], [70, 70, 75, 75]),
-            ('Overhead Press', 3, [8, 8, 8], [115, 115, 115]),
-            ('Tricep Pushdowns', 3, [12, 12, 12], [50, 50, 50]),
-            ('Lateral Raises', 3, [15, 15, 15], [20, 20, 20])
-        ]),
-        ('Pull Day', [
-            ('Deadlift', 4, [5, 5, 3, 3], [275, 275, 315, 315]),
-            ('Pull-ups', 4, [10, 8, 8, 6], [0, 0, 0, 0]),
-            ('Barbell Rows', 4, [8, 8, 8, 8], [185, 185, 185, 185]),
-            ('Face Pulls', 3, [15, 15, 15], [40, 40, 40]),
-            ('Hammer Curls', 3, [12, 12, 12], [35, 35, 35])
-        ]),
-        ('Leg Day', [
-            ('Squats', 4, [8, 8, 6, 6], [225, 225, 245, 245]),
-            ('Romanian Deadlifts', 4, [10, 10, 10, 10], [185, 185, 185, 185]),
-            ('Leg Press', 3, [12, 12, 12], [360, 360, 360]),
-            ('Leg Curls', 3, [12, 12, 12], [90, 90, 90]),
-            ('Calf Raises', 4, [15, 15, 15, 15], [135, 135, 135, 135])
-        ]),
-        ('Upper Body', [
-            ('Bench Press', 3, [10, 10, 10], [165, 165, 165]),
-            ('Lat Pulldowns', 3, [10, 10, 10], [140, 140, 140]),
-            ('Dumbbell Rows', 3, [12, 12, 12], [65, 65, 65]),
-            ('Dumbbell Flyes', 3, [12, 12, 12], [30, 30, 30]),
-            ('Cable Curls', 3, [15, 15, 15], [40, 40, 40])
-        ])
+    # Create workout templates first (so we can reference them in workouts)
+    workout_templates_data = [
+        {
+            'name': 'Push Day',
+            'scheduled_days': [0],  # Monday
+            'color': '#FF6B6B',
+            'description': 'Chest, Shoulders, and Triceps',
+            'exercises': [
+                ('Bench Press', 4, 8, 185, 180),
+                ('Incline Dumbbell Press', 4, 10, 70, 90),
+                ('Overhead Press', 3, 8, 115, 120),
+                ('Tricep Pushdowns', 3, 12, 50, 90),
+                ('Lateral Raises', 3, 15, 20, 60)
+            ]
+        },
+        {
+            'name': 'Pull Day',
+            'scheduled_days': [1],  # Tuesday
+            'color': '#4ECDC4',
+            'description': 'Back and Biceps',
+            'exercises': [
+                ('Deadlift', 4, 5, 275, 240),
+                ('Pull-ups', 4, 10, None, 120),  # Bodyweight exercise
+                ('Barbell Rows', 4, 8, 185, 120),
+                ('Face Pulls', 3, 15, 40, 90),
+                ('Hammer Curls', 3, 12, 35, 90)
+            ]
+        },
+        {
+            'name': 'Leg Day',
+            'scheduled_days': [3],  # Thursday
+            'color': '#95E1D3',
+            'description': 'Quads, Hamstrings, and Calves',
+            'exercises': [
+                ('Squats', 4, 8, 225, 180),
+                ('Romanian Deadlifts', 4, 10, 185, 120),
+                ('Leg Press', 3, 12, 360, 90),
+                ('Leg Curls', 3, 12, 90, 90),
+                ('Calf Raises', 4, 15, 135, 60)
+            ]
+        },
+        {
+            'name': 'Upper Body',
+            'scheduled_days': [5],  # Saturday
+            'color': '#F38181',
+            'description': 'Full Upper Body',
+            'exercises': [
+                ('Bench Press', 3, 10, 165, 120),
+                ('Lat Pulldowns', 3, 10, 140, 90),
+                ('Dumbbell Rows', 3, 12, 65, 90),
+                ('Dumbbell Flyes', 3, 12, 30, 90),
+                ('Cable Curls', 3, 15, 40, 60)
+            ]
+        }
     ]
 
-    # Create workouts aligned with scheduled days for consistency tracking
-    # Schedule: Monday (0), Tuesday (1), Thursday (3), Saturday (5)
-    scheduled_days = [0, 1, 3, 5]  # Maps to workout_types indices
+    templates = []
+    for template_data in workout_templates_data:
+        template = WorkoutTemplate(
+            user_id=user.id,
+            name=template_data['name'],
+            description=template_data['description'],
+            color=template_data['color']
+        )
+        db.session.add(template)
+        db.session.flush()
+        templates.append(template)
 
-    # Create workouts for the last 4 weeks on the scheduled days
-    for week in range(4):
-        # Start from 4 weeks ago
-        week_start = datetime.now() - timedelta(weeks=4-week)
-        # Find the Monday of that week
-        days_since_monday = week_start.weekday()
-        monday = week_start - timedelta(days=days_since_monday)
+        # Add template schedule (multi-day support)
+        for day in template_data['scheduled_days']:
+            schedule = TemplateSchedule(
+                template_id=template.id,
+                day_of_week=day
+            )
+            db.session.add(schedule)
 
-        for day_of_week in scheduled_days:
-            workout_date = (monday + timedelta(days=day_of_week)).replace(hour=10, minute=0, second=0, microsecond=0)
+        # Add template exercises
+        for idx, (ex_name, sets, reps, weight, rest) in enumerate(template_data['exercises']):
+            template_exercise = TemplateExercise(
+                template_id=template.id,
+                name=ex_name,
+                sets=sets,
+                reps=reps,
+                weight=weight,
+                rest_time=rest,
+                order=idx
+            )
+            db.session.add(template_exercise)
 
-            # Only create if date is in the past
-            if workout_date.date() <= datetime.now().date():
-                workout_type_idx = scheduled_days.index(day_of_week)
-                workout_name, exercises = workout_types[workout_type_idx]
+    db.session.flush()
 
-                workout = Workout(
-                    user_id=user.id,
-                    date=workout_date,
-                    notes=f"{workout_name} - Great session! Felt strong today."
-                )
-                db.session.add(workout)
-                db.session.flush()
+    # Create workout history with NEW FEATURES: supersets, drop sets, set-by-set data
+    workout_definitions = [
+        {
+            'template_idx': 0,  # Push Day
+            'exercises': [
+                {
+                    'name': 'Bench Press',
+                    'sets': 4,
+                    'reps': 8,
+                    'rest_time': 180,
+                    'set_data': [
+                        {'reps': 8, 'weight': 185, 'completed': True},
+                        {'reps': 8, 'weight': 185, 'completed': True},
+                        {'reps': 6, 'weight': 205, 'completed': True},
+                        {'reps': 6, 'weight': 205, 'completed': True}
+                    ]
+                },
+                {
+                    'name': 'Incline Dumbbell Press',
+                    'sets': 3,
+                    'reps': 10,
+                    'rest_time': 90,
+                    'set_data': [
+                        {'reps': 10, 'weight': 70, 'completed': True},
+                        {'reps': 10, 'weight': 70, 'completed': True},
+                        {'reps': 8, 'weight': 75, 'completed': True, 'is_drop_set': True, 'drop_sets': [
+                            {'reps': 8, 'weight': 60},
+                            {'reps': 6, 'weight': 50}
+                        ]}
+                    ]
+                },
+                {
+                    'name': 'Overhead Press',
+                    'sets': 3,
+                    'reps': 8,
+                    'rest_time': 120,
+                    'is_superset': True,
+                    'superset_exercise_name': 'Lateral Raises',
+                    'set_data': [
+                        {'reps': 8, 'weight': 115, 'completed': True},
+                        {'reps': 8, 'weight': 115, 'completed': True},
+                        {'reps': 8, 'weight': 115, 'completed': True}
+                    ]
+                },
+                {
+                    'name': 'Lateral Raises',
+                    'sets': 3,
+                    'reps': 15,
+                    'rest_time': 60,
+                    'is_superset': True,
+                    'superset_exercise_name': 'Overhead Press',
+                    'set_data': [
+                        {'reps': 15, 'weight': 20, 'completed': True},
+                        {'reps': 15, 'weight': 20, 'completed': True},
+                        {'reps': 15, 'weight': 20, 'completed': True}
+                    ]
+                },
+                {
+                    'name': 'Tricep Pushdowns',
+                    'sets': 3,
+                    'reps': 12,
+                    'rest_time': 90,
+                    'set_data': [
+                        {'reps': 12, 'weight': 50, 'completed': True},
+                        {'reps': 12, 'weight': 50, 'completed': True},
+                        {'reps': 12, 'weight': 50, 'completed': True}
+                    ]
+                }
+            ]
+        },
+        {
+            'template_idx': 1,  # Pull Day
+            'exercises': [
+                {
+                    'name': 'Deadlift',
+                    'sets': 4,
+                    'reps': 5,
+                    'rest_time': 240,
+                    'set_data': [
+                        {'reps': 5, 'weight': 275, 'completed': True},
+                        {'reps': 5, 'weight': 275, 'completed': True},
+                        {'reps': 3, 'weight': 315, 'completed': True},
+                        {'reps': 3, 'weight': 315, 'completed': True}
+                    ]
+                },
+                {
+                    'name': 'Pull-ups',
+                    'sets': 4,
+                    'reps': 10,
+                    'rest_time': 120,
+                    'set_data': [
+                        {'reps': 10, 'weight': None, 'completed': True},
+                        {'reps': 8, 'weight': None, 'completed': True},
+                        {'reps': 8, 'weight': None, 'completed': True},
+                        {'reps': 6, 'weight': None, 'completed': True}
+                    ]
+                },
+                {
+                    'name': 'Barbell Rows',
+                    'sets': 4,
+                    'reps': 8,
+                    'rest_time': 120,
+                    'is_superset': True,
+                    'superset_exercise_name': 'Face Pulls',
+                    'set_data': [
+                        {'reps': 8, 'weight': 185, 'completed': True},
+                        {'reps': 8, 'weight': 185, 'completed': True},
+                        {'reps': 8, 'weight': 185, 'completed': True},
+                        {'reps': 8, 'weight': 185, 'completed': True}
+                    ]
+                },
+                {
+                    'name': 'Face Pulls',
+                    'sets': 3,
+                    'reps': 15,
+                    'rest_time': 90,
+                    'is_superset': True,
+                    'superset_exercise_name': 'Barbell Rows',
+                    'set_data': [
+                        {'reps': 15, 'weight': 40, 'completed': True},
+                        {'reps': 15, 'weight': 40, 'completed': True},
+                        {'reps': 15, 'weight': 40, 'completed': True}
+                    ]
+                },
+                {
+                    'name': 'Hammer Curls',
+                    'sets': 3,
+                    'reps': 12,
+                    'rest_time': 90,
+                    'set_data': [
+                        {'reps': 12, 'weight': 35, 'completed': True},
+                        {'reps': 12, 'weight': 35, 'completed': True},
+                        {'reps': 12, 'weight': 35, 'completed': True}
+                    ]
+                }
+            ]
+        },
+        {
+            'template_idx': 2,  # Leg Day
+            'exercises': [
+                {
+                    'name': 'Squats',
+                    'sets': 4,
+                    'reps': 8,
+                    'rest_time': 180,
+                    'set_data': [
+                        {'reps': 8, 'weight': 225, 'completed': True},
+                        {'reps': 8, 'weight': 225, 'completed': True},
+                        {'reps': 6, 'weight': 245, 'completed': True},
+                        {'reps': 6, 'weight': 245, 'completed': True}
+                    ]
+                },
+                {
+                    'name': 'Romanian Deadlifts',
+                    'sets': 4,
+                    'reps': 10,
+                    'rest_time': 120,
+                    'set_data': [
+                        {'reps': 10, 'weight': 185, 'completed': True},
+                        {'reps': 10, 'weight': 185, 'completed': True},
+                        {'reps': 10, 'weight': 185, 'completed': True},
+                        {'reps': 10, 'weight': 185, 'completed': True}
+                    ]
+                },
+                {
+                    'name': 'Leg Press',
+                    'sets': 3,
+                    'reps': 12,
+                    'rest_time': 90,
+                    'set_data': [
+                        {'reps': 12, 'weight': 360, 'completed': True},
+                        {'reps': 12, 'weight': 360, 'completed': True},
+                        {'reps': 12, 'weight': 360, 'completed': True}
+                    ]
+                },
+                {
+                    'name': 'Leg Curls',
+                    'sets': 3,
+                    'reps': 12,
+                    'rest_time': 90,
+                    'is_superset': True,
+                    'superset_exercise_name': 'Calf Raises',
+                    'set_data': [
+                        {'reps': 12, 'weight': 90, 'completed': True},
+                        {'reps': 12, 'weight': 90, 'completed': True},
+                        {'reps': 12, 'weight': 90, 'completed': True}
+                    ]
+                },
+                {
+                    'name': 'Calf Raises',
+                    'sets': 4,
+                    'reps': 15,
+                    'rest_time': 60,
+                    'is_superset': True,
+                    'superset_exercise_name': 'Leg Curls',
+                    'set_data': [
+                        {'reps': 15, 'weight': 135, 'completed': True},
+                        {'reps': 15, 'weight': 135, 'completed': True},
+                        {'reps': 15, 'weight': 135, 'completed': True},
+                        {'reps': 15, 'weight': 135, 'completed': True}
+                    ]
+                }
+            ]
+        },
+        {
+            'template_idx': 3,  # Upper Body
+            'exercises': [
+                {
+                    'name': 'Bench Press',
+                    'sets': 3,
+                    'reps': 10,
+                    'rest_time': 120,
+                    'set_data': [
+                        {'reps': 10, 'weight': 165, 'completed': True},
+                        {'reps': 10, 'weight': 165, 'completed': True},
+                        {'reps': 10, 'weight': 165, 'completed': True}
+                    ]
+                },
+                {
+                    'name': 'Lat Pulldowns',
+                    'sets': 3,
+                    'reps': 10,
+                    'rest_time': 90,
+                    'set_data': [
+                        {'reps': 10, 'weight': 140, 'completed': True},
+                        {'reps': 10, 'weight': 140, 'completed': True},
+                        {'reps': 10, 'weight': 140, 'completed': True}
+                    ]
+                },
+                {
+                    'name': 'Dumbbell Rows',
+                    'sets': 3,
+                    'reps': 12,
+                    'rest_time': 90,
+                    'set_data': [
+                        {'reps': 12, 'weight': 65, 'completed': True},
+                        {'reps': 12, 'weight': 65, 'completed': True},
+                        {'reps': 12, 'weight': 65, 'completed': True}
+                    ]
+                },
+                {
+                    'name': 'Dumbbell Flyes',
+                    'sets': 3,
+                    'reps': 12,
+                    'rest_time': 90,
+                    'is_superset': True,
+                    'superset_exercise_name': 'Cable Curls',
+                    'set_data': [
+                        {'reps': 12, 'weight': 30, 'completed': True},
+                        {'reps': 12, 'weight': 30, 'completed': True},
+                        {'reps': 12, 'weight': 30, 'completed': True}
+                    ]
+                },
+                {
+                    'name': 'Cable Curls',
+                    'sets': 3,
+                    'reps': 15,
+                    'rest_time': 60,
+                    'is_superset': True,
+                    'superset_exercise_name': 'Dumbbell Flyes',
+                    'set_data': [
+                        {'reps': 15, 'weight': 40, 'completed': True},
+                        {'reps': 15, 'weight': 40, 'completed': True},
+                        {'reps': 15, 'weight': 40, 'completed': True}
+                    ]
+                }
+            ]
+        }
+    ]
 
-                for ex_name, num_sets, reps, weights in exercises:
-                    for set_num in range(num_sets):
-                        exercise = Exercise(
-                            workout_id=workout.id,
-                            name=ex_name,
-                            sets=1,
-                            reps=reps[set_num] if set_num < len(reps) else reps[-1],
-                            weight=weights[set_num] if set_num < len(weights) else weights[-1]
-                        )
-                        db.session.add(exercise)
+    # Create workouts to fill February calendar (show recruiters the calendar capabilities)
+    # February 2026: 28 days, starts on Sunday
+    # Schedule: Monday (Push), Tuesday (Pull), Thursday (Leg), Saturday (Upper)
 
-    # Create nutrition logs (last 7 days) with realistic values
-    meal_templates = {
-        'Breakfast': [
-            ('Scrambled Eggs (3 large)', 210, 18, 2, 15),
-            ('Whole Wheat Toast (2 slices)', 140, 6, 24, 2),
-            ('Avocado (1/2)', 120, 1, 6, 11),
-            ('Greek Yogurt (1 cup)', 150, 17, 8, 4)
-        ],
-        'Lunch': [
-            ('Grilled Chicken Breast (6oz)', 280, 53, 0, 6),
-            ('Brown Rice (1 cup cooked)', 215, 5, 45, 2),
-            ('Broccoli (1 cup)', 55, 4, 11, 0),
-            ('Olive Oil (1 tbsp)', 120, 0, 0, 14)
-        ],
-        'Dinner': [
-            ('Salmon Fillet (6oz)', 350, 39, 0, 21),
-            ('Sweet Potato (1 medium)', 103, 2, 24, 0),
-            ('Green Beans (1 cup)', 44, 2, 10, 0),
-            ('Quinoa (1/2 cup cooked)', 111, 4, 20, 2)
-        ],
-        'Snack': [
-            ('Protein Shake', 160, 30, 5, 3),
-            ('Banana', 105, 1, 27, 0),
-            ('Almonds (1 oz)', 164, 6, 6, 14)
-        ]
-    }
+    # Define all February workout dates for a complete calendar view
+    february_workout_dates = [
+        # Week 1
+        datetime(2026, 2, 2, 10, 0),   # Monday - Push
+        datetime(2026, 2, 3, 10, 0),   # Tuesday - Pull
+        datetime(2026, 2, 5, 10, 0),   # Thursday - Leg
+        datetime(2026, 2, 7, 10, 0),   # Saturday - Upper
+        # Week 2
+        datetime(2026, 2, 9, 10, 0),   # Monday - Push
+        datetime(2026, 2, 10, 10, 0),  # Tuesday - Pull
+        datetime(2026, 2, 12, 10, 0),  # Thursday - Leg
+        datetime(2026, 2, 14, 10, 0),  # Saturday - Upper
+        # Week 3
+        datetime(2026, 2, 16, 10, 0),  # Monday - Push
+        datetime(2026, 2, 17, 10, 0),  # Tuesday - Pull
+        datetime(2026, 2, 19, 10, 0),  # Thursday - Leg
+        datetime(2026, 2, 21, 10, 0),  # Saturday - Upper
+        # Week 4
+        datetime(2026, 2, 23, 10, 0),  # Monday - Push
+        datetime(2026, 2, 24, 10, 0),  # Tuesday - Pull
+        datetime(2026, 2, 26, 10, 0),  # Thursday - Leg
+        datetime(2026, 2, 28, 10, 0),  # Saturday - Upper
+        # Add some late January workouts for continuity
+        datetime(2026, 1, 26, 10, 0),  # Monday - Push
+        datetime(2026, 1, 27, 10, 0),  # Tuesday - Pull
+        datetime(2026, 1, 29, 10, 0),  # Thursday - Leg
+        datetime(2026, 1, 31, 10, 0),  # Saturday - Upper
+    ]
 
+    workout_notes_variations = [
+        "Great session! Felt strong today.",
+        "Solid workout, hit all my targets.",
+        "Challenging but rewarding session.",
+        "Personal best on several lifts!",
+        "Good pump, feeling energized.",
+        "Tough workout but pushed through.",
+    ]
+
+    for idx, workout_date in enumerate(february_workout_dates):
+        # Create all workouts for demo (including future dates) to showcase calendar
+        # Determine which workout type based on day of week
+        day_of_week = workout_date.weekday()
+        if day_of_week == 0:  # Monday - Push
+            day_idx = 0
+        elif day_of_week == 1:  # Tuesday - Pull
+            day_idx = 1
+        elif day_of_week == 3:  # Thursday - Leg
+            day_idx = 2
+        elif day_of_week == 5:  # Saturday - Upper
+            day_idx = 3
+        else:
+            continue  # Skip if not a scheduled day
+
+        workout_def = workout_definitions[day_idx]
+        template = templates[workout_def['template_idx']]
+
+        workout = Workout(
+            user_id=user.id,
+            date=workout_date,
+            notes=f"{template.name} - {workout_notes_variations[idx % len(workout_notes_variations)]}",
+            template_id=template.id,
+            is_draft=False
+        )
+        db.session.add(workout)
+        db.session.flush()
+
+        for ex_def in workout_def['exercises']:
+            # Calculate average reps and weight from set_data
+            set_data = ex_def['set_data']
+            avg_reps = int(sum(s['reps'] for s in set_data) / len(set_data))
+            weights = [s['weight'] for s in set_data if s['weight'] is not None]
+            avg_weight = sum(weights) / len(weights) if weights else None
+
+            exercise = Exercise(
+                workout_id=workout.id,
+                name=ex_def['name'],
+                sets=ex_def['sets'],
+                reps=avg_reps,
+                weight=avg_weight,
+                rest_time=ex_def['rest_time'],
+                set_data=json.dumps(set_data),
+                is_superset=ex_def.get('is_superset', False),
+                superset_exercise_name=ex_def.get('superset_exercise_name')
+            )
+            db.session.add(exercise)
+
+    # Create nutrition logs (last 7 days) with varied, realistic meals
+    # Format: (food_name, calories, protein, carbs, fats, fiber)
+    weekly_meals = [
+        # Day 0 (Today) - ~2,450 calories
+        {
+            'Breakfast': [
+                ('Oatmeal with brown sugar', 300, 10, 54, 6, 8),
+                ('Whole milk (1 cup)', 150, 8, 12, 8, 0),
+                ('Blueberries (1/2 cup)', 42, 1, 11, 0, 2),
+                ('Coffee with cream', 40, 1, 1, 4, 0)
+            ],
+            'Lunch': [
+                ('Turkey sandwich on wheat', 320, 25, 42, 7, 4),
+                ('Potato chips (1 oz)', 150, 2, 15, 10, 1),
+                ('Apple', 95, 0, 25, 0, 4),
+                ('Cheddar cheese (1 oz)', 115, 7, 0, 9, 0)
+            ],
+            'Dinner': [
+                ('Spaghetti with meat sauce (2 cups)', 520, 28, 65, 14, 6),
+                ('Garlic bread (2 slices)', 180, 5, 24, 7, 1),
+                ('Side salad with ranch', 150, 2, 8, 12, 2)
+            ],
+            'Snack': [
+                ('Chocolate chip cookies (3)', 160, 2, 24, 7, 1),
+                ('Vanilla ice cream (1/2 cup)', 140, 2, 17, 7, 0),
+                ('Orange juice (8 oz)', 110, 2, 26, 0, 0)
+            ]
+        },
+        # Day 1 - ~2,620 calories
+        {
+            'Breakfast': [
+                ('Scrambled eggs (2 large)', 140, 12, 2, 10, 0),
+                ('Bacon (3 slices)', 130, 9, 0, 10, 0),
+                ('Hash browns', 150, 2, 20, 7, 2),
+                ('Orange juice (8 oz)', 110, 2, 26, 0, 0)
+            ],
+            'Lunch': [
+                ('Chicken burrito bowl', 650, 38, 72, 20, 12),
+                ('Tortilla chips with salsa', 140, 2, 19, 6, 2),
+                ('Sprite (12 oz)', 140, 0, 38, 0, 0)
+            ],
+            'Dinner': [
+                ('Pepperoni pizza (3 slices)', 840, 36, 90, 36, 6),
+                ('Caesar salad', 180, 4, 8, 14, 2)
+            ],
+            'Snack': [
+                ('Protein bar', 200, 20, 22, 7, 3),
+                ('String cheese', 80, 6, 1, 6, 0),
+                ('Grapes (1 cup)', 62, 1, 16, 0, 1)
+            ]
+        },
+        # Day 2 - ~2,380 calories
+        {
+            'Breakfast': [
+                ('Pancakes with syrup (3)', 450, 10, 78, 10, 2),
+                ('Butter (1 tbsp)', 100, 0, 0, 11, 0),
+                ('Sausage links (2)', 170, 8, 1, 15, 0)
+            ],
+            'Lunch': [
+                ('Cheeseburger', 540, 30, 42, 26, 2),
+                ('French fries (medium)', 380, 4, 48, 19, 4),
+                ('Coca-Cola (12 oz)', 140, 0, 39, 0, 0)
+            ],
+            'Dinner': [
+                ('Grilled chicken breast (6 oz)', 280, 53, 0, 6, 0),
+                ('Mashed potatoes (1 cup)', 240, 4, 36, 9, 3),
+                ('Corn (1 cup)', 130, 5, 29, 2, 4),
+                ('Dinner roll with butter', 150, 3, 20, 6, 1)
+            ],
+            'Snack': [
+                ('Peanut butter crackers', 190, 5, 21, 9, 2),
+                ('Banana', 105, 1, 27, 0, 3)
+            ]
+        },
+        # Day 3 - ~2,550 calories
+        {
+            'Breakfast': [
+                ('Cereal with milk (Cheerios)', 280, 12, 48, 4, 6),
+                ('Toast with peanut butter', 250, 10, 24, 13, 3),
+                ('Orange', 62, 1, 15, 0, 3)
+            ],
+            'Lunch': [
+                ('Chicken Caesar wrap', 520, 32, 44, 23, 3),
+                ('Pretzels (1 oz)', 110, 3, 23, 1, 1),
+                ('Iced tea (sweetened)', 90, 0, 24, 0, 0)
+            ],
+            'Dinner': [
+                ('Beef tacos (3)', 510, 30, 48, 21, 6),
+                ('Refried beans (1/2 cup)', 120, 7, 20, 2, 6),
+                ('Mexican rice (1 cup)', 200, 4, 40, 2, 2),
+                ('Sour cream (2 tbsp)', 60, 1, 2, 5, 0)
+            ],
+            'Snack': [
+                ('Popcorn (microwave bag)', 280, 4, 32, 16, 5),
+                ('Apple slices with caramel', 150, 0, 38, 0, 2)
+            ]
+        },
+        # Day 4 - ~2,720 calories
+        {
+            'Breakfast': [
+                ('Breakfast burrito', 450, 20, 42, 22, 4),
+                ('Coffee with cream and sugar', 60, 1, 8, 3, 0),
+                ('Hash browns', 150, 2, 20, 7, 2)
+            ],
+            'Lunch': [
+                ('Subway sandwich (12 inch)', 620, 36, 84, 14, 6),
+                ('Lays chips (1 oz)', 150, 2, 15, 10, 1),
+                ('Cookie', 220, 2, 30, 11, 1)
+            ],
+            'Dinner': [
+                ('Steak (8 oz)', 560, 56, 0, 36, 0),
+                ('Baked potato with toppings', 350, 8, 52, 13, 5),
+                ('Steamed broccoli', 55, 4, 11, 0, 5)
+            ],
+            'Snack': [
+                ('Yogurt (flavored)', 150, 6, 25, 2, 0),
+                ('Trail mix (1/4 cup)', 170, 5, 16, 11, 2),
+                ('Gatorade (20 oz)', 130, 0, 36, 0, 0)
+            ]
+        },
+        # Day 5 - ~2,400 calories
+        {
+            'Breakfast': [
+                ('Bagel with cream cheese', 380, 12, 54, 13, 2),
+                ('Latte (12 oz)', 120, 8, 12, 4, 0),
+                ('Strawberries (1 cup)', 50, 1, 12, 0, 3)
+            ],
+            'Lunch': [
+                ('Chicken quesadilla', 540, 32, 42, 26, 3),
+                ('Guacamole (1/4 cup)', 90, 1, 5, 8, 4),
+                ('Chips (1 oz)', 140, 2, 18, 7, 1)
+            ],
+            'Dinner': [
+                ('Baked salmon (6 oz)', 350, 39, 0, 21, 0),
+                ('Rice pilaf (1 cup)', 220, 4, 44, 4, 2),
+                ('Asparagus (6 spears)', 20, 2, 4, 0, 2),
+                ('Dinner roll', 110, 3, 18, 2, 1)
+            ],
+            'Snack': [
+                ('Protein shake', 160, 30, 5, 3, 1),
+                ('Granola bar', 190, 3, 29, 7, 2),
+                ('Mixed berries (1/2 cup)', 40, 1, 10, 0, 3)
+            ]
+        },
+        # Day 6 - ~2,580 calories
+        {
+            'Breakfast': [
+                ('French toast (2 slices)', 300, 10, 42, 10, 2),
+                ('Maple syrup (2 tbsp)', 110, 0, 28, 0, 0),
+                ('Scrambled eggs (2)', 140, 12, 2, 10, 0),
+                ('Bacon (2 slices)', 90, 6, 0, 7, 0)
+            ],
+            'Lunch': [
+                ('Grilled chicken salad', 420, 38, 22, 20, 6),
+                ('Breadstick (2)', 140, 4, 24, 3, 1),
+                ('Lemonade (12 oz)', 150, 0, 42, 0, 0)
+            ],
+            'Dinner': [
+                ('BBQ ribs (6 oz)', 520, 32, 12, 38, 0),
+                ('Coleslaw (1 cup)', 150, 1, 14, 10, 3),
+                ('Cornbread (1 piece)', 180, 4, 28, 6, 2),
+                ('Baked beans (1/2 cup)', 140, 6, 27, 1, 5)
+            ],
+            'Snack': [
+                ('Nachos with cheese', 280, 8, 28, 15, 3),
+                ('M&Ms (1 oz)', 140, 2, 20, 6, 1),
+                ('Apple', 95, 0, 25, 0, 4)
+            ]
+        }
+    ]
+
+    # Create meals for each of the last 7 days
     for days_ago in range(7):
-        # Create a date for each day (not datetime to avoid time issues)
         meal_date = (datetime.now() - timedelta(days=days_ago)).replace(hour=12, minute=0, second=0, microsecond=0)
+        daily_meals = weekly_meals[days_ago]
 
-        for meal_type, foods in meal_templates.items():
+        for meal_type, foods in daily_meals.items():
             meal = Meal(
                 user_id=user.id,
                 date=meal_date,
@@ -253,7 +795,10 @@ def populate_demo_data(user):
             db.session.add(meal)
             db.session.flush()
 
-            for food_name, cals, protein, carbs, fats in foods:
+            for food_data in foods:
+                food_name, cals, protein, carbs, fats = food_data[:5]
+                fiber = food_data[5] if len(food_data) > 5 else 0
+
                 food_item = FoodItem(
                     meal_id=meal.id,
                     name=food_name,
@@ -263,7 +808,8 @@ def populate_demo_data(user):
                     calories=cals,
                     protein=protein,
                     carbs=carbs,
-                    fats=fats
+                    fats=fats,
+                    fiber=fiber
                 )
                 db.session.add(food_item)
 
@@ -288,80 +834,7 @@ def populate_demo_data(user):
             )
             db.session.add(supplement)
 
-    # Create workout templates for "My Schedule" (matches the workout history pattern)
-    workout_templates_data = [
-        {
-            'name': 'Push Day',
-            'day_of_week': 0,  # Monday
-            'description': 'Chest, Shoulders, and Triceps',
-            'exercises': [
-                ('Bench Press', 4, 8, 185, 180),
-                ('Incline Dumbbell Press', 4, 10, 70, 90),
-                ('Overhead Press', 3, 8, 115, 120),
-                ('Tricep Pushdowns', 3, 12, 50, 90),
-                ('Lateral Raises', 3, 15, 20, 60)
-            ]
-        },
-        {
-            'name': 'Pull Day',
-            'day_of_week': 1,  # Tuesday
-            'description': 'Back and Biceps',
-            'exercises': [
-                ('Deadlift', 4, 5, 275, 240),
-                ('Pull-ups', 4, 10, 0, 120),
-                ('Barbell Rows', 4, 8, 185, 120),
-                ('Face Pulls', 3, 15, 40, 90),
-                ('Hammer Curls', 3, 12, 35, 90)
-            ]
-        },
-        {
-            'name': 'Leg Day',
-            'day_of_week': 3,  # Thursday
-            'description': 'Quads, Hamstrings, and Calves',
-            'exercises': [
-                ('Squats', 4, 8, 225, 180),
-                ('Romanian Deadlifts', 4, 10, 185, 120),
-                ('Leg Press', 3, 12, 360, 90),
-                ('Leg Curls', 3, 12, 90, 90),
-                ('Calf Raises', 4, 15, 135, 60)
-            ]
-        },
-        {
-            'name': 'Upper Body',
-            'day_of_week': 5,  # Saturday
-            'description': 'Full Upper Body',
-            'exercises': [
-                ('Bench Press', 3, 10, 165, 120),
-                ('Lat Pulldowns', 3, 10, 140, 90),
-                ('Dumbbell Rows', 3, 12, 65, 90),
-                ('Dumbbell Flyes', 3, 12, 30, 90),
-                ('Cable Curls', 3, 15, 40, 60)
-            ]
-        }
-    ]
-
-    for template_data in workout_templates_data:
-        template = WorkoutTemplate(
-            user_id=user.id,
-            name=template_data['name'],
-            description=template_data['description'],
-            day_of_week=template_data['day_of_week']
-        )
-        db.session.add(template)
-        db.session.flush()
-
-        for idx, (ex_name, sets, reps, weight, rest) in enumerate(template_data['exercises']):
-            template_exercise = TemplateExercise(
-                template_id=template.id,
-                name=ex_name,
-                sets=sets,
-                reps=reps,
-                weight=weight,
-                rest_time=rest,
-                order=idx
-            )
-            db.session.add(template_exercise)
-
+    # Commit all demo data
     db.session.commit()
     print(f"[SUCCESS] Demo data populated for user '{user.username}'")
 
@@ -520,16 +993,20 @@ def log_workout():
             else:
                 weight_value = None
 
+            # Normalize exercise names for consistency
+            normalized_name = normalize_exercise_name(ex['name'])
+            normalized_superset_name = normalize_exercise_name(ex.get('superset_exercise_name')) if ex.get('superset_exercise_name') else None
+
             exercise = Exercise(
                 workout_id=workout.id,
-                name=ex['name'],
+                name=normalized_name,
                 sets=int(ex['sets']),
                 reps=int(ex['reps']),
                 weight=weight_value,
                 rest_time=int(ex.get('rest_time', 0)),
                 set_data=json.dumps(ex.get('set_data')) if ex.get('set_data') else None,
                 is_superset=bool(ex.get('is_superset', False)),
-                superset_exercise_name=ex.get('superset_exercise_name')
+                superset_exercise_name=normalized_superset_name
             )
             db.session.add(exercise)
 
@@ -593,16 +1070,20 @@ def update_workout(workout_id):
             else:
                 weight_value = None
 
+            # Normalize exercise names for consistency
+            normalized_name = normalize_exercise_name(ex['name'])
+            normalized_superset_name = normalize_exercise_name(ex.get('superset_exercise_name')) if ex.get('superset_exercise_name') else None
+
             exercise = Exercise(
                 workout_id=workout.id,
-                name=ex['name'],
+                name=normalized_name,
                 sets=int(ex['sets']),
                 reps=int(ex['reps']),
                 weight=weight_value,
                 rest_time=int(ex.get('rest_time', 0)),
                 set_data=json.dumps(ex.get('set_data')) if ex.get('set_data') else None,
                 is_superset=bool(ex.get('is_superset', False)),
-                superset_exercise_name=ex.get('superset_exercise_name')
+                superset_exercise_name=normalized_superset_name
             )
             db.session.add(exercise)
 
@@ -770,6 +1251,119 @@ def get_exercise_names():
         Workout.user_id == current_user.id
     ).distinct().all()
     return jsonify([ex[0] for ex in exercises])
+
+@app.route('/api/exercises/normalize/preview')
+@login_required
+def preview_exercise_normalization():
+    """Preview what normalization would do to existing exercise names"""
+    # Get all distinct exercise names for current user
+    exercise_names = db.session.query(Exercise.name).join(Workout).filter(
+        Workout.user_id == current_user.id
+    ).distinct().all()
+
+    # Also get template exercise names
+    template_exercise_names = db.session.query(TemplateExercise.name).join(WorkoutTemplate).filter(
+        WorkoutTemplate.user_id == current_user.id
+    ).distinct().all()
+
+    # Combine and deduplicate
+    all_names = set([ex[0] for ex in exercise_names] + [ex[0] for ex in template_exercise_names])
+
+    changes = []
+    for name in all_names:
+        normalized = normalize_exercise_name(name)
+        if name != normalized:
+            # Count how many workouts use this exercise
+            workout_count = db.session.query(Exercise).join(Workout).filter(
+                Workout.user_id == current_user.id,
+                Exercise.name == name
+            ).count()
+
+            # Count how many templates use this exercise
+            template_count = db.session.query(TemplateExercise).join(WorkoutTemplate).filter(
+                WorkoutTemplate.user_id == current_user.id,
+                TemplateExercise.name == name
+            ).count()
+
+            changes.append({
+                'original': name,
+                'normalized': normalized,
+                'workout_count': workout_count,
+                'template_count': template_count,
+                'total_count': workout_count + template_count
+            })
+
+    # Sort by total count (most used first)
+    changes.sort(key=lambda x: x['total_count'], reverse=True)
+
+    return jsonify({
+        'total_changes': len(changes),
+        'changes': changes
+    })
+
+@app.route('/api/exercises/normalize/execute', methods=['POST'])
+@login_required
+def execute_exercise_normalization():
+    """Execute normalization on all existing exercises"""
+    try:
+        updated_count = 0
+
+        # Normalize workout exercises
+        exercises = db.session.query(Exercise).join(Workout).filter(
+            Workout.user_id == current_user.id
+        ).all()
+
+        for exercise in exercises:
+            old_name = exercise.name
+            new_name = normalize_exercise_name(old_name)
+
+            if old_name != new_name:
+                exercise.name = new_name
+                updated_count += 1
+
+            # Also normalize superset exercise name if present
+            if exercise.superset_exercise_name:
+                old_superset_name = exercise.superset_exercise_name
+                new_superset_name = normalize_exercise_name(old_superset_name)
+                if old_superset_name != new_superset_name:
+                    exercise.superset_exercise_name = new_superset_name
+                    updated_count += 1
+
+        # Normalize template exercises
+        template_exercises = db.session.query(TemplateExercise).join(WorkoutTemplate).filter(
+            WorkoutTemplate.user_id == current_user.id
+        ).all()
+
+        for template_exercise in template_exercises:
+            old_name = template_exercise.name
+            new_name = normalize_exercise_name(old_name)
+
+            if old_name != new_name:
+                template_exercise.name = new_name
+                updated_count += 1
+
+            # Also normalize superset exercise name if present
+            if template_exercise.superset_exercise_name:
+                old_superset_name = template_exercise.superset_exercise_name
+                new_superset_name = normalize_exercise_name(old_superset_name)
+                if old_superset_name != new_superset_name:
+                    template_exercise.superset_exercise_name = new_superset_name
+                    updated_count += 1
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': f'Successfully normalized {updated_count} exercise name(s)',
+            'updated_count': updated_count
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'Error normalizing exercises: {str(e)}'
+        }), 500
 
 @app.route('/body_metrics', methods=['GET', 'POST'])
 @login_required
@@ -1461,16 +2055,20 @@ def create_template():
 
     # Add exercises to template
     for idx, ex in enumerate(data.get('exercises', [])):
+        # Normalize exercise names for consistency
+        normalized_name = normalize_exercise_name(ex['name'])
+        normalized_superset_name = normalize_exercise_name(ex.get('superset_exercise_name')) if ex.get('superset_exercise_name') else None
+
         template_exercise = TemplateExercise(
             template_id=template.id,
-            name=ex['name'],
+            name=normalized_name,
             sets=int(ex['sets']),
             reps=int(ex['reps']),
             weight=float(ex.get('weight', 0)),
             rest_time=int(ex.get('rest_time', 0)),
             order=idx,
             is_superset=bool(ex.get('is_superset', False)),
-            superset_exercise_name=ex.get('superset_exercise_name')
+            superset_exercise_name=normalized_superset_name
         )
         db.session.add(template_exercise)
 
@@ -1516,16 +2114,20 @@ def update_template(template_id):
 
     # Add updated exercises
     for idx, ex in enumerate(data.get('exercises', [])):
+        # Normalize exercise names for consistency
+        normalized_name = normalize_exercise_name(ex['name'])
+        normalized_superset_name = normalize_exercise_name(ex.get('superset_exercise_name')) if ex.get('superset_exercise_name') else None
+
         template_exercise = TemplateExercise(
             template_id=template.id,
-            name=ex['name'],
+            name=normalized_name,
             sets=int(ex['sets']),
             reps=int(ex['reps']),
             weight=float(ex.get('weight', 0)),
             rest_time=int(ex.get('rest_time', 0)),
             order=idx,
             is_superset=bool(ex.get('is_superset', False)),
-            superset_exercise_name=ex.get('superset_exercise_name')
+            superset_exercise_name=normalized_superset_name
         )
         db.session.add(template_exercise)
 
