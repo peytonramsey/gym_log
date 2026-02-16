@@ -264,9 +264,12 @@ function saveGoals() {
     });
 }
 
-// Load daily data with goals
+// Load daily data with goals (using timezone-adjusted date)
 function loadDailyData() {
-    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const offset = getTimezoneOffset();
+    now.setUTCHours(now.getUTCHours() + offset);
+    const today = now.toISOString().split('T')[0];
     fetch(`/api/nutrition/daily/${today}/with-goals`)
         .then(response => response.json())
         .then(data => {

@@ -657,9 +657,12 @@
             document.getElementById('todays-workout-display').innerHTML = '<h3 class="mb-1">-</h3>';
         });
 
-    // Fetch nutrition data for today
+    // Fetch nutrition data for today (using timezone-adjusted date)
     function fetchNutritionData() {
-        const today = new Date().toISOString().split('T')[0];
+        const now = new Date();
+        const offset = getTimezoneOffset();
+        now.setUTCHours(now.getUTCHours() + offset);
+        const today = now.toISOString().split('T')[0];
         fetch(`/api/nutrition/daily/${today}/with-goals`)
             .then(response => {
                 if (!response.ok) throw new Error('No nutrition data');

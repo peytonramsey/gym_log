@@ -474,10 +474,12 @@
         .then(([workouts, meals]) => {
             workoutData = workouts;
 
-            // Group nutrition data by date
+            // Group nutrition data by date (using timezone-adjusted date)
             nutritionData = {};
             meals.forEach(meal => {
-                const dateStr = new Date(meal.date).toISOString().split('T')[0];
+                // Apply timezone offset to get local date, not UTC date
+                const localDate = applyTimezoneOffset(meal.date);
+                const dateStr = localDate.toISOString().split('T')[0];
                 if (!nutritionData[dateStr]) {
                     nutritionData[dateStr] = [];
                 }

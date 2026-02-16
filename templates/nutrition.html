@@ -1446,10 +1446,16 @@ function loadRecentMeals() {
         .then(data => {
             const container = document.getElementById('recent-meals');
 
-            // Filter to only show today's meals
-            const today = new Date().toISOString().split('T')[0];
+            // Filter to only show today's meals (using timezone-adjusted date)
+            const now = new Date();
+            const offset = getTimezoneOffset();
+            now.setUTCHours(now.getUTCHours() + offset);
+            const today = now.toISOString().split('T')[0];
+
             const todaysMeals = data.filter(meal => {
-                const mealDate = new Date(meal.date).toISOString().split('T')[0];
+                // Apply timezone offset to meal date to get local date
+                const localMealDate = applyTimezoneOffset(meal.date);
+                const mealDate = localMealDate.toISOString().split('T')[0];
                 return mealDate === today;
             });
 
@@ -1568,9 +1574,12 @@ function loadWeeklyChart() {
         });
 }
 
-// Fetch supplements for today
+// Fetch supplements for today (using timezone-adjusted date)
 function fetchSupplements() {
-    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const offset = getTimezoneOffset();
+    now.setUTCHours(now.getUTCHours() + offset);
+    const today = now.toISOString().split('T')[0];
     fetch(`/api/supplements/daily/${today}`)
         .then(response => response.json())
         .then(supplements => {

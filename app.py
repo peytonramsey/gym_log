@@ -1235,8 +1235,11 @@ def get_exercise_progress(exercise_name):
         Workout.user_id == current_user.id
     ).order_by(Workout.date.asc()).all()
 
+    # Get user's timezone offset
+    offset_hours = current_user.timezone_offset or 0
+
     data = [{
-        'date': ex.workout.date.strftime('%Y-%m-%d'),
+        'date': (ex.workout.date + timedelta(hours=offset_hours)).strftime('%Y-%m-%d'),
         'weight': ex.weight,
         'reps': ex.reps,
         'sets': ex.sets
@@ -1394,8 +1397,14 @@ def calendar_data():
     # Exclude draft workouts from calendar
     workouts = Workout.query.filter_by(user_id=current_user.id, is_draft=False).all()
     data = {}
+
+    # Get user's timezone offset to group workouts by local date
+    offset_hours = current_user.timezone_offset or 0
+
     for w in workouts:
-        date_str = w.date.strftime('%Y-%m-%d')
+        # Apply timezone offset to get local date (not UTC date)
+        local_datetime = w.date + timedelta(hours=offset_hours)
+        date_str = local_datetime.strftime('%Y-%m-%d')
         if date_str not in data:
             data[date_str] = []
         data[date_str].append({
@@ -1890,8 +1899,13 @@ def get_weekly_nutrition():
             'fats': 0
         }
 
+    # Get user's timezone offset
+    offset_hours = current_user.timezone_offset or 0
+
     for meal in meals:
-        date_str = meal.date.strftime('%Y-%m-%d')
+        # Apply timezone offset to group by local date
+        local_datetime = meal.date + timedelta(hours=offset_hours)
+        date_str = local_datetime.strftime('%Y-%m-%d')
         if date_str in daily_data:
             totals = meal.get_totals()
             daily_data[date_str]['calories'] += totals['calories']
