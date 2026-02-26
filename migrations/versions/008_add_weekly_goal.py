@@ -8,6 +8,11 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import inspect
 
+revision = '008_add_weekly_goal'
+down_revision = '007_add_equipment_type'
+branch_labels = None
+depends_on = None
+
 
 def upgrade():
     bind = op.get_bind()
