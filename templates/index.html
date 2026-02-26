@@ -670,8 +670,8 @@
             const label = document.getElementById('weekly-goal-label');
             const text = document.getElementById('weekly-goal-text');
             if (data.scheduled_days === 0) {
-                label.innerHTML = '<span class="text-muted" style="font-size:0.75rem;">No schedule set</span>';
-                text.innerHTML = '<a href="/schedule" class="text-muted">Set up a schedule</a>';
+                label.innerHTML = '<span class="text-muted" style="font-size:0.75rem;">—</span>';
+                text.innerHTML = '<a href="/settings" class="text-muted">Set a weekly goal in Settings</a>';
                 bar.style.width = '0%';
                 return;
             }

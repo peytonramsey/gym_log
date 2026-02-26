@@ -171,6 +171,22 @@
                 <option value="300">5 minutes</option>
             </select>
         </div>
+
+        <div class="settings-item">
+            <div style="flex: 1;">
+                <div class="settings-label">Weekly Workout Goal</div>
+                <div class="settings-description">Target workouts per week shown on the dashboard</div>
+            </div>
+            <select class="form-select" id="weeklyGoal" style="width: 160px;" onchange="saveWeeklyGoal(this.value)">
+                <option value="1">1 / week</option>
+                <option value="2">2 / week</option>
+                <option value="3">3 / week</option>
+                <option value="4">4 / week</option>
+                <option value="5">5 / week</option>
+                <option value="6">6 / week</option>
+                <option value="7">7 / week</option>
+            </select>
+        </div>
     </div>
 
     <!-- Account Section -->
@@ -334,6 +350,13 @@
         const savedRestTime = localStorage.getItem('defaultRestTime') || '90';
         document.getElementById('defaultRestTime').value = savedRestTime;
 
+        // Load weekly goal from server
+        fetch('/api/user/weekly-goal')
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('weeklyGoal').value = data.weekly_goal;
+            });
+
         // Set member since date (from user data if available)
         const createdDate = new Date('{{ current_user.created_at }}');
         document.getElementById('memberSince').textContent = createdDate.toLocaleDateString('en-US', {
@@ -382,6 +405,14 @@
         const time = document.getElementById('defaultRestTime').value;
         localStorage.setItem('defaultRestTime', time);
         showSuccess(`Default rest time set to ${time} seconds`);
+    }
+
+    function saveWeeklyGoal(val) {
+        fetch('/api/user/weekly-goal', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ weekly_goal: parseInt(val) })
+        }).then(() => showSuccess(`Weekly goal set to ${val} workout${val != 1 ? 's' : ''}`));
     }
 
     function exportData() {

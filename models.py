@@ -14,6 +14,7 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     timezone_offset = db.Column(db.Integer, default=0)  # Hours offset from UTC (e.g., -5 for EST)
+    weekly_goal = db.Column(db.Integer, default=3)  # Manual weekly workout goal
 
     # Relationships
     workouts = db.relationship('Workout', backref='user', lazy=True, cascade='all, delete-orphan')

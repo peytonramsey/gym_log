@@ -2347,6 +2347,19 @@ def update_timezone():
 
     return jsonify({'success': True, 'timezone_offset': timezone_offset})
 
+@app.route('/api/user/weekly-goal', methods=['GET', 'POST'])
+@login_required
+def user_weekly_goal():
+    """Get or set the user's manual weekly workout goal"""
+    if request.method == 'GET':
+        return jsonify({'weekly_goal': current_user.weekly_goal or 3})
+    data = request.get_json()
+    goal = int(data.get('weekly_goal', 3))
+    goal = max(1, min(7, goal))  # clamp to 1–7
+    current_user.weekly_goal = goal
+    db.session.commit()
+    return jsonify({'success': True, 'weekly_goal': goal})
+
 # Consistency tracking endpoint
 @app.route('/api/consistency')
 @login_required
@@ -2354,11 +2367,40 @@ def get_consistency():
     """
     Calculate workout consistency based on scheduled workouts vs actual workouts
     Query params: days (default 30) - number of days to look back
+                  period=week - use manual weekly_goal and count any workouts this Mon-Sun
     """
     from datetime import datetime, timedelta
 
-    # Get number of days to look back (default 30), or use current calendar week
     period = request.args.get('period')
+
+    # --- Manual weekly goal path ---
+    if period == 'week':
+        goal = current_user.weekly_goal or 3
+        end_date = datetime.now()
+        today = end_date.date()
+        monday = today - timedelta(days=today.weekday())
+        start_date = datetime(monday.year, monday.month, monday.day)
+
+        workouts = Workout.query.filter(
+            Workout.user_id == current_user.id,
+            Workout.is_draft == False,
+            Workout.date >= start_date,
+            Workout.date <= end_date
+        ).all()
+
+        # Count distinct days with at least one workout this week
+        workout_dates = set(w.date.date() for w in workouts)
+        completed_count = len(workout_dates)
+        adherence_percentage = min(100, round(completed_count / goal * 100, 1)) if goal > 0 else 0
+
+        return jsonify({
+            'adherence_percentage': adherence_percentage,
+            'scheduled_days': goal,
+            'completed_days': completed_count,
+            'total_workouts': len(workouts)
+        })
+
+    # --- Template-based consistency path (30-day default) ---
     days = int(request.args.get('days', 30))
 
     # Build a set of scheduled day_of_week values from both old and new methods
@@ -2393,14 +2435,8 @@ def get_consistency():
             'message': 'No workouts scheduled'
         })
 
-    # Get all workouts in the date range (exclude drafts)
     end_date = datetime.now()
-    if period == 'week':
-        today = end_date.date()
-        monday = today - timedelta(days=today.weekday())
-        start_date = datetime(monday.year, monday.month, monday.day)
-    else:
-        start_date = end_date - timedelta(days=days)
+    start_date = end_date - timedelta(days=days)
 
     workouts = Workout.query.filter(
         Workout.user_id == current_user.id,
@@ -2418,24 +2454,20 @@ def get_consistency():
     scheduled_count = 0
     completed_count = 0
 
-    # Iterate through each day in the range
     current_date = start_date.date()
     end = end_date.date()
 
     while current_date <= end:
-        # Check if this day of week is scheduled
         day_of_week = current_date.weekday()  # 0=Monday, 6=Sunday
 
         if day_of_week in scheduled_days_of_week:
             scheduled_count += 1
 
-            # Check if there was a workout on this date
             if current_date in workout_dates:
                 completed_count += 1
 
         current_date += timedelta(days=1)
 
-    # Calculate adherence percentage
     adherence_percentage = (completed_count / scheduled_count * 100) if scheduled_count > 0 else 0
 
     return jsonify({
