@@ -197,6 +197,32 @@
         color: #e0e0e0;
     }
 
+    /* Weekly goal progress bar */
+    .weekly-progress-track {
+        height: 8px;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.12);
+        overflow: hidden;
+        margin: 6px 0 4px;
+    }
+
+    body.dark-mode .weekly-progress-track {
+        background: rgba(255, 255, 255, 0.08);
+    }
+
+    #weekly-goal-bar {
+        height: 100%;
+        border-radius: 4px;
+        background: linear-gradient(90deg, #667eea, #48bb78);
+        transition: width 0.7s cubic-bezier(0.25, 0.8, 0.25, 1);
+        width: 0%;
+    }
+
+    #weekly-goal-bar.complete {
+        background: linear-gradient(90deg, #38a169, #48bb78);
+        box-shadow: 0 0 8px rgba(72, 187, 120, 0.55);
+    }
+
     /* Consistency color coding */
     .text-success {
         color: #198754 !important;
@@ -409,7 +435,8 @@
 {% block content %}
 <!-- Welcome Text -->
 <div class="welcome-text">
-    <h3 id = "welcome-message"> Welcome back, {{ current_user.username }}</h3>
+    <h3 id="welcome-message">Welcome back, {{ current_user.username }}</h3>
+    <small id="weekly-goal-text" class="text-muted"></small>
 </div>
 
 <!-- Split Screen Layout -->
@@ -484,10 +511,14 @@
         <div class="row mb-2">
             <div class="col-4">
                 <div class="stat-card text-center">
-                    <div class="stat-value">
-                        <h3 id="total-workouts" class="mb-1">0</h3>
+                    <div class="stat-value justify-content-center">
+                        <h3 class="mb-0" id="weekly-goal-label">—</h3>
                     </div>
-                    <small>Total Workouts</small>
+                    <div class="weekly-progress-track">
+                        <div id="weekly-goal-bar" role="progressbar"
+                             aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <small>Workouts this week</small>
                 </div>
             </div>
             <div class="col-4">
@@ -507,12 +538,12 @@
                             <span class="visually-hidden">Loading...</span>
                         </div>
                     </div>
-                    <small>Consistency (30d)</small>
+                    <small>Training Consistency</small>
                 </div>
             </div>
         </div>
 
-        <div class="row">
+<div class="row">
             <!-- Log Workout -->
             <div class="col-6">
                 <a href="/log" class="feature-link">
@@ -596,16 +627,6 @@
     const randomMessage = welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)];
     document.getElementById('welcome-message').textContent = randomMessage;
 
-    // Fetch workout data
-    fetch('/api/workouts')
-        .then(response => response.json())
-        .then(data => {
-            // Update stats
-            document.getElementById('total-workouts').textContent = data.length;
-        })
-        .catch(error => {
-            console.error('Error fetching workouts:', error);
-        });
 
     // Fetch calendar data
     fetch('/api/calendar_data')
@@ -627,11 +648,11 @@
             const display = document.getElementById('consistency-display');
             const percentage = data.adherence_percentage || 0;
 
-            // Color code based on percentage
+            // Encouraging color scale — no red for low values
             let colorClass = '';
-            if (percentage >= 80) colorClass = 'text-success';
-            else if (percentage >= 60) colorClass = 'text-warning';
-            else colorClass = 'text-danger';
+            if (percentage >= 70) colorClass = 'text-success';
+            else if (percentage >= 50) colorClass = 'text-warning';
+            else colorClass = 'text-muted';
 
             display.innerHTML = `<h3 class="mb-1 ${colorClass}">${percentage}%</h3>`;
             display.title = `${data.completed_days} of ${data.scheduled_days} scheduled workouts completed`;
@@ -639,6 +660,33 @@
         .catch(error => {
             console.error('Error fetching consistency:', error);
             document.getElementById('consistency-display').innerHTML = '<h3 class="mb-1">-</h3>';
+        });
+
+    // Fetch weekly workout goal progress
+    fetch('/api/consistency?period=week')
+        .then(response => response.json())
+        .then(data => {
+            const bar = document.getElementById('weekly-goal-bar');
+            const label = document.getElementById('weekly-goal-label');
+            const text = document.getElementById('weekly-goal-text');
+            if (data.scheduled_days === 0) {
+                label.innerHTML = '<span class="text-muted" style="font-size:0.75rem;">No schedule set</span>';
+                text.innerHTML = '<a href="/schedule" class="text-muted">Set up a schedule</a>';
+                bar.style.width = '0%';
+                return;
+            }
+            const pct = Math.min(100, Math.round((data.completed_days / data.scheduled_days) * 100));
+            bar.style.width = pct + '%';
+            bar.setAttribute('aria-valuenow', pct);
+            bar.className = pct >= 100 ? 'complete' : '';
+            label.innerHTML = `${data.completed_days} <span style="opacity:0.45;font-size:0.75em;">/ ${data.scheduled_days}</span>`;
+            const remaining = data.scheduled_days - data.completed_days;
+            text.textContent = pct >= 100
+                ? 'All workouts done — great week!'
+                : `${remaining} workout${remaining !== 1 ? 's' : ''} left this week`;
+        })
+        .catch(() => {
+            document.getElementById('weekly-goal-text').textContent = '';
         });
 
     // Fetch today's scheduled workout

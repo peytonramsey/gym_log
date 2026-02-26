@@ -373,6 +373,21 @@
         border: 2px solid #0d6efd;
     }
 
+    .legend-missed {
+        background: rgba(245, 158, 11, 0.08);
+        border: 1px dashed rgba(245, 158, 11, 0.7);
+    }
+
+    .calendar-day.missed-day {
+        border: 1px dashed rgba(245, 158, 11, 0.5);
+        background: rgba(245, 158, 11, 0.04);
+    }
+
+    body.dark-mode .calendar-day.missed-day {
+        border-color: rgba(245, 158, 11, 0.35);
+        background: rgba(245, 158, 11, 0.06);
+    }
+
     body.dark-mode h4,
     body.dark-mode h5 {
         color: #ffffff !important;
@@ -597,6 +612,7 @@
     let currentDate = new Date();
     let workoutData = {};
     let nutritionData = {};
+    let scheduledDaysOfWeek = new Set(); // Python weekday ints: 0=Mon … 6=Sun
     const today = new Date();
 
     // Compare mode state
@@ -605,13 +621,20 @@
     let compareDay2 = null;   // 'YYYY-MM-DD'
 
     function loadCalendarData() {
-        // Fetch both workouts and nutrition data
+        // Fetch workouts, nutrition data, and templates (for missed-day detection)
         Promise.all([
             fetch('/api/calendar_data').then(r => r.json()),
-            fetch('/api/nutrition').then(r => r.json())
+            fetch('/api/nutrition').then(r => r.json()),
+            fetch('/api/templates').then(r => r.json())
         ])
-        .then(([workouts, meals]) => {
+        .then(([workouts, meals, templates]) => {
             workoutData = workouts;
+
+            // Build set of scheduled days-of-week (Python: 0=Mon … 6=Sun)
+            scheduledDaysOfWeek = new Set();
+            templates.forEach(t => {
+                (t.scheduled_days || []).forEach(d => scheduledDaysOfWeek.add(d));
+            });
 
             // Group nutrition data by date (using timezone-adjusted date)
             nutritionData = {};
@@ -701,6 +724,17 @@
             }
         }
 
+        // Add "Missed Day" legend if the user has a schedule defined
+        if (scheduledDaysOfWeek.size > 0) {
+            const missedItem = document.createElement('div');
+            missedItem.className = 'legend-item';
+            missedItem.innerHTML = `
+                <div class="legend-box legend-missed"></div>
+                <span>Missed Day</span>
+            `;
+            legend.appendChild(missedItem);
+        }
+
         // Add legend items for each template
         templatesInMonth.forEach((color, name) => {
             const legendItem = document.createElement('div');
@@ -737,6 +771,19 @@
 
         if (dateStr) {
             const hasWorkout = workoutData[dateStr] && workoutData[dateStr].length > 0;
+
+            // Mark past days with no workout on a scheduled weekday as "missed"
+            if (!hasWorkout && !isToday && !isOtherMonth) {
+                const cellDate = new Date(dateStr + 'T00:00:00');
+                if (cellDate < today) {
+                    // JS getDay(): 0=Sun,1=Mon,...,6=Sat → Python weekday: Mon=0,...,Sun=6
+                    const jsDay = cellDate.getDay();
+                    const pythonDay = jsDay === 0 ? 6 : jsDay - 1;
+                    if (scheduledDaysOfWeek.has(pythonDay)) {
+                        cell.classList.add('missed-day');
+                    }
+                }
+            }
 
             if (hasWorkout) {
                 const workouts = workoutData[dateStr];
@@ -830,6 +877,11 @@
      * @param {boolean} includeActions - If true, renders Edit/Delete buttons per workout
      * @returns {string} HTML string
      */
+    function formatEquipmentType(type) {
+        const labels = { barbell: 'Barbell', free_weight: 'Free Weight', cable: 'Cable', machine: 'Machine' };
+        return labels[type] || type;
+    }
+
     function buildWorkoutHtml(workouts, includeActions = false) {
         if (!workouts || workouts.length === 0) {
             return '<p class="text-muted text-center py-3">No workouts logged.</p>';
@@ -868,10 +920,13 @@
                 w.exercises.forEach(ex => {
                     html += `<div class="mb-3">`;
 
+                    const equipBadge = ex.equipment_type
+                        ? `<span class="badge bg-secondary ms-1">${formatEquipmentType(ex.equipment_type)}</span>`
+                        : '';
                     if (ex.is_superset) {
-                        html += `<div><span class="badge bg-primary me-2">Superset</span><strong>${ex.name} / ${ex.superset_exercise_name || 'Exercise B'}</strong></div>`;
+                        html += `<div><span class="badge bg-primary me-2">Superset</span><strong>${ex.name} / ${ex.superset_exercise_name || 'Exercise B'}</strong>${equipBadge}</div>`;
                     } else {
-                        html += `<div><strong>${ex.name}</strong></div>`;
+                        html += `<div><strong>${ex.name}</strong>${equipBadge}</div>`;
                     }
 
                     if (ex.set_data && ex.set_data.length > 0) {

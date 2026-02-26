@@ -81,6 +81,7 @@ class Exercise(db.Model):
     reps = db.Column(db.Integer, nullable=False)
     weight = db.Column(db.Float, nullable=True)  # Nullable for bodyweight exercises
     rest_time = db.Column(db.Integer, nullable=True)  # rest time in seconds
+    equipment_type = db.Column(db.String(50), nullable=True)  # barbell, free_weight, cable, machine
     set_data = db.Column(db.Text, nullable=True)  # JSON array of individual sets: [{"set_number": 1, "reps": 10, "weight": 135}, ...]
     is_superset = db.Column(db.Boolean, default=False)  # Whether this is a superset exercise
     superset_exercise_name = db.Column(db.String(100), nullable=True)  # Name of the second exercise in superset
@@ -94,6 +95,7 @@ class Exercise(db.Model):
             'reps': self.reps,
             'weight': self.weight,
             'rest_time': self.rest_time,
+            'equipment_type': self.equipment_type,
             'set_data': json.loads(self.set_data) if self.set_data else None,
             'is_superset': self.is_superset,
             'superset_exercise_name': self.superset_exercise_name
@@ -256,6 +258,7 @@ class TemplateExercise(db.Model):
     reps = db.Column(db.Integer, nullable=False)
     weight = db.Column(db.Float, default=0)  # Default weight (optional)
     rest_time = db.Column(db.Integer, nullable=True)  # rest time in seconds
+    equipment_type = db.Column(db.String(50), nullable=True)  # barbell, free_weight, cable, machine
     order = db.Column(db.Integer, default=0)  # order of exercise in the workout
     is_superset = db.Column(db.Boolean, default=False)  # Whether this is a superset exercise
     superset_exercise_name = db.Column(db.String(100), nullable=True)  # Name of the second exercise in superset
@@ -268,10 +271,32 @@ class TemplateExercise(db.Model):
             'reps': self.reps,
             'weight': self.weight,
             'rest_time': self.rest_time,
+            'equipment_type': self.equipment_type,
             'order': self.order,
             'is_superset': self.is_superset,
             'superset_exercise_name': self.superset_exercise_name
         }
+
+class ExerciseBank(db.Model):
+    """Global (user_id=None) and user-specific custom exercise entries."""
+    __tablename__ = 'exercise_bank'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)  # NULL = global/seeded
+    name = db.Column(db.String(100), nullable=False)
+    muscle_group = db.Column(db.String(50), nullable=True)  # e.g. "Chest", "Back"
+    equipment_type = db.Column(db.String(50), nullable=True)  # barbell, free_weight, cable, machine
+    is_custom = db.Column(db.Boolean, default=False)  # True = added by user
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'muscle_group': self.muscle_group,
+            'equipment_type': self.equipment_type,
+            'is_custom': self.is_custom,
+        }
+
 
 class WeightPrediction(db.Model):
     """Track ML predictions vs actual outcomes for model improvement"""

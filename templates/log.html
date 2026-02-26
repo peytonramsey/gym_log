@@ -138,8 +138,9 @@
         color: #fbbf24;
     }
 
+    /* Dropset toggles hidden by default; revealed when exercise is in advanced mode */
     .drop-set-toggle {
-        display: inline-flex;
+        display: none;
         align-items: center;
         gap: 4px;
         padding: 2px 8px;
@@ -150,6 +151,10 @@
         cursor: pointer;
         font-size: 0.7rem;
         font-weight: 500;
+    }
+
+    .exercise-advanced .drop-set-toggle {
+        display: inline-flex;
     }
 
     .drop-set-toggle:hover {
@@ -270,6 +275,100 @@
     #auto-save-status.saving {
         animation: pulse 1.5s ease-in-out infinite;
     }
+
+    /* Exercise autocomplete */
+    .exercise-autocomplete-wrapper {
+        position: relative;
+    }
+
+    .exercise-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        z-index: 1050;
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-top: none;
+        border-radius: 0 0 6px 6px;
+        max-height: 220px;
+        overflow-y: auto;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        display: none;
+    }
+
+    .exercise-dropdown.show {
+        display: block;
+    }
+
+    .exercise-dropdown-item {
+        padding: 8px 12px;
+        cursor: pointer;
+        font-size: 0.875rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+
+    .exercise-dropdown-item:last-child {
+        border-bottom: none;
+    }
+
+    .exercise-dropdown-item:hover,
+    .exercise-dropdown-item.active {
+        background: #f0f4ff;
+    }
+
+    .exercise-dropdown-item .muscle-badge {
+        font-size: 0.7rem;
+        color: #777;
+        background: #f0f0f0;
+        padding: 2px 7px;
+        border-radius: 10px;
+        flex-shrink: 0;
+        margin-left: 8px;
+    }
+
+    .exercise-dropdown-item.add-custom {
+        color: #667eea;
+        font-style: italic;
+        background: rgba(102,126,234,0.04);
+    }
+
+    .exercise-dropdown-item.add-custom:hover {
+        background: rgba(102,126,234,0.1);
+    }
+
+    /* Dark mode */
+    body.dark-mode .exercise-dropdown {
+        background: #2d2d2d;
+        border-color: #404040;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+
+    body.dark-mode .exercise-dropdown-item {
+        color: #e0e0e0;
+        border-bottom-color: rgba(255,255,255,0.05);
+    }
+
+    body.dark-mode .exercise-dropdown-item:hover,
+    body.dark-mode .exercise-dropdown-item.active {
+        background: rgba(102,126,234,0.15);
+    }
+
+    body.dark-mode .exercise-dropdown-item .muscle-badge {
+        background: #3a3a3a;
+        color: #aaa;
+    }
+
+    body.dark-mode .exercise-dropdown-item.add-custom {
+        background: rgba(102,126,234,0.08);
+    }
+
+    body.dark-mode .exercise-dropdown-item.add-custom:hover {
+        background: rgba(102,126,234,0.18);
+    }
 </style>
 {% endblock %}
 
@@ -315,17 +414,36 @@
         <small id="auto-save-status" class="text-muted">
             <i class="bi bi-cloud-check"></i> Auto-save enabled
         </small>
+        <button type="button" class="btn btn-link btn-sm p-0 text-danger" onclick="confirmClear()">
+            <i class="bi bi-trash"></i> Clear
+        </button>
     </div>
     <div class="row g-2">
-        <div class="col-6">
-            <button class="btn btn-outline-danger w-100" onclick="clearWorkout()">
-                <i class="bi bi-trash"></i> Clear
-            </button>
-        </div>
-        <div class="col-6">
+        <div class="col-12">
             <button class="btn btn-success w-100" onclick="saveWorkout()">
                 <i class="bi bi-check-circle"></i> Save Workout
             </button>
+        </div>
+    </div>
+</div>
+
+<!-- Clear Workout Confirmation Modal -->
+<div class="modal fade" id="clearConfirmModal" tabindex="-1" aria-labelledby="clearConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="clearConfirmModalLabel">Clear Workout?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                All exercises and sets will be lost. This cannot be undone.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="clearWorkout(); bootstrap.Modal.getInstance(document.getElementById('clearConfirmModal')).hide()">
+                    <i class="bi bi-trash"></i> Clear Workout
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -429,6 +547,7 @@
                     reps: avgReps,
                     weight: avgWeight,
                     rest_time: rest,
+                    equipment_type: getEquipmentType(i),
                     set_data: sets,
                     is_superset: isSuperset,
                     superset_exercise_name: supersetExerciseName
@@ -588,6 +707,7 @@
                             addExercise({
                                 name: ex.name,
                                 rest_time: ex.rest_time,
+                                equipment_type: ex.equipment_type,
                                 set_data: ex.set_data
                             });
                         } else {
@@ -596,7 +716,8 @@
                                 sets: ex.sets,
                                 reps: ex.reps,
                                 weight: ex.weight,
-                                rest_time: ex.rest_time
+                                rest_time: ex.rest_time,
+                                equipment_type: ex.equipment_type
                             });
                         }
                     }
@@ -891,20 +1012,38 @@
         exerciseDiv.innerHTML = `
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div class="d-flex align-items-center gap-3">
-                        <h6 class="mb-0" id="exercise-header-${exerciseCount}">
-                            Exercise ${exerciseCount}
-                        </h6>
-                        <label class="superset-toggle" for="superset-toggle-${exerciseCount}" id="superset-toggle-label-${exerciseCount}">
-                            <input type="checkbox" id="superset-toggle-${exerciseCount}"
-                                   onchange="toggleSuperset(${exerciseCount})">
-                            <i class="bi bi-layers superset-toggle-icon"></i>
-                            <span>Superset</span>
-                        </label>
+                    <h6 class="mb-0" id="exercise-header-${exerciseCount}">
+                        Exercise ${exerciseCount}
+                    </h6>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="More options">
+                                <i class="bi bi-three-dots-vertical"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    <label class="dropdown-item d-flex align-items-center gap-2" for="superset-toggle-${exerciseCount}" id="superset-toggle-label-${exerciseCount}" style="cursor:pointer;">
+                                        <input type="checkbox" id="superset-toggle-${exerciseCount}"
+                                               onchange="toggleSuperset(${exerciseCount})">
+                                        <i class="bi bi-layers"></i>
+                                        Enable Superset
+                                    </label>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <label class="dropdown-item d-flex align-items-center gap-2" for="advanced-toggle-${exerciseCount}" style="cursor:pointer;">
+                                        <input type="checkbox" id="advanced-toggle-${exerciseCount}"
+                                               onchange="toggleAdvanced(${exerciseCount})">
+                                        <i class="bi bi-chevron-double-down"></i>
+                                        Enable Drop Sets
+                                    </label>
+                                </li>
+                            </ul>
+                        </div>
+                        <button class="btn btn-danger btn-sm" onclick="removeExercise(${exerciseCount})">
+                            <i class="bi bi-trash"></i>
+                        </button>
                     </div>
-                    <button class="btn btn-danger btn-sm" onclick="removeExercise(${exerciseCount})">
-                        <i class="bi bi-trash"></i>
-                    </button>
                 </div>
                 <div class="mb-3 superset-name-container" id="names-container-${exerciseCount}">
                     <div>
@@ -914,6 +1053,17 @@
                     <div id="name-b-container-${exerciseCount}" style="display: none;">
                         <div class="exercise-name-label">Exercise B</div>
                         <input type="text" class="form-control" placeholder="Second exercise name" id="name-b-${exerciseCount}" value="${exerciseData && exerciseData.superset_exercise_name ? exerciseData.superset_exercise_name : ''}" onchange="scheduleAutoSave()">
+                    </div>
+                </div>
+
+                <!-- Equipment Type Selector -->
+                <div class="mb-3" id="equipment-selector-${exerciseCount}">
+                    <small class="text-muted d-block mb-1">Equipment <span class="text-muted" style="font-weight:normal;">(optional)</span></small>
+                    <div class="d-flex flex-wrap gap-1">
+                        <button type="button" class="btn btn-sm btn-outline-secondary equipment-btn" data-exercise="${exerciseCount}" data-type="barbell" onclick="toggleEquipment(${exerciseCount}, 'barbell')">Barbell</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary equipment-btn" data-exercise="${exerciseCount}" data-type="free_weight" onclick="toggleEquipment(${exerciseCount}, 'free_weight')">Free Weight</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary equipment-btn" data-exercise="${exerciseCount}" data-type="cable" onclick="toggleEquipment(${exerciseCount}, 'cable')">Cable</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary equipment-btn" data-exercise="${exerciseCount}" data-type="machine" onclick="toggleEquipment(${exerciseCount}, 'machine')">Machine</button>
                     </div>
                 </div>
 
@@ -942,9 +1092,18 @@
                         </button>
                     </div>
                 </div>
+
             </div>
         `;
         container.appendChild(exerciseDiv);
+
+        // Attach autocomplete to the exercise name input
+        initExerciseAutocomplete(`name-${exerciseCount}`);
+
+        // Restore equipment type if provided
+        if (exerciseData && exerciseData.equipment_type) {
+            setEquipmentType(exerciseCount, exerciseData.equipment_type);
+        }
 
         // If this is a superset, enable superset mode
         if (exerciseData && exerciseData.is_superset) {
@@ -978,6 +1137,51 @@
         scheduleAutoSave();
     }
 
+    function toggleEquipment(exerciseId, type) {
+        const selector = document.getElementById(`equipment-selector-${exerciseId}`);
+        if (!selector) return;
+        const btn = selector.querySelector(`[data-type="${type}"]`);
+        const isActive = btn.classList.contains('btn-secondary');
+        // Deactivate all buttons first
+        selector.querySelectorAll('.equipment-btn').forEach(b => {
+            b.classList.remove('btn-secondary');
+            b.classList.add('btn-outline-secondary');
+        });
+        // Toggle: if wasn't active, activate it; if was active, leave deselected
+        if (!isActive) {
+            btn.classList.remove('btn-outline-secondary');
+            btn.classList.add('btn-secondary');
+        }
+        scheduleAutoSave();
+    }
+
+    function setEquipmentType(exerciseId, type) {
+        if (!type) return;
+        const selector = document.getElementById(`equipment-selector-${exerciseId}`);
+        if (!selector) return;
+        selector.querySelectorAll('.equipment-btn').forEach(b => {
+            b.classList.remove('btn-secondary');
+            b.classList.add('btn-outline-secondary');
+        });
+        const btn = selector.querySelector(`[data-type="${type}"]`);
+        if (btn) {
+            btn.classList.remove('btn-outline-secondary');
+            btn.classList.add('btn-secondary');
+        }
+    }
+
+    function getEquipmentType(exerciseId) {
+        const selector = document.getElementById(`equipment-selector-${exerciseId}`);
+        if (!selector) return null;
+        const active = selector.querySelector('.equipment-btn.btn-secondary');
+        return active ? active.dataset.type : null;
+    }
+
+    function toggleAdvanced(exerciseId) {
+        const card = document.getElementById(`exercise-${exerciseId}`);
+        card.classList.toggle('exercise-advanced');
+    }
+
     function toggleSuperset(exerciseId, skipSave = false) {
         const isChecked = document.getElementById(`superset-toggle-${exerciseId}`).checked;
         const nameB = document.getElementById(`name-b-container-${exerciseId}`);
@@ -994,6 +1198,9 @@
             card.classList.add('superset-card');
             header.textContent = `Superset ${exerciseId}A & ${exerciseId}B`;
             if (toggleLabel) toggleLabel.classList.add('active');
+
+            // Attach autocomplete to the superset B name input (only once)
+            initExerciseAutocomplete(`name-b-${exerciseId}`);
 
             // Convert existing sets to dual weight format
             const setDivs = setsContainer.querySelectorAll('[id^="exercise-' + exerciseId + '-set-"]');
@@ -1456,6 +1663,7 @@
 
                 exercises.push({
                     name,
+                    equipment_type: getEquipmentType(i),
                     sets: totalSets,
                     reps: avgReps,
                     weight: avgWeight,
@@ -1514,12 +1722,11 @@
         });
     }
 
-    function clearWorkout() {
-        // Confirm before clearing
-        if (!confirm('Are you sure you want to clear all workout data? This cannot be undone.')) {
-            return;
-        }
+    function confirmClear() {
+        new bootstrap.Modal(document.getElementById('clearConfirmModal')).show();
+    }
 
+    function clearWorkout() {
         // Clear all exercises
         document.getElementById('exercises-container').innerHTML = '';
         exerciseCount = 0;
@@ -1545,5 +1752,156 @@
     }
 
     // Note: First exercise is added in initializePage() if no draft is restored
+
+    // ===== EXERCISE BANK AUTOCOMPLETE =====
+
+    function initExerciseAutocomplete(inputId) {
+        const input = document.getElementById(inputId);
+        if (!input || input.dataset.autocompleteInit) return;
+        input.dataset.autocompleteInit = '1';
+
+        // Wrap the input
+        const wrapper = document.createElement('div');
+        wrapper.className = 'exercise-autocomplete-wrapper';
+        input.parentNode.insertBefore(wrapper, input);
+        wrapper.appendChild(input);
+
+        // Create dropdown
+        const dropdown = document.createElement('div');
+        dropdown.className = 'exercise-dropdown';
+        wrapper.appendChild(dropdown);
+
+        let debounceTimer = null;
+        let activeIndex = -1;
+
+        function getItems() {
+            return dropdown.querySelectorAll('.exercise-dropdown-item');
+        }
+
+        function setActive(index) {
+            const items = getItems();
+            items.forEach(i => i.classList.remove('active'));
+            if (index >= 0 && index < items.length) {
+                items[index].classList.add('active');
+                items[index].scrollIntoView({ block: 'nearest' });
+            }
+            activeIndex = index;
+        }
+
+        function selectItem(name) {
+            input.value = name;
+            dropdown.classList.remove('show');
+            activeIndex = -1;
+            scheduleAutoSave();
+        }
+
+        function renderResults(results, query) {
+            dropdown.innerHTML = '';
+            activeIndex = -1;
+
+            results.forEach(ex => {
+                const item = document.createElement('div');
+                item.className = 'exercise-dropdown-item';
+
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = ex.name;
+                item.appendChild(nameSpan);
+
+                if (ex.muscle_group) {
+                    const badge = document.createElement('span');
+                    badge.className = 'muscle-badge';
+                    badge.textContent = ex.muscle_group;
+                    item.appendChild(badge);
+                }
+
+                item.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    selectItem(ex.name);
+                });
+                dropdown.appendChild(item);
+            });
+
+            // "Add to my exercises" option when typed text doesn't exactly match anything
+            const q = query.trim();
+            const exactMatch = results.some(r => r.name.toLowerCase() === q.toLowerCase());
+            if (q.length > 1 && !exactMatch) {
+                const addItem = document.createElement('div');
+                addItem.className = 'exercise-dropdown-item add-custom';
+                addItem.innerHTML = `<span><i class="bi bi-plus-circle"></i> Add "<strong>${q}</strong>" to my exercises</span>`;
+                addItem.addEventListener('mousedown', async (e) => {
+                    e.preventDefault();
+                    try {
+                        const resp = await fetch('/api/exercise_bank', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({name: q}),
+                        });
+                        const saved = await resp.json();
+                        selectItem(saved.name);
+                        showSuccess(`"${saved.name}" added to your exercise library`);
+                    } catch (err) {
+                        // Fall back to using whatever was typed
+                        selectItem(q);
+                    }
+                });
+                dropdown.appendChild(addItem);
+            }
+
+            if (dropdown.children.length > 0) {
+                dropdown.classList.add('show');
+            } else {
+                dropdown.classList.remove('show');
+            }
+        }
+
+        async function search(query) {
+            if (!query.trim()) {
+                dropdown.classList.remove('show');
+                return;
+            }
+            try {
+                const resp = await fetch(`/api/exercise_bank?q=${encodeURIComponent(query)}`);
+                const results = await resp.json();
+                renderResults(results, query);
+            } catch (err) {
+                dropdown.classList.remove('show');
+            }
+        }
+
+        input.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => search(input.value), 250);
+        });
+
+        input.addEventListener('focus', () => {
+            if (input.value.trim().length > 0) {
+                search(input.value);
+            }
+        });
+
+        input.addEventListener('keydown', (e) => {
+            const items = getItems();
+            if (!dropdown.classList.contains('show')) return;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setActive(Math.min(activeIndex + 1, items.length - 1));
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setActive(Math.max(activeIndex - 1, 0));
+            } else if (e.key === 'Enter' && activeIndex >= 0) {
+                e.preventDefault();
+                items[activeIndex].dispatchEvent(new MouseEvent('mousedown', {bubbles: true}));
+            } else if (e.key === 'Escape') {
+                dropdown.classList.remove('show');
+                activeIndex = -1;
+            }
+        });
+
+        input.addEventListener('blur', () => {
+            // Small delay so mousedown on dropdown items fires first
+            setTimeout(() => dropdown.classList.remove('show'), 150);
+        });
+    }
 </script>
 {% endblock %}

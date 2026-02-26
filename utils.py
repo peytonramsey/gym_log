@@ -4,6 +4,110 @@ Utility functions for GymLog application
 
 import re
 
+# Pre-seeded global exercise bank — names are already normalized (Title Case)
+EXERCISE_BANK_SEEDS = [
+    # Chest
+    ("Barbell Bench Press", "Chest"),
+    ("Dumbbell Bench Press", "Chest"),
+    ("Incline Barbell Press", "Chest"),
+    ("Incline Dumbbell Press", "Chest"),
+    ("Decline Barbell Press", "Chest"),
+    ("Decline Dumbbell Press", "Chest"),
+    ("Cable Fly", "Chest"),
+    ("Dumbbell Fly", "Chest"),
+    ("Incline Dumbbell Fly", "Chest"),
+    ("Pec Deck", "Chest"),
+    ("Push Up", "Chest"),
+    ("Dip", "Chest"),
+    ("Chest Press Machine", "Chest"),
+    # Back
+    ("Pull Up", "Back"),
+    ("Chin Up", "Back"),
+    ("Barbell Row", "Back"),
+    ("Dumbbell Row", "Back"),
+    ("Cable Row", "Back"),
+    ("Seated Cable Row", "Back"),
+    ("Lat Pulldown", "Back"),
+    ("Wide Grip Lat Pulldown", "Back"),
+    ("Close Grip Lat Pulldown", "Back"),
+    ("Face Pull", "Back"),
+    ("T-Bar Row", "Back"),
+    ("Barbell Deadlift", "Back"),
+    ("Romanian Deadlift", "Back"),
+    ("Straight Arm Pulldown", "Back"),
+    ("Hyperextension", "Back"),
+    # Shoulders
+    ("Barbell Overhead Press", "Shoulders"),
+    ("Dumbbell Overhead Press", "Shoulders"),
+    ("Seated Dumbbell Press", "Shoulders"),
+    ("Arnold Press", "Shoulders"),
+    ("Dumbbell Lateral Raise", "Shoulders"),
+    ("Cable Lateral Raise", "Shoulders"),
+    ("Dumbbell Front Raise", "Shoulders"),
+    ("Rear Delt Fly", "Shoulders"),
+    ("Cable Rear Delt Fly", "Shoulders"),
+    ("Barbell Shrug", "Shoulders"),
+    ("Dumbbell Shrug", "Shoulders"),
+    ("Upright Row", "Shoulders"),
+    # Biceps
+    ("Barbell Curl", "Biceps"),
+    ("Dumbbell Curl", "Biceps"),
+    ("Incline Dumbbell Curl", "Biceps"),
+    ("Hammer Curl", "Biceps"),
+    ("Preacher Curl", "Biceps"),
+    ("Cable Curl", "Biceps"),
+    ("EZ Bar Curl", "Biceps"),
+    ("Concentration Curl", "Biceps"),
+    # Triceps
+    ("Tricep Pushdown", "Triceps"),
+    ("Overhead Tricep Extension", "Triceps"),
+    ("Skull Crusher", "Triceps"),
+    ("Close Grip Bench Press", "Triceps"),
+    ("Tricep Kickback", "Triceps"),
+    ("Cable Overhead Tricep Extension", "Triceps"),
+    ("Diamond Push Up", "Triceps"),
+    # Quads
+    ("Barbell Squat", "Quads"),
+    ("Front Squat", "Quads"),
+    ("Leg Press", "Quads"),
+    ("Hack Squat", "Quads"),
+    ("Leg Extension", "Quads"),
+    ("Dumbbell Lunge", "Quads"),
+    ("Barbell Lunge", "Quads"),
+    ("Bulgarian Split Squat", "Quads"),
+    ("Smith Machine Squat", "Quads"),
+    # Hamstrings
+    ("Lying Leg Curl", "Hamstrings"),
+    ("Seated Leg Curl", "Hamstrings"),
+    ("Romanian Deadlift", "Hamstrings"),
+    ("Stiff Leg Deadlift", "Hamstrings"),
+    ("Nordic Hamstring Curl", "Hamstrings"),
+    # Glutes
+    ("Hip Thrust", "Glutes"),
+    ("Barbell Hip Thrust", "Glutes"),
+    ("Cable Kickback", "Glutes"),
+    ("Glute Bridge", "Glutes"),
+    # Calves
+    ("Standing Calf Raise", "Calves"),
+    ("Seated Calf Raise", "Calves"),
+    ("Leg Press Calf Raise", "Calves"),
+    # Core
+    ("Plank", "Core"),
+    ("Crunch", "Core"),
+    ("Cable Crunch", "Core"),
+    ("Hanging Leg Raise", "Core"),
+    ("Ab Rollout", "Core"),
+    ("Russian Twist", "Core"),
+    ("Side Plank", "Core"),
+    ("Decline Crunch", "Core"),
+    # Cardio
+    ("Treadmill Run", "Cardio"),
+    ("Stationary Bike", "Cardio"),
+    ("Rowing Machine", "Cardio"),
+    ("Jump Rope", "Cardio"),
+    ("Stair Climber", "Cardio"),
+]
+
 # Common gym abbreviations and their full forms
 ABBREVIATIONS = {
     'db': 'dumbbell',
@@ -51,6 +155,14 @@ ABBREVIATIONS = {
     'push up': 'push up',
 }
 
+# Equipment type → word mapping (for stripping when equipment_type is tracked separately)
+EQUIPMENT_TYPE_WORDS = {
+    'barbell':    ['barbell'],
+    'free_weight': ['dumbbell'],
+    'cable':      ['cable'],
+    'machine':    ['machine'],
+}
+
 # Equipment words (should come first)
 EQUIPMENT_WORDS = [
     'dumbbell', 'barbell', 'cable', 'machine', 'smith', 'smith machine',
@@ -88,7 +200,7 @@ SPECIAL_PATTERNS = {
 }
 
 
-def normalize_exercise_name(name):
+def normalize_exercise_name(name, equipment_type=None):
     """
     Normalize exercise name through multiple stages:
     1. Cleaning (trim, lowercase, remove special chars)
@@ -118,6 +230,13 @@ def normalize_exercise_name(name):
     # Stage 2: Apply special patterns first (e.g., "bench press" → "barbell bench press")
     for pattern, replacement in SPECIAL_PATTERNS.items():
         name = re.sub(pattern, replacement, name, flags=re.IGNORECASE)
+
+    # Stage 2b: Strip equipment words when equipment_type is tracked as a separate field
+    if equipment_type and equipment_type in EQUIPMENT_TYPE_WORDS:
+        for eq_word in EQUIPMENT_TYPE_WORDS[equipment_type]:
+            # Remove the equipment word wherever it appears (start, middle, end)
+            name = re.sub(rf'\b{re.escape(eq_word)}\b', '', name)
+        name = ' '.join(name.split())  # collapse extra spaces
 
     # Stage 3: Expand abbreviations
     words = name.split()

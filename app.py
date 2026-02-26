@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_migrate import Migrate
-from models import db, User, Workout, Exercise, BodyMetrics, Meal, FoodItem, NutritionGoals, Supplement, WorkoutTemplate, TemplateExercise, TemplateSchedule, WeightPrediction
+from models import db, User, Workout, Exercise, BodyMetrics, Meal, FoodItem, NutritionGoals, Supplement, WorkoutTemplate, TemplateExercise, TemplateSchedule, WeightPrediction, ExerciseBank
 from datetime import datetime, timedelta
 from sqlalchemy import func
 import requests
@@ -994,7 +994,8 @@ def log_workout():
                 weight_value = None
 
             # Normalize exercise names for consistency
-            normalized_name = normalize_exercise_name(ex['name'])
+            equipment_type = ex.get('equipment_type') or None
+            normalized_name = normalize_exercise_name(ex['name'], equipment_type)
             normalized_superset_name = normalize_exercise_name(ex.get('superset_exercise_name')) if ex.get('superset_exercise_name') else None
 
             exercise = Exercise(
@@ -1004,6 +1005,7 @@ def log_workout():
                 reps=int(ex['reps']),
                 weight=weight_value,
                 rest_time=int(ex.get('rest_time', 0)),
+                equipment_type=equipment_type,
                 set_data=json.dumps(ex.get('set_data')) if ex.get('set_data') else None,
                 is_superset=bool(ex.get('is_superset', False)),
                 superset_exercise_name=normalized_superset_name
@@ -1071,7 +1073,8 @@ def update_workout(workout_id):
                 weight_value = None
 
             # Normalize exercise names for consistency
-            normalized_name = normalize_exercise_name(ex['name'])
+            equipment_type = ex.get('equipment_type') or None
+            normalized_name = normalize_exercise_name(ex['name'], equipment_type)
             normalized_superset_name = normalize_exercise_name(ex.get('superset_exercise_name')) if ex.get('superset_exercise_name') else None
 
             exercise = Exercise(
@@ -1081,6 +1084,7 @@ def update_workout(workout_id):
                 reps=int(ex['reps']),
                 weight=weight_value,
                 rest_time=int(ex.get('rest_time', 0)),
+                equipment_type=equipment_type,
                 set_data=json.dumps(ex.get('set_data')) if ex.get('set_data') else None,
                 is_superset=bool(ex.get('is_superset', False)),
                 superset_exercise_name=normalized_superset_name
@@ -1152,6 +1156,7 @@ def save_draft_workout():
             reps=int(ex.get('reps', 0)),
             weight=weight_value,
             rest_time=int(ex.get('rest_time', 0)),
+            equipment_type=ex.get('equipment_type') or None,
             set_data=json.dumps(ex.get('set_data')) if ex.get('set_data') else None,
             is_superset=bool(ex.get('is_superset', False)),
             superset_exercise_name=ex.get('superset_exercise_name')
@@ -1190,16 +1195,21 @@ def complete_draft_workout():
             else:
                 weight_value = None
 
+            equipment_type = ex.get('equipment_type') or None
+            normalized_name = normalize_exercise_name(ex['name'], equipment_type)
+            normalized_superset_name = normalize_exercise_name(ex.get('superset_exercise_name')) if ex.get('superset_exercise_name') else None
+
             exercise = Exercise(
                 workout_id=draft.id,
-                name=ex['name'],
+                name=normalized_name,
                 sets=int(ex.get('sets', 1)),
                 reps=int(ex.get('reps', 0)),
                 weight=weight_value,
                 rest_time=int(ex.get('rest_time', 0)),
+                equipment_type=equipment_type,
                 set_data=json.dumps(ex.get('set_data')) if ex.get('set_data') else None,
                 is_superset=bool(ex.get('is_superset', False)),
-                superset_exercise_name=ex.get('superset_exercise_name')
+                superset_exercise_name=normalized_superset_name
             )
             db.session.add(exercise)
 
@@ -1230,10 +1240,16 @@ def progress():
 @app.route('/api/progress/<exercise_name>')
 @login_required
 def get_exercise_progress(exercise_name):
-    exercises = Exercise.query.join(Workout).filter(
+    equipment_type = request.args.get('equipment_type') or None
+    query = Exercise.query.join(Workout).filter(
         Exercise.name == exercise_name,
         Workout.user_id == current_user.id
-    ).order_by(Workout.date.asc()).all()
+    )
+    if equipment_type:
+        query = query.filter(Exercise.equipment_type == equipment_type)
+    else:
+        query = query.filter(Exercise.equipment_type.is_(None))
+    exercises = query.order_by(Workout.date.asc()).all()
 
     # Get user's timezone offset
     offset_hours = current_user.timezone_offset or 0
@@ -1250,10 +1266,108 @@ def get_exercise_progress(exercise_name):
 @app.route('/api/exercise_names')
 @login_required
 def get_exercise_names():
-    exercises = db.session.query(Exercise.name).join(Workout).filter(
-        Workout.user_id == current_user.id
+    results = db.session.query(Exercise.name, Exercise.equipment_type).join(Workout).filter(
+        Workout.user_id == current_user.id,
+        Workout.is_draft == False
     ).distinct().all()
-    return jsonify([ex[0] for ex in exercises])
+    seen = set()
+    exercise_list = []
+    for name, equipment_type in results:
+        key = (name, equipment_type)
+        if key not in seen:
+            seen.add(key)
+            exercise_list.append({'name': name, 'equipment_type': equipment_type})
+    exercise_list.sort(key=lambda e: e['name'].lower())
+    return jsonify(exercise_list)
+
+
+@app.route('/api/exercise_bank')
+@login_required
+def get_exercise_bank():
+    """Search the exercise bank. Returns global + user custom + user history exercises."""
+    q = request.args.get('q', '').strip()
+
+    # Global seeded exercises
+    global_query = ExerciseBank.query.filter(ExerciseBank.user_id.is_(None))
+    # User's custom exercises
+    custom_query = ExerciseBank.query.filter(ExerciseBank.user_id == current_user.id)
+
+    if q:
+        pattern = f'%{q}%'
+        global_query = global_query.filter(ExerciseBank.name.ilike(pattern))
+        custom_query = custom_query.filter(ExerciseBank.name.ilike(pattern))
+
+    bank_entries = global_query.all() + custom_query.all()
+    bank_names = {e.name.lower() for e in bank_entries}
+
+    # Also include exercises from user's workout history not already in the bank
+    history_query = db.session.query(Exercise.name).join(Workout).filter(
+        Workout.user_id == current_user.id,
+        Workout.is_draft == False
+    ).distinct()
+    if q:
+        history_query = history_query.filter(Exercise.name.ilike(f'%{q}%'))
+
+    history_results = []
+    for (name,) in history_query.all():
+        if name.lower() not in bank_names:
+            history_results.append({'id': None, 'name': name, 'muscle_group': None, 'is_custom': False})
+            bank_names.add(name.lower())
+
+    results = [e.to_dict() for e in bank_entries] + history_results
+
+    # Sort: exact-start matches first, then alphabetical
+    if q:
+        ql = q.lower()
+        results.sort(key=lambda e: (0 if e['name'].lower().startswith(ql) else 1, e['name'].lower()))
+    else:
+        results.sort(key=lambda e: e['name'].lower())
+
+    return jsonify(results[:25])
+
+
+@app.route('/api/exercise_bank', methods=['POST'])
+@login_required
+def add_exercise_bank():
+    """Add a custom exercise to the user's bank."""
+    data = request.get_json()
+    if not data or not data.get('name', '').strip():
+        return jsonify({'error': 'name is required'}), 400
+
+    equipment_type = data.get('equipment_type') or None
+    normalized = normalize_exercise_name(data['name'].strip(), equipment_type)
+    muscle_group = data.get('muscle_group', '').strip() or None
+
+    # Check if already exists (global or user's custom)
+    existing = ExerciseBank.query.filter(
+        ExerciseBank.name.ilike(normalized),
+        (ExerciseBank.user_id.is_(None)) | (ExerciseBank.user_id == current_user.id)
+    ).first()
+    if existing:
+        return jsonify(existing.to_dict()), 200
+
+    entry = ExerciseBank(
+        user_id=current_user.id,
+        name=normalized,
+        muscle_group=muscle_group,
+        equipment_type=equipment_type,
+        is_custom=True,
+    )
+    db.session.add(entry)
+    db.session.commit()
+    return jsonify(entry.to_dict()), 201
+
+
+@app.route('/api/exercise_bank/<int:exercise_id>', methods=['DELETE'])
+@login_required
+def delete_exercise_bank(exercise_id):
+    """Delete a user's custom exercise from the bank."""
+    entry = ExerciseBank.query.filter_by(id=exercise_id, user_id=current_user.id).first()
+    if not entry:
+        return jsonify({'error': 'Not found or not authorized'}), 404
+    db.session.delete(entry)
+    db.session.commit()
+    return jsonify({'success': True})
 
 @app.route('/api/exercises/normalize/preview')
 @login_required
@@ -2243,7 +2357,8 @@ def get_consistency():
     """
     from datetime import datetime, timedelta
 
-    # Get number of days to look back (default 30)
+    # Get number of days to look back (default 30), or use current calendar week
+    period = request.args.get('period')
     days = int(request.args.get('days', 30))
 
     # Build a set of scheduled day_of_week values from both old and new methods
@@ -2280,7 +2395,12 @@ def get_consistency():
 
     # Get all workouts in the date range (exclude drafts)
     end_date = datetime.now()
-    start_date = end_date - timedelta(days=days)
+    if period == 'week':
+        today = end_date.date()
+        monday = today - timedelta(days=today.weekday())
+        start_date = datetime(monday.year, monday.month, monday.day)
+    else:
+        start_date = end_date - timedelta(days=days)
 
     workouts = Workout.query.filter(
         Workout.user_id == current_user.id,

@@ -75,6 +75,15 @@
 <script>
     let weightChart, volumeChart;
 
+    const EQUIPMENT_LABELS = { barbell: 'Barbell', free_weight: 'Free Weight', cable: 'Cable', machine: 'Machine' };
+
+    function exerciseDisplayName(ex) {
+        if (ex.equipment_type && EQUIPMENT_LABELS[ex.equipment_type]) {
+            return `${ex.name} (${EQUIPMENT_LABELS[ex.equipment_type]})`;
+        }
+        return ex.name;
+    }
+
     function loadExercises() {
         fetch('/api/exercise_names')
             .then(response => response.json())
@@ -82,18 +91,21 @@
                 const select = document.getElementById('exercise-select');
                 exercises.forEach(ex => {
                     const option = document.createElement('option');
-                    option.value = ex;
-                    option.textContent = ex;
+                    // Store name and equipment_type as JSON in the value
+                    option.value = JSON.stringify({ name: ex.name, equipment_type: ex.equipment_type });
+                    option.textContent = exerciseDisplayName(ex);
                     select.appendChild(option);
                 });
             });
     }
 
     function loadProgress() {
-        const exercise = document.getElementById('exercise-select').value;
-        if (!exercise) return;
+        const raw = document.getElementById('exercise-select').value;
+        if (!raw) return;
+        const { name: exercise, equipment_type } = JSON.parse(raw);
 
-        fetch(`/api/progress/${encodeURIComponent(exercise)}`)
+        const params = equipment_type ? `?equipment_type=${encodeURIComponent(equipment_type)}` : '';
+        fetch(`/api/progress/${encodeURIComponent(exercise)}${params}`)
             .then(response => response.json())
             .then(data => {
                 if (data.length === 0) {
