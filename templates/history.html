@@ -256,6 +256,87 @@
         border-color: rgba(74, 158, 255, 0.2);
     }
 
+    /* ---- Compare Mode ---- */
+    #compare-banner {
+        display: none;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 10px 14px;
+        margin-bottom: 12px;
+        background: rgba(13, 110, 253, 0.12);
+        border: 1px solid rgba(13, 110, 253, 0.35);
+        border-radius: 8px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #0d6efd;
+    }
+
+    #compare-banner.active {
+        display: flex;
+    }
+
+    body.dark-mode #compare-banner {
+        background: rgba(74, 158, 255, 0.15);
+        border-color: rgba(74, 158, 255, 0.35);
+        color: #4a9eff;
+    }
+
+    .calendar-day.compare-selected-1 {
+        outline: 3px solid #198754 !important;
+        outline-offset: -2px;
+        background: rgba(25, 135, 84, 0.18) !important;
+    }
+
+    .calendar-day.compare-selected-2 {
+        outline: 3px solid #dc3545 !important;
+        outline-offset: -2px;
+        background: rgba(220, 53, 69, 0.18) !important;
+    }
+
+    #compare-btn {
+        font-size: 0.85rem;
+        padding: 6px 12px;
+        white-space: nowrap;
+    }
+
+    @media (max-width: 768px) {
+        #compare-btn .compare-btn-text {
+            display: none;
+        }
+    }
+
+    .compare-col-header {
+        font-size: 1rem;
+        font-weight: 600;
+        padding-bottom: 8px;
+        border-bottom: 2px solid rgba(13, 110, 253, 0.3);
+        margin-bottom: 12px;
+    }
+
+    .compare-col-day1 {
+        border-bottom-color: #198754;
+        color: #198754;
+    }
+
+    .compare-col-day2 {
+        border-bottom-color: #dc3545;
+        color: #dc3545;
+    }
+
+    body.dark-mode .compare-col-day1 { color: #28a745; }
+    body.dark-mode .compare-col-day2 { color: #e05c6a; }
+
+    @media (min-width: 768px) {
+        .compare-col-right {
+            border-left: 1px solid rgba(0, 0, 0, 0.1);
+            padding-left: 20px;
+        }
+        body.dark-mode .compare-col-right {
+            border-left-color: rgba(255, 255, 255, 0.12);
+        }
+    }
+
     .legend {
         display: flex;
         gap: 20px;
@@ -377,8 +458,26 @@
             <i class="bi bi-chevron-left"></i>
         </button>
         <h4 class="calendar-title" id="calendar-title"></h4>
-        <button class="btn btn-outline-primary month-nav-btn" onclick="changeMonth(1)">
-            <i class="bi bi-chevron-right"></i>
+        <div class="d-flex align-items-center gap-2">
+            <button id="compare-btn" class="btn btn-outline-secondary" onclick="startCompareMode()">
+                <i class="bi bi-layout-split"></i>
+                <span class="compare-btn-text ms-1">Compare</span>
+            </button>
+            <button class="btn btn-outline-primary month-nav-btn" onclick="changeMonth(1)">
+                <i class="bi bi-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Compare mode status banner -->
+    <div id="compare-banner">
+        <div>
+            <i class="bi bi-info-circle me-2"></i>
+            <span id="compare-banner-text">Select first day</span>
+        </div>
+        <button class="btn btn-sm btn-outline-secondary" onclick="cancelCompareMode()">
+            <i class="bi bi-x-lg"></i>
+            <span class="ms-1 d-none d-sm-inline">Cancel</span>
         </button>
     </div>
 
@@ -456,6 +555,41 @@
         </div>
     </div>
 </div>
+
+<!-- Comparison Modal -->
+<div class="modal fade" id="comparisonModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-layout-split me-2"></i>Workout Comparison
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-12 col-md-6">
+                        <div class="compare-col-header compare-col-day1">
+                            <i class="bi bi-calendar-event me-1"></i>
+                            <span id="compare-date-1"></span>
+                        </div>
+                        <div id="compare-body-1"></div>
+                    </div>
+                    <div class="col-12 col-md-6 compare-col-right">
+                        <div class="compare-col-header compare-col-day2">
+                            <i class="bi bi-calendar-event me-1"></i>
+                            <span id="compare-date-2"></span>
+                        </div>
+                        <div id="compare-body-2"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -464,6 +598,11 @@
     let workoutData = {};
     let nutritionData = {};
     const today = new Date();
+
+    // Compare mode state
+    let compareModeActive = false;
+    let compareDay1 = null;   // 'YYYY-MM-DD'
+    let compareDay2 = null;   // 'YYYY-MM-DD'
 
     function loadCalendarData() {
         // Fetch both workouts and nutrition data
@@ -670,11 +809,124 @@
                     cell.appendChild(indicators);
                 }
 
-                cell.onclick = () => showActivityDetails(dateStr);
             }
+
+            cell.onclick = () => {
+                if (compareModeActive) {
+                    handleCompareDayClick(dateStr, cell);
+                } else {
+                    showActivityDetails(dateStr);
+                }
+            };
         }
 
         return cell;
+    }
+
+    /**
+     * Builds HTML for a list of workout objects.
+     * Used by both the activity modal and the comparison modal.
+     * @param {Array}   workouts       - Array of workout objects from workoutData
+     * @param {boolean} includeActions - If true, renders Edit/Delete buttons per workout
+     * @returns {string} HTML string
+     */
+    function buildWorkoutHtml(workouts, includeActions = false) {
+        if (!workouts || workouts.length === 0) {
+            return '<p class="text-muted text-center py-3">No workouts logged.</p>';
+        }
+
+        let html = '<h6 class="mb-3"><i class="bi bi-dumbbell"></i> Workouts</h6>';
+
+        workouts.forEach((w, idx) => {
+            html += `<div class="activity-card">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <strong><i class="bi bi-check-circle-fill text-success"></i> Workout ${workouts.length > 1 ? `#${idx + 1}` : 'Completed'}</strong>
+                    <div>`;
+
+            if (includeActions) {
+                html += `
+                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editWorkout(${w.id})" title="Edit Workout">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteWorkoutConfirm(${w.id})" title="Delete Workout">
+                            <i class="bi bi-trash"></i>
+                        </button>`;
+            }
+
+            html += `
+                        <span class="badge bg-primary ms-2">${w.exercise_count} exercise${w.exercise_count > 1 ? 's' : ''}</span>
+                    </div>
+                </div>`;
+
+            if (w.template_name) {
+                const tc = w.template_color || '#198754';
+                html += `<small class="d-block mb-2"><span class="badge" style="background-color: ${tc};">${w.template_name}</span></small>`;
+            }
+
+            if (w.exercises && w.exercises.length > 0) {
+                html += '<div class="ms-3">';
+                w.exercises.forEach(ex => {
+                    html += `<div class="mb-3">`;
+
+                    if (ex.is_superset) {
+                        html += `<div><span class="badge bg-primary me-2">Superset</span><strong>${ex.name} / ${ex.superset_exercise_name || 'Exercise B'}</strong></div>`;
+                    } else {
+                        html += `<div><strong>${ex.name}</strong></div>`;
+                    }
+
+                    if (ex.set_data && ex.set_data.length > 0) {
+                        html += '<div class="ms-2 mt-1">';
+                        ex.set_data.forEach((set, setIdx) => {
+                            let displayText = '';
+                            let dropSetBadge = '';
+
+                            if (ex.is_superset) {
+                                const repsA = set.reps_a || set.reps || '-';
+                                const repsB = set.reps_b || set.reps || '-';
+                                const weightA = set.weight_a !== null && set.weight_a !== undefined ? set.weight_a : '-';
+                                const weightB = set.weight_b !== null && set.weight_b !== undefined ? set.weight_b : '-';
+                                displayText = `${repsA} reps @ ${weightA} lbs / ${repsB} reps @ ${weightB} lbs`;
+                            } else if (set.is_drop_set && set.stages && set.stages.length > 0) {
+                                const stageTexts = set.stages.map(stage => {
+                                    const weight = stage.weight !== null && stage.weight !== undefined ? `${stage.weight}` : 'BW';
+                                    return `${stage.reps} @ ${weight}`;
+                                });
+                                displayText = stageTexts.join(' → ') + ' lbs';
+                                dropSetBadge = '<span class="badge bg-warning text-dark me-1">Drop Set</span>';
+                            } else {
+                                const weightDisplay = set.weight !== null && set.weight !== undefined ? ` @ ${set.weight} lbs` : '';
+                                displayText = `${set.reps} reps${weightDisplay}`;
+                            }
+                            html += `<small class="d-block text-muted">${dropSetBadge}Set ${set.set_number || setIdx + 1}: ${displayText}</small>`;
+                        });
+                        html += '</div>';
+                    } else {
+                        const weightDisplay = ex.weight !== null && ex.weight !== undefined ? ` @ ${ex.weight} lbs` : '';
+                        html += `<small class="text-muted">${ex.sets} × ${ex.reps} reps${weightDisplay}</small>`;
+                    }
+
+                    if (ex.rest_time) {
+                        html += `<small class="text-muted d-block">Rest: ${ex.rest_time}s</small>`;
+                    }
+                    html += `</div>`;
+                });
+                html += '</div>';
+            }
+
+            if (w.notes) {
+                html += `<p class="text-muted mb-0 mt-2"><small><i class="bi bi-sticky"></i> ${w.notes}</small></p>`;
+            }
+
+            if (w.date) {
+                const adjustedDate = applyTimezoneOffset(w.date);
+                const workoutTime = adjustedDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+                html += `<small class="text-muted"><i class="bi bi-clock"></i> ${workoutTime}</small>`;
+            }
+
+            html += '</div>';
+        });
+
+        return html;
     }
 
     function showActivityDetails(dateStr) {
@@ -691,108 +943,7 @@
 
         // Show workouts
         if (workouts.length > 0) {
-            html += '<h6 class="mb-3"><i class="bi bi-dumbbell"></i> Workouts</h6>';
-            workouts.forEach((w, idx) => {
-                html += `
-                    <div class="activity-card">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <strong><i class="bi bi-check-circle-fill text-success"></i> Workout ${workouts.length > 1 ? `#${idx + 1}` : 'Completed'}</strong>
-                            <div>
-                                <button class="btn btn-sm btn-outline-primary me-1" onclick="editWorkout(${w.id})" title="Edit Workout">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-danger" onclick="deleteWorkoutConfirm(${w.id})" title="Delete Workout">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                                <span class="badge bg-primary ms-2">${w.exercise_count} exercise${w.exercise_count > 1 ? 's' : ''}</span>
-                            </div>
-                        </div>
-                `;
-
-                // Display each exercise with set-by-set details
-                if (w.exercises && w.exercises.length > 0) {
-                    html += '<div class="ms-3">';
-                    w.exercises.forEach(ex => {
-                        html += `<div class="mb-3">`;
-
-                        // Show superset badge and dual exercise names if it's a superset
-                        if (ex.is_superset) {
-                            html += `
-                                <div>
-                                    <span class="badge bg-primary me-2">Superset</span>
-                                    <strong>${ex.name} / ${ex.superset_exercise_name || 'Exercise B'}</strong>
-                                </div>
-                            `;
-                        } else {
-                            html += `<div><strong>${ex.name}</strong></div>`;
-                        }
-
-                        // Show individual sets if set_data exists, otherwise show summary
-                        if (ex.set_data && ex.set_data.length > 0) {
-                            html += '<div class="ms-2 mt-1">';
-                            ex.set_data.forEach((set, setIdx) => {
-                                let displayText = '';
-                                let dropSetBadge = '';
-
-                                if (ex.is_superset) {
-                                    // Show dual reps and weights for superset
-                                    const repsA = set.reps_a || set.reps || '-';
-                                    const repsB = set.reps_b || set.reps || '-';
-                                    const weightA = set.weight_a !== null && set.weight_a !== undefined ? set.weight_a : '-';
-                                    const weightB = set.weight_b !== null && set.weight_b !== undefined ? set.weight_b : '-';
-                                    displayText = `${repsA} reps @ ${weightA} lbs / ${repsB} reps @ ${weightB} lbs`;
-                                } else if (set.is_drop_set && set.stages && set.stages.length > 0) {
-                                    // Show drop set stages with arrows
-                                    const stageTexts = set.stages.map(stage => {
-                                        const weight = stage.weight !== null && stage.weight !== undefined ? `${stage.weight}` : 'BW';
-                                        return `${stage.reps} @ ${weight}`;
-                                    });
-                                    displayText = stageTexts.join(' → ') + ' lbs';
-                                    dropSetBadge = '<span class="badge bg-warning text-dark me-1">Drop Set</span>';
-                                } else {
-                                    // Show single reps and weight for normal exercise
-                                    const weightDisplay = set.weight !== null && set.weight !== undefined ? ` @ ${set.weight} lbs` : '';
-                                    displayText = `${set.reps} reps${weightDisplay}`;
-                                }
-                                html += `
-                                    <small class="d-block text-muted">
-                                        ${dropSetBadge}Set ${set.set_number || setIdx + 1}: ${displayText}
-                                    </small>
-                                `;
-                            });
-                            html += '</div>';
-                        } else {
-                            // Fallback to summary view
-                            const weightDisplay = ex.weight !== null && ex.weight !== undefined ? ` @ ${ex.weight} lbs` : '';
-                            html += `
-                                <small class="text-muted">
-                                    ${ex.sets} × ${ex.reps} reps${weightDisplay}
-                                </small>
-                            `;
-                        }
-
-                        if (ex.rest_time) {
-                            html += `<small class="text-muted d-block">Rest: ${ex.rest_time}s</small>`;
-                        }
-                        html += `</div>`;
-                    });
-                    html += '</div>';
-                }
-
-                // Show notes if any
-                if (w.notes) {
-                    html += `<p class="text-muted mb-0 mt-2"><small><i class="bi bi-sticky"></i> ${w.notes}</small></p>`;
-                }
-
-                // Show workout time with timezone offset applied
-                if (w.date) {
-                    const adjustedDate = applyTimezoneOffset(w.date);
-                    const workoutTime = adjustedDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-                    html += `<small class="text-muted"><i class="bi bi-clock"></i> ${workoutTime}</small>`;
-                }
-
-                html += '</div>';
-            });
+            html += buildWorkoutHtml(workouts, true);
         }
 
         // Show nutrition
@@ -847,6 +998,59 @@
 
         modalBody.innerHTML = html;
         modal.show();
+    }
+
+    function showComparisonView(date1, date2) {
+        const formatOpts = { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' };
+        document.getElementById('compare-date-1').textContent =
+            new Date(date1 + 'T00:00:00').toLocaleDateString('en-US', formatOpts);
+        document.getElementById('compare-date-2').textContent =
+            new Date(date2 + 'T00:00:00').toLocaleDateString('en-US', formatOpts);
+        document.getElementById('compare-body-1').innerHTML = buildWorkoutHtml(workoutData[date1] || [], false);
+        document.getElementById('compare-body-2').innerHTML = buildWorkoutHtml(workoutData[date2] || [], false);
+        new bootstrap.Modal(document.getElementById('comparisonModal')).show();
+    }
+
+    function startCompareMode() {
+        compareModeActive = true;
+        compareDay1 = null;
+        compareDay2 = null;
+        document.getElementById('compare-banner').classList.add('active');
+        document.getElementById('compare-banner-text').textContent = 'Select first day';
+        document.getElementById('compare-btn').classList.replace('btn-outline-secondary', 'btn-secondary');
+    }
+
+    function cancelCompareMode() {
+        compareModeActive = false;
+        compareDay1 = null;
+        compareDay2 = null;
+        document.getElementById('compare-banner').classList.remove('active');
+        document.getElementById('compare-btn').classList.replace('btn-secondary', 'btn-outline-secondary');
+        document.querySelectorAll('.calendar-day.compare-selected-1, .calendar-day.compare-selected-2')
+            .forEach(el => el.classList.remove('compare-selected-1', 'compare-selected-2'));
+    }
+
+    function handleCompareDayClick(dateStr, cell) {
+        if (compareDay1 === null) {
+            compareDay1 = dateStr;
+            cell.classList.add('compare-selected-1');
+            document.getElementById('compare-banner-text').textContent = 'Now select second day';
+        } else if (dateStr === compareDay1) {
+            // Deselect Day 1
+            compareDay1 = null;
+            cell.classList.remove('compare-selected-1');
+            document.getElementById('compare-banner-text').textContent = 'Select first day';
+        } else if (compareDay2 === null) {
+            compareDay2 = dateStr;
+            cell.classList.add('compare-selected-2');
+            document.getElementById('compare-banner-text').textContent = 'Loading comparison...';
+            const d1 = compareDay1;
+            const d2 = compareDay2;
+            setTimeout(() => {
+                cancelCompareMode();
+                showComparisonView(d1, d2);
+            }, 150);
+        }
     }
 
     function changeMonth(delta) {
