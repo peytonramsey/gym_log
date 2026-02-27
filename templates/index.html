@@ -429,6 +429,10 @@
             font-size: 0.7rem;
         }
     }
+
+    /* Muscle Balance Card */
+    .trend-down { color: #dc3545; }
+    body.dark-mode .trend-down { color: #ff6b6b; }
 </style>
 {% endblock %}
 
@@ -532,13 +536,19 @@
                 </div>
             </div>
             <div class="col-4">
-                <div class="stat-card text-center">
-                    <div class="stat-value" id="consistency-display">
+                <div class="stat-card text-center" id="hybrid-stat-card">
+                    <!-- Spinner while loading -->
+                    <div id="hybrid-loading" class="stat-value">
                         <div class="spinner-border spinner-border-sm" role="status">
                             <span class="visually-hidden">Loading...</span>
                         </div>
                     </div>
-                    <small>Training Consistency</small>
+                    <!-- Balance content -->
+                    <div id="hybrid-content" style="display:none;width:100%;">
+                        <div id="balance-dominant" style="min-height:32px;display:flex;align-items:center;justify-content:center;"></div>
+                        <div id="balance-subtext" style="font-size:0.6rem;line-height:1.2;color:rgba(255,255,255,0.65);margin-top:1px;"></div>
+                    </div>
+                    <small>Muscle Balance</small>
                 </div>
             </div>
         </div>
@@ -641,25 +651,44 @@
             console.error('Error fetching calendar data:', error);
         });
 
-    // Fetch consistency data
-    fetch('/api/consistency?days=30')
-        .then(response => response.json())
-        .then(data => {
-            const display = document.getElementById('consistency-display');
-            const percentage = data.adherence_percentage || 0;
+    // ── Muscle Balance Card ──────────────────────────────────────────────────
+    function renderBalanceCard(data) {
+        document.getElementById('hybrid-loading').style.display = 'none';
+        document.getElementById('hybrid-content').style.display = 'block';
 
-            // Encouraging color scale — no red for low values
-            let colorClass = '';
-            if (percentage >= 70) colorClass = 'text-success';
-            else if (percentage >= 50) colorClass = 'text-warning';
-            else colorClass = 'text-muted';
+        if (!data.has_data) {
+            document.getElementById('balance-dominant').innerHTML =
+                '<p style="font-size:0.65rem;color:rgba(255,255,255,0.45);margin:0;line-height:1.3;">Log your first workout<br>to see your balance</p>';
+            return;
+        }
 
-            display.innerHTML = `<h3 class="mb-1 ${colorClass}">${percentage}%</h3>`;
-            display.title = `${data.completed_days} of ${data.scheduled_days} scheduled workouts completed`;
-        })
-        .catch(error => {
-            console.error('Error fetching consistency:', error);
-            document.getElementById('consistency-display').innerHTML = '<h3 class="mb-1">-</h3>';
+        const b = data.balance;
+        if (b.no_tracked_groups) {
+            document.getElementById('balance-dominant').innerHTML =
+                '<p style="font-size:0.62rem;color:rgba(255,255,255,0.45);margin:0;">Log exercises to see muscle balance</p>';
+            document.getElementById('balance-subtext').textContent = '';
+        } else if (b.all_trained_this_week) {
+            document.getElementById('balance-dominant').innerHTML =
+                '<h3 class="mb-0" style="font-size:1.1rem;">Balance: Good</h3>';
+            document.getElementById('balance-subtext').textContent = 'All groups trained this week';
+        } else if (b.most_neglected) {
+            const mn = b.most_neglected;
+            document.getElementById('balance-dominant').innerHTML =
+                `<h3 class="mb-0 trend-down" style="font-size:0.95rem;">&#9888; Check ${mn.group}</h3>`;
+            document.getElementById('balance-subtext').textContent =
+                `${mn.group} last trained ${mn.days_ago} day${mn.days_ago !== 1 ? 's' : ''} ago`;
+        } else {
+            document.getElementById('balance-dominant').innerHTML =
+                '<h3 class="mb-0" style="font-size:1.1rem;">Balance: Good</h3>';
+            document.getElementById('balance-subtext').textContent = '';
+        }
+    }
+
+    fetch('/api/hybrid_stat')
+        .then(r => r.json())
+        .then(renderBalanceCard)
+        .catch(() => {
+            document.getElementById('hybrid-loading').innerHTML = '<h3 class="mb-1 text-muted">—</h3>';
         });
 
     // Fetch weekly workout goal progress

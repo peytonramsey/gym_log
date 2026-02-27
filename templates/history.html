@@ -709,19 +709,35 @@
 
         // Collect unique templates from the current month
         const templatesInMonth = new Map(); // Map of templateName -> color
+        let hasRestDays = false;
 
         for (let day = 1; day <= daysInMonth; day++) {
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             if (workoutData[dateStr]) {
                 workoutData[dateStr].forEach(workout => {
-                    const templateName = workout.template_name || 'Workout';
-                    const templateColor = workout.template_color || '#198754';
-                    // Use template name as key to avoid duplicates
-                    if (!templatesInMonth.has(templateName)) {
-                        templatesInMonth.set(templateName, templateColor);
+                    if (workout.is_rest_day) {
+                        hasRestDays = true;
+                    } else {
+                        const templateName = workout.template_name || 'Workout';
+                        const templateColor = workout.template_color || '#198754';
+                        // Use template name as key to avoid duplicates
+                        if (!templatesInMonth.has(templateName)) {
+                            templatesInMonth.set(templateName, templateColor);
+                        }
                     }
                 });
             }
+        }
+
+        // Add "Rest Day" legend if any rest days exist this month
+        if (hasRestDays) {
+            const restItem = document.createElement('div');
+            restItem.className = 'legend-item';
+            restItem.innerHTML = `
+                <div class="legend-box" style="background: rgba(108, 117, 125, 0.3); border-color: #6c757d;"></div>
+                <span>Rest Day</span>
+            `;
+            legend.appendChild(restItem);
         }
 
         // Add "Missed Day" legend if the user has a schedule defined
@@ -787,9 +803,26 @@
 
             if (hasWorkout) {
                 const workouts = workoutData[dateStr];
+                const allRestDays = workouts.every(w => w.is_rest_day);
 
+                // Rest-only day: grey styling + moon indicator
+                if (allRestDays) {
+                    cell.style.backgroundColor = 'rgba(108, 117, 125, 0.2)';
+                    if (!isToday) {
+                        cell.style.borderColor = '#6c757d';
+                    }
+                    const indicators = document.createElement('div');
+                    indicators.className = 'activity-indicators';
+                    const restIndicator = document.createElement('div');
+                    restIndicator.className = 'workout-indicator';
+                    restIndicator.style.backgroundColor = '#6c757d';
+                    restIndicator.textContent = '🌙';
+                    restIndicator.title = 'Rest Day';
+                    indicators.appendChild(restIndicator);
+                    cell.appendChild(indicators);
+                } else {
                 // Check if we have 2 workouts with different template colors
-                const uniqueColors = [...new Set(workouts.map(w => w.template_color || '#198754'))];
+                const uniqueColors = [...new Set(workouts.filter(w => !w.is_rest_day).map(w => w.template_color || '#198754'))];
                 const hasTwoTemplates = workouts.length >= 2 && uniqueColors.length >= 2;
 
                 if (hasTwoTemplates) {
@@ -855,6 +888,7 @@
 
                     cell.appendChild(indicators);
                 }
+                } // end else (not allRestDays)
 
             }
 
@@ -890,6 +924,26 @@
         let html = '<h6 class="mb-3"><i class="bi bi-dumbbell"></i> Workouts</h6>';
 
         workouts.forEach((w, idx) => {
+            // Rest day entry
+            if (w.is_rest_day) {
+                html += `<div class="activity-card" style="border-left: 4px solid #6c757d;">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <strong><i class="bi bi-moon-stars-fill text-secondary me-1"></i> Rest Day</strong>
+                        <div>`;
+                if (includeActions) {
+                    html += `
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteWorkoutConfirm(${w.id})" title="Delete">
+                                <i class="bi bi-trash"></i>
+                            </button>`;
+                }
+                html += `</div></div>`;
+                if (w.notes) {
+                    html += `<small class="text-muted">${w.notes}</small>`;
+                }
+                html += `</div>`;
+                return;
+            }
+
             html += `<div class="activity-card">
                 <div class="d-flex justify-content-between align-items-start mb-2">
                     <strong><i class="bi bi-check-circle-fill text-success"></i> Workout ${workouts.length > 1 ? `#${idx + 1}` : 'Completed'}</strong>

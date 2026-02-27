@@ -58,6 +58,7 @@ class Workout(db.Model):
     date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     notes = db.Column(db.String(500))
     is_draft = db.Column(db.Boolean, default=False, nullable=False)  # Draft workouts are auto-saved in progress
+    is_rest_day = db.Column(db.Boolean, default=False, nullable=False)  # Intentional rest day (no exercises)
     template_id = db.Column(db.Integer, db.ForeignKey('workout_template.id'), nullable=True)  # Track which template was used
     exercises = db.relationship('Exercise', backref='workout', lazy=True, cascade='all, delete-orphan')
     template = db.relationship('WorkoutTemplate', backref='workouts')
@@ -68,6 +69,7 @@ class Workout(db.Model):
             'date': self.date.isoformat() + 'Z',  # Return as ISO format with UTC marker
             'notes': self.notes,
             'is_draft': self.is_draft,
+            'is_rest_day': self.is_rest_day,
             'template_id': self.template_id,
             'template_color': self.template.color if self.template else None,
             'template_name': self.template.name if self.template else None,

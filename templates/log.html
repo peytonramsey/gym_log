@@ -424,6 +424,11 @@
                 <i class="bi bi-check-circle"></i> Save Workout
             </button>
         </div>
+        <div class="col-12">
+            <button class="btn btn-outline-secondary w-100" onclick="saveRestDay()">
+                <i class="bi bi-moon-stars"></i> Log Rest Day
+            </button>
+        </div>
     </div>
 </div>
 
@@ -1720,6 +1725,34 @@
         .catch(error => {
             showError('Error saving workout: ' + error);
         });
+    }
+
+    function saveRestDay() {
+        const localDateValue = document.getElementById('workout-date').value;
+        const utcDate = localInputValueToUTC(localDateValue);
+        const data = {
+            date: utcDate,
+            notes: document.getElementById('workout-notes').value,
+            is_rest_day: true,
+            exercises: []
+        };
+        fetch('/log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(r => r.json())
+        .then(result => {
+            if (result.success) {
+                workoutSaved = true;
+                localStorage.removeItem('gymlog_workout_draft');
+                showSuccess('Rest day logged!');
+                setTimeout(() => { window.location.href = '/history'; }, 1000);
+            } else {
+                showError('Error logging rest day: ' + (result.message || 'Unknown error'));
+            }
+        })
+        .catch(error => showError('Error logging rest day: ' + error));
     }
 
     function confirmClear() {

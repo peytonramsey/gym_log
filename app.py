@@ -975,16 +975,18 @@ def log_workout():
     if request.method == 'POST':
         data = request.get_json()
 
+        is_rest_day = bool(data.get('is_rest_day', False))
         workout = Workout(
             user_id=current_user.id,
             date=datetime.fromisoformat(data.get('date', datetime.now().isoformat())),
             notes=data.get('notes', ''),
+            is_rest_day=is_rest_day,
             template_id=data.get('template_id')
         )
         db.session.add(workout)
         db.session.flush()
 
-        for ex in data.get('exercises', []):
+        for ex in data.get('exercises', []) if not is_rest_day else []:
             import json
             # Handle weight being optional for bodyweight exercises
             weight_value = ex.get('weight')
@@ -1263,6 +1265,80 @@ def get_exercise_progress(exercise_name):
 
     return jsonify(data)
 
+@app.route('/api/progress/template/<int:template_id>')
+@login_required
+def get_template_progress(template_id):
+    template = WorkoutTemplate.query.filter_by(
+        id=template_id, user_id=current_user.id
+    ).first_or_404()
+
+    period = request.args.get('period', 'all').lower()
+    now_utc = datetime.utcnow()
+    period_map = {
+        '1w': timedelta(weeks=1),
+        '1m': timedelta(days=30),
+        '3m': timedelta(days=90),
+        '6m': timedelta(days=182),
+    }
+    cutoff = (now_utc - period_map[period]) if period in period_map else None
+    offset_hours = current_user.timezone_offset or 0
+
+    exercises_data = []
+    for tex in sorted(template.template_exercises, key=lambda e: e.order):
+        q = (
+            Exercise.query.join(Workout).filter(
+                Workout.user_id == current_user.id,
+                Workout.is_draft == False,
+                Exercise.name == tex.name,
+            )
+        )
+        if tex.equipment_type is None:
+            q = q.filter(Exercise.equipment_type.is_(None))
+        else:
+            q = q.filter(Exercise.equipment_type == tex.equipment_type)
+        if cutoff:
+            q = q.filter(Workout.date >= cutoff)
+
+        history = q.order_by(Workout.date.asc()).all()
+
+        data_points = [{
+            'date':   (ex.workout.date + timedelta(hours=offset_hours)).strftime('%Y-%m-%d'),
+            'weight': ex.weight,
+            'sets':   ex.sets,
+            'reps':   ex.reps,
+        } for ex in history]
+
+        weighted = [p for p in data_points if p['weight'] is not None]
+        delta, delta_label = None, None
+        if len(weighted) >= 2:
+            diff = weighted[-1]['weight'] - weighted[0]['weight']
+            sign = '+' if diff >= 0 else ''
+            delta = diff
+            delta_label = f"{sign}{diff:.1f} lbs"
+        elif len(weighted) == 1:
+            delta_label = f"{weighted[0]['weight']:.1f} lbs (1 session)"
+
+        exercises_data.append({
+            'name':           tex.name,
+            'equipment_type': tex.equipment_type,
+            'order':          tex.order,
+            'is_bodyweight':  bool(data_points and all(p['weight'] is None for p in data_points)),
+            'data':           data_points,
+            'delta':          delta,
+            'delta_label':    delta_label,
+            'session_count':  len(data_points),
+        })
+
+    return jsonify({
+        'template': {
+            'id':    template.id,
+            'name':  template.name,
+            'color': template.color or '#198754',
+        },
+        'period':    period,
+        'exercises': exercises_data,
+    })
+
 @app.route('/api/exercise_names')
 @login_required
 def get_exercise_names():
@@ -1526,6 +1602,7 @@ def calendar_data():
             'exercises': [ex.to_dict() for ex in w.exercises],  # Include full exercise details
             'exercise_count': len(w.exercises),
             'notes': w.notes,
+            'is_rest_day': w.is_rest_day,
             'date': w.date.isoformat() + 'Z',  # Return as ISO format with UTC marker
             'template_id': w.template_id,
             'template_color': w.template.color if w.template else None,
@@ -2477,6 +2554,76 @@ def get_consistency():
         'total_workouts': len(workouts),
         'period_days': days
     })
+
+@app.route('/api/hybrid_stat')
+@login_required
+def hybrid_stat():
+    from datetime import datetime, timedelta, date as date_type, timezone
+
+    offset_hours = current_user.timezone_offset or 0
+
+    def to_local_date(dt):
+        return (dt + timedelta(hours=offset_hours)).date()
+
+    now_local = to_local_date(datetime.now(timezone.utc).replace(tzinfo=None))
+
+    all_workouts = Workout.query.filter_by(
+        user_id=current_user.id, is_draft=False
+    ).all()
+
+    if not all_workouts:
+        return jsonify({'has_data': False, 'balance': None})
+
+    # Bucket by local date
+    by_local_date = {}
+    for w in all_workouts:
+        ld = to_local_date(w.date)
+        by_local_date.setdefault(ld, []).append(w)
+
+    # ── BALANCE ────────────────────────────────────────────────────────
+    bank_rows = ExerciseBank.query.filter(
+        (ExerciseBank.user_id.is_(None)) | (ExerciseBank.user_id == current_user.id)
+    ).all()
+    name_to_group = {r.name.lower(): r.muscle_group for r in bank_rows if r.muscle_group}
+
+    PRIMARY_GROUPS = {'Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps',
+                      'Quads', 'Hamstrings', 'Glutes', 'Calves', 'Core'}
+    thirty_ago = now_local - timedelta(days=30)
+
+    group_last_trained = {}
+    for ld, wlist in by_local_date.items():
+        if ld < thirty_ago:
+            continue
+        for w in wlist:
+            for ex in w.exercises:
+                g = name_to_group.get(ex.name.lower())
+                if g and g in PRIMARY_GROUPS:
+                    if g not in group_last_trained or ld > group_last_trained[g]:
+                        group_last_trained[g] = ld
+
+    trained_groups = set(group_last_trained.keys())
+    last_7 = now_local - timedelta(days=7)
+    neglected = sorted(
+        [{'group': g, 'days_ago': (now_local - d).days, 'last_date': d.isoformat()}
+         for g, d in group_last_trained.items() if d < last_7],
+        key=lambda x: x['days_ago'], reverse=True
+    )
+    all_trained_this_week = bool(trained_groups) and all(
+        group_last_trained.get(g, date_type.min) >= last_7 for g in trained_groups
+    )
+
+    balance_data = {
+        'all_trained_this_week': all_trained_this_week,
+        'neglected_groups':      neglected,
+        'most_neglected':        neglected[0] if neglected else None,
+        'no_tracked_groups':     len(trained_groups) == 0,
+    }
+
+    return jsonify({
+        'has_data': True,
+        'balance':  balance_data,
+    })
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
