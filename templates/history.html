@@ -192,6 +192,15 @@
         margin: auto 0;
     }
 
+    .cal-cell__labels {
+        margin-top: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        max-width: 100%;
+        overflow: hidden;
+    }
+
     .cal-cell__label {
         font-family: var(--font-body);
         font-size: 9px;
@@ -200,7 +209,6 @@
         text-transform: uppercase;
         letter-spacing: 0.04em;
         line-height: 1;
-        margin-top: auto;
         max-width: 100%;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -836,14 +844,25 @@
 
                     cell.style.backgroundColor = `rgba(79, 152, 163, ${opacity})`;
 
-                    // Template name label — first word only so it always fits
-                    const templateName = workouts.find(w => !w.is_rest_day)?.template_name;
-                    if (templateName) {
-                        const label = document.createElement('span');
-                        label.className = 'cal-cell__label';
-                        label.textContent = templateName.split(' ')[0];
-                        label.title = templateName; // full name on hover
-                        cell.appendChild(label);
+                    // Template name labels — up to 2 stacked, with "+" if more
+                    const namedWorkouts = workouts.filter(w => !w.is_rest_day && w.template_name);
+                    if (namedWorkouts.length > 0) {
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'cal-cell__labels';
+                        wrapper.title = namedWorkouts.map(w => w.template_name).join(', ');
+
+                        const shown = namedWorkouts.slice(0, 2);
+                        const extra = namedWorkouts.length - shown.length;
+
+                        shown.forEach((w, i) => {
+                            const label = document.createElement('span');
+                            label.className = 'cal-cell__label';
+                            const isLast = i === shown.length - 1;
+                            label.textContent = w.template_name.split(' ')[0] + (isLast && extra > 0 ? ' +' : '');
+                            wrapper.appendChild(label);
+                        });
+
+                        cell.appendChild(wrapper);
                     }
                 }
             }
