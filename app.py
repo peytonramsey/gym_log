@@ -12,7 +12,7 @@ from utils import normalize_exercise_name
 load_dotenv()
 
 # App version
-VERSION = "2.0.2"
+VERSION = "3.0.1"
 
 # Unit conversion factors to grams/ml
 UNIT_CONVERSIONS = {
