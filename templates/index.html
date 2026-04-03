@@ -257,8 +257,19 @@ body.dark-mode h3, body.dark-mode h4 {
     opacity: 0.85;
 }
 
+.hm-day {
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1;
+    padding: 4px 4px 0;
+    opacity: 0.7;
+}
+
 @media (max-width: 480px) {
     .hm-label { font-size: 8px; }
+    .hm-day   { font-size: 10px; }
 }
 
 .heatmap-labels {
@@ -649,11 +660,15 @@ body.dark-mode h3, body.dark-mode h4 {
     }
 
     // ── Weekly session count — Level 2 ────────────────────────────────
+    function hasRealWorkout(d) {
+        return workoutCalendarData[d] && workoutCalendarData[d].some(w => !w.is_rest_day);
+    }
+
     function renderWeeklyStats() {
         const thisWeek  = getCurrentWeekDates();
         const lastWeek  = getLastWeekDates();
-        const thisCount = thisWeek.filter(function(d) { return workoutCalendarData[d]; }).length;
-        const lastCount = lastWeek.filter(function(d) { return workoutCalendarData[d]; }).length;
+        const thisCount = thisWeek.filter(hasRealWorkout).length;
+        const lastCount = lastWeek.filter(hasRealWorkout).length;
         const delta     = thisCount - lastCount;
 
         document.getElementById('l2-sessions').textContent = thisCount;
@@ -675,7 +690,8 @@ body.dark-mode h3, body.dark-mode h4 {
     function renderWeekHeatmap() {
         const dates      = getCurrentWeekDates();
         const counts     = dates.map(function(d) {
-            return workoutCalendarData[d] ? workoutCalendarData[d].length : 0;
+            if (!workoutCalendarData[d]) return 0;
+            return workoutCalendarData[d].filter(w => !w.is_rest_day).length;
         });
         const maxCount   = Math.max.apply(null, counts.concat([1]));
         const dayLetters = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -695,6 +711,12 @@ body.dark-mode h3, body.dark-mode h4 {
 
             var cell = document.createElement('div');
             cell.className = 'heatmap-cell';
+
+            // Day number
+            var dayNum = document.createElement('span');
+            dayNum.className = 'hm-day';
+            dayNum.textContent = parseInt(dateStr.split('-')[2]);
+            cell.appendChild(dayNum);
 
             if (count > 0) {
                 // Opacity range 0.20–1.00, scaled to session count relative to week's max
