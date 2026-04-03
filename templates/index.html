@@ -214,6 +214,9 @@ body.dark-mode h3, body.dark-mode h4 {
     min-height: 36px;
     transition: background 0.2s ease;
     cursor: default;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .heatmap-cell--today {
@@ -227,6 +230,35 @@ body.dark-mode h3, body.dark-mode h4 {
 
 .heatmap-cell--active:hover {
     filter: brightness(1.15);
+}
+
+.hm-labels {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-width: 100%;
+    overflow: hidden;
+    padding: 3px 4px;
+}
+
+.hm-label {
+    font-family: var(--font-body);
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--text);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    opacity: 0.85;
+}
+
+@media (max-width: 480px) {
+    .hm-label { font-size: 8px; }
 }
 
 .heatmap-labels {
@@ -687,6 +719,26 @@ body.dark-mode h3, body.dark-mode h4 {
 
             if (dateStr === todayStr) {
                 cell.classList.add('heatmap-cell--today');
+            }
+
+            // Stacked workout type labels
+            if (count > 0) {
+                const dayWorkouts = workoutCalendarData[dateStr] || [];
+                const named = dayWorkouts.filter(w => !w.is_rest_day && w.template_name);
+                if (named.length > 0) {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'hm-labels';
+                    const shown = named.slice(0, 2);
+                    const extra = named.length - shown.length;
+                    shown.forEach(function(w, i) {
+                        const lbl = document.createElement('span');
+                        lbl.className = 'hm-label';
+                        const isLast = i === shown.length - 1;
+                        lbl.textContent = w.template_name.split(' ')[0] + (isLast && extra > 0 ? ' +' : '');
+                        wrapper.appendChild(lbl);
+                    });
+                    cell.appendChild(wrapper);
+                }
             }
 
             heatmapEl.appendChild(cell);
