@@ -1,131 +1,209 @@
 {% extends "base.html" %}
 
-{% block title %}Progress - GymLog{% endblock %}
+{% block title %}Progress — FitGlyph{% endblock %}
 
 {% block extra_css %}
 <style>
-    /* ── Dropdown controls ───────────────────────────────── */
-    .template-select-wrap {
-        position: relative;
-        flex: 1;
-    }
-    #template-select {
-        border-left: 4px solid var(--tpl-color, #198754);
-        transition: border-color 0.2s ease;
-        font-weight: 600;
-    }
-
-    /* ── Exercise cards ──────────────────────────────────── */
-    .exercise-card {
-        border-radius: 12px;
-        overflow: hidden;
-        margin-bottom: 14px;
-    }
-    .exercise-card .card-header {
+    /* ── Controls ────────────────────────────────────────────── */
+    .progress-controls {
         display: flex;
+        gap: 10px;
         align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .progress-controls .template-wrap { flex: 1; min-width: 0; }
+    .progress-controls .period-wrap   { flex: 0 0 148px; }
+
+    .form-select {
+        background-color: var(--bg-elevated) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: var(--radius-input) !important;
+        color: var(--text) !important;
+        font-family: var(--font-body);
+        font-size: 14px;
+    }
+
+    .form-select:focus {
+        background-color: var(--bg-elevated) !important;
+        border-color: var(--accent) !important;
+        color: var(--text) !important;
+        box-shadow: 0 0 0 2px oklch(from #4f98a3 l c h / 0.20) !important;
+        outline: none;
+    }
+
+    .form-select option {
+        background: var(--bg-elevated);
+        color: var(--text);
+    }
+
+    /* ── Exercise card ───────────────────────────────────────── */
+    .prog-card {
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-card);
+        margin-bottom: 12px;
+        overflow: hidden;
+    }
+
+    .prog-card__header {
+        display: flex;
+        align-items: baseline;
         justify-content: space-between;
-        padding: 10px 14px;
-        border-bottom: none;
-    }
-    .exercise-card .card-body {
-        padding: 8px 14px 14px;
-    }
-    .exercise-chart-wrap {
-        position: relative;
-        height: 140px;
-    }
-    .exercise-chart-wrap canvas {
-        width: 100% !important;
-        height: 140px !important;
+        gap: 12px;
+        padding: 12px 14px 10px;
     }
 
-    /* ── Delta badge ─────────────────────────────────────── */
-    .delta-badge {
-        font-size: 0.73rem;
-        font-weight: 700;
-        padding: 3px 9px;
-        border-radius: 20px;
+    .prog-card__meta {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        min-width: 0;
+    }
+
+    .prog-card__name {
+        font-family: var(--font-body);
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--text);
         white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
-    .delta-positive { background: rgba(25,135,84,0.15); color: #198754; }
-    .delta-negative { background: rgba(220,53,69,0.15);  color: #dc3545; }
-    .delta-neutral  { background: rgba(108,117,125,0.15); color: #6c757d; }
 
-    /* ── Empty / loading states ──────────────────────────── */
-    .no-data-msg {
+    .prog-card__equip {
+        font-family: var(--font-body);
+        font-size: 11px;
+        color: var(--text-faint);
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    /* ── Delta ───────────────────────────────────────────────── */
+    .prog-card__delta {
+        font-family: var(--font-body);
+        font-size: 12px;
+        font-weight: 500;
+        white-space: nowrap;
+        flex-shrink: 0;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .delta--positive { color: var(--success); }
+    .delta--negative { color: var(--text-muted); }
+    .delta--neutral  { color: var(--text-faint); }
+
+    /* ── Chart container ─────────────────────────────────────── */
+    .prog-card__chart {
+        position: relative;
+        height: 130px;
+        padding: 0 14px 12px;
+    }
+
+    .prog-card__chart canvas {
+        width: 100% !important;
+        height: 130px !important;
+    }
+
+    /* ── Session-only body (bodyweight, no weight data) ──────── */
+    .prog-card__sessions {
+        padding: 6px 14px 12px;
+        font-family: var(--font-body);
+        font-size: 13px;
+        color: var(--text-muted);
+    }
+
+    /* ── Empty states ────────────────────────────────────────── */
+    .prog-empty {
+        padding: 32px 0 24px;
+        font-family: var(--font-body);
+        font-size: 14px;
+        color: var(--text-muted);
+    }
+
+    .prog-empty__title {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--text);
+        margin: 0 0 4px;
+    }
+
+    .prog-empty__sub {
+        font-size: 13px;
+        color: var(--text-muted);
+        margin: 0;
+    }
+
+    .prog-empty__sub a {
+        color: var(--accent);
+        text-decoration: none;
+    }
+
+    /* ── Loading spinner (token override) ────────────────────── */
+    .prog-spinner {
+        padding: 32px 0;
         text-align: center;
-        padding: 20px 10px;
-        color: #6c757d;
-        font-size: 0.88rem;
+        color: var(--text-muted);
+        font-size: 13px;
     }
 
-    /* ── Dark mode ───────────────────────────────────────── */
-    body.dark-mode .card {
-        background: rgba(45,45,45,0.5);
-        border: 1px solid rgba(255,255,255,0.1);
-        color: #fff;
+    .spinner-border {
+        color: var(--accent) !important;
+        width: 1.5rem;
+        height: 1.5rem;
+        border-width: 2px;
     }
-    body.dark-mode .card-header {
-        background: rgba(50,50,50,0.6);
-        color: #fff;
+
+    /* ── No-data inline ──────────────────────────────────────── */
+    .prog-card__nodata {
+        padding: 8px 14px 12px;
+        font-family: var(--font-body);
+        font-size: 12px;
+        color: var(--text-faint);
     }
-    body.dark-mode .form-select {
-        background-color: #1a1a1a;
-        color: #fff;
-        border-color: #404040;
+
+    /* ── Reduced motion ──────────────────────────────────────── */
+    @media (prefers-reduced-motion: reduce) {
+        .form-select { transition: none; }
     }
-    body.dark-mode h4, body.dark-mode .fw-semibold {
-        color: #fff !important;
-    }
-    body.dark-mode .text-muted { color: #aaa !important; }
-    body.dark-mode .delta-positive { color: #4cbb80; }
-    body.dark-mode .delta-negative { color: #e05c6a; }
-    body.dark-mode .delta-neutral  { color: #888; }
-    body.dark-mode .no-data-msg    { color: #666; }
 </style>
 {% endblock %}
 
 {% block content %}
-<h4 class="mb-3">Progress</h4>
+<h1 class="page-heading" style="font-family:var(--font-display);font-size:20px;font-weight:700;color:var(--text);margin:0 0 20px;">Progress</h1>
 
-<!-- ── Controls card ─────────────────────────────────────── -->
-<div class="card mb-3" id="controls-card">
-    <div class="card-body py-3">
-        <div class="d-flex gap-2 align-items-center">
-            <div class="template-select-wrap">
-                <select class="form-select" id="template-select" onchange="onTemplateChange()">
-                    <option value="">Loading templates...</option>
-                </select>
-            </div>
-            <div style="flex:0 0 140px;">
-                <select class="form-select" id="period-select" onchange="onPeriodChange()">
-                    <option value="1w">Last Week</option>
-                    <option value="1m" selected>Last Month</option>
-                    <option value="3m">Last 3 Months</option>
-                    <option value="6m">Last 6 Months</option>
-                    <option value="all">All Time</option>
-                </select>
-            </div>
-        </div>
+<!-- ── Controls ──────────────────────────────────────────────── -->
+<div class="progress-controls" id="progress-controls">
+    <div class="template-wrap">
+        <select class="form-select" id="template-select" aria-label="Select template" onchange="onTemplateChange()">
+            <option value="">Loading templates…</option>
+        </select>
+    </div>
+    <div class="period-wrap">
+        <select class="form-select" id="period-select" aria-label="Select time period" onchange="onPeriodChange()">
+            <option value="1w">Last week</option>
+            <option value="1m" selected>Last month</option>
+            <option value="3m">Last 3 months</option>
+            <option value="6m">Last 6 months</option>
+            <option value="all">All time</option>
+        </select>
     </div>
 </div>
 
-<!-- ── No templates empty state ──────────────────────────── -->
-<div class="card mb-3 d-none" id="no-templates-msg">
-    <div class="card-body text-center py-4">
-        <i class="bi bi-clipboard-x" style="font-size:2.5rem; color:#6c757d;"></i>
-        <p class="mt-2 mb-1 fw-semibold">No templates yet</p>
-        <p class="text-muted small mb-0">Create a workout template on the <a href="/schedule">Schedule</a> page and your progress will appear here.</p>
+<!-- ── No templates empty state ──────────────────────────────── -->
+<div class="prog-empty d-none" id="no-templates-msg">
+    <p class="prog-empty__title">No templates yet</p>
+    <p class="prog-empty__sub">Create a workout template on the <a href="/schedule">Schedule</a> page and your progress will appear here.</p>
+</div>
+
+<!-- ── Loading ────────────────────────────────────────────────── -->
+<div id="exercises-loading" class="prog-spinner d-none" aria-live="polite">
+    <div class="spinner-border" role="status">
+        <span class="visually-hidden">Loading…</span>
     </div>
 </div>
 
-<!-- ── Exercise cards ─────────────────────────────────────── -->
-<div id="exercises-loading" class="text-center py-4 d-none">
-    <div class="spinner-border text-primary" role="status"></div>
-    <p class="text-muted small mt-2">Loading progress...</p>
-</div>
-
+<!-- ── Exercise cards ─────────────────────────────────────────── -->
 <div id="exercise-cards"></div>
 {% endblock %}
 
@@ -133,11 +211,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
-let activeCharts  = {};
-let templateColor = '#198754';
-
-// Keyed by template id → color for quick lookup
-let templateColorMap = {};
+let activeCharts = {};
 
 const EQUIPMENT_LABELS = {
     barbell:     'Barbell',
@@ -158,41 +232,28 @@ function loadTemplates() {
             sel.innerHTML = '';
 
             if (!templates || templates.length === 0) {
-                document.getElementById('controls-card').classList.add('d-none');
+                document.getElementById('progress-controls').classList.add('d-none');
                 document.getElementById('no-templates-msg').classList.remove('d-none');
                 return;
             }
 
-            templates.forEach((t, idx) => {
+            templates.forEach(t => {
                 const opt = document.createElement('option');
                 opt.value = t.id;
                 opt.textContent = t.name;
-                opt.dataset.color = t.color || '#198754';
                 sel.appendChild(opt);
-                templateColorMap[t.id] = t.color || '#198754';
             });
 
-            // Trigger first load
             onTemplateChange();
+        })
+        .catch(() => {
+            showError('Failed to load templates.');
         });
 }
 
 // ── Event handlers ────────────────────────────────────────────────────────────
-function onTemplateChange() {
-    const sel = document.getElementById('template-select');
-    const opt = sel.options[sel.selectedIndex];
-    const color = (opt && opt.dataset.color) ? opt.dataset.color : '#198754';
-
-    templateColor = color;
-    document.getElementById('template-select').style.setProperty('--tpl-color', color);
-    document.getElementById('template-select').style.borderLeftColor = color;
-
-    loadProgress();
-}
-
-function onPeriodChange() {
-    loadProgress();
-}
+function onTemplateChange() { loadProgress(); }
+function onPeriodChange()   { loadProgress(); }
 
 // ── Load & render ─────────────────────────────────────────────────────────────
 function loadProgress() {
@@ -212,94 +273,94 @@ function loadProgress() {
         .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
         .then(data => {
             spinner.classList.add('d-none');
-            renderExerciseCards(data.exercises, data.template.color || '#198754');
+            renderExerciseCards(data.exercises);
         })
         .catch(() => {
             spinner.classList.add('d-none');
-            container.innerHTML = `<div class="no-data-msg"><i class="bi bi-exclamation-circle"></i> Failed to load progress data.</div>`;
+            container.innerHTML = `<p style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);">Failed to load progress data.</p>`;
         });
 }
 
 // ── Render exercise cards ─────────────────────────────────────────────────────
-function renderExerciseCards(exercises, color) {
+function renderExerciseCards(exercises) {
     const container = document.getElementById('exercise-cards');
     container.innerHTML = '';
 
     if (!exercises || exercises.length === 0) {
-        container.innerHTML = `<div class="no-data-msg">
-            <i class="bi bi-bar-chart-line" style="font-size:2rem;"></i>
-            <p class="mt-2">No exercises found in this template.</p>
+        container.innerHTML = `<div class="prog-empty">
+            <p class="prog-empty__title">No exercises found in this template.</p>
         </div>`;
         return;
     }
 
     exercises.forEach((ex, idx) => {
-        container.appendChild(buildExerciseCard(ex, idx, color));
+        container.appendChild(buildExerciseCard(ex, idx));
         const weighted = ex.data.filter(p => p.weight !== null);
-        if (weighted.length > 0) renderChart(`chart-${idx}`, weighted, color);
+        if (weighted.length > 0) renderChart(`chart-${idx}`, weighted);
     });
 }
 
-function buildExerciseCard(ex, idx, color) {
+function buildExerciseCard(ex, idx) {
     const equipLabel = EQUIPMENT_LABELS[ex.equipment_type] || null;
 
-    let deltaCls  = 'delta-neutral';
-    let deltaText = 'No data yet';
+    // Delta display — plain text, no pill badge
+    let deltaCls  = 'delta--neutral';
+    let deltaText = '—';
     if (ex.delta_label) {
         deltaText = ex.delta_label;
-        deltaCls  = ex.delta > 0 ? 'delta-positive' : ex.delta < 0 ? 'delta-negative' : 'delta-neutral';
+        deltaCls  = ex.delta > 0 ? 'delta--positive'
+                  : ex.delta < 0 ? 'delta--negative'
+                  : 'delta--neutral';
     } else if (ex.is_bodyweight) {
         deltaText = 'Bodyweight';
     }
 
     const weighted = ex.data.filter(p => p.weight !== null);
+
     let bodyHtml = '';
     if (weighted.length > 0) {
-        bodyHtml = `<div class="exercise-chart-wrap"><canvas id="chart-${idx}"></canvas></div>`;
+        bodyHtml = `<div class="prog-card__chart"><canvas id="chart-${idx}" role="img" aria-label="${escHtml(ex.name)} weight progression"></canvas></div>`;
     } else if (ex.is_bodyweight && ex.session_count > 0) {
-        bodyHtml = `<div class="no-data-msg" style="padding:10px 0;">
-            <i class="bi bi-person-fill-check"></i>
-            ${ex.session_count} session${ex.session_count !== 1 ? 's' : ''} logged &mdash; no weight tracked
-        </div>`;
+        bodyHtml = `<div class="prog-card__sessions">${ex.session_count} session${ex.session_count !== 1 ? 's' : ''} logged — no weight tracked</div>`;
     } else {
-        bodyHtml = `<div class="no-data-msg" style="padding:10px 0;">
-            <i class="bi bi-bar-chart-line"></i> Not logged in this period yet
-        </div>`;
+        bodyHtml = `<div class="prog-card__nodata">Not logged in this period yet</div>`;
     }
 
-    const el = document.createElement('div');
-    el.className = 'card exercise-card';
+    const el = document.createElement('article');
+    el.className = 'prog-card';
     el.innerHTML = `
-        <div class="card-header" style="border-left:4px solid ${escHtml(color)};">
-            <div>
-                <span class="fw-semibold">${escHtml(ex.name)}</span>
-                ${equipLabel ? `<span class="badge bg-secondary ms-1" style="font-size:0.68rem;">${escHtml(equipLabel)}</span>` : ''}
+        <div class="prog-card__header">
+            <div class="prog-card__meta">
+                <span class="prog-card__name">${escHtml(ex.name)}</span>
+                ${equipLabel ? `<span class="prog-card__equip">${escHtml(equipLabel)}</span>` : ''}
             </div>
-            <span class="delta-badge ${deltaCls}">${escHtml(deltaText)}</span>
+            <span class="prog-card__delta ${deltaCls}" aria-label="Delta: ${escHtml(deltaText)}">${escHtml(deltaText)}</span>
         </div>
-        <div class="card-body">${bodyHtml}</div>`;
+        ${bodyHtml}`;
     return el;
 }
 
-function renderChart(canvasId, points, color) {
+// ── Chart ─────────────────────────────────────────────────────────────────────
+function renderChart(canvasId, points) {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return;
 
-    const isDark    = document.body.classList.contains('dark-mode');
-    const axisColor = isDark ? '#aaa' : '#666';
-    const gridColor = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
+    // App is always dark — use token values directly
+    const axisColor = '#797876';           // --text-muted
+    const gridColor = 'rgba(205,204,202,0.06)'; // alpha border approximate
 
     activeCharts[canvasId] = new Chart(ctx, {
         type: 'line',
         data: {
-            labels:   points.map(p => p.date),
+            labels: points.map(p => p.date),
             datasets: [{
                 data:             points.map(p => p.weight),
-                borderColor:      color,
-                backgroundColor:  hexToRgba(color, 0.15),
+                borderColor:      '#4f98a3',
+                backgroundColor:  'rgba(79,152,163,0.10)',
                 borderWidth:      2,
                 pointRadius:      points.length === 1 ? 5 : 3,
                 pointHoverRadius: 6,
+                pointBackgroundColor: '#4f98a3',
                 tension:          0.3,
                 fill:             true,
             }]
@@ -307,20 +368,38 @@ function renderChart(canvasId, points, color) {
         options: {
             responsive:          true,
             maintainAspectRatio: false,
-            animation:           { duration: 250 },
+            animation:           { duration: 200 },
             plugins: {
                 legend:  { display: false },
-                tooltip: { callbacks: { label: c => ` ${c.parsed.y} lbs` } }
+                tooltip: {
+                    backgroundColor: '#1c1b19',
+                    borderColor:     'rgba(205,204,202,0.10)',
+                    borderWidth:     1,
+                    titleColor:      '#cdccca',
+                    bodyColor:       '#797876',
+                    callbacks: {
+                        label: c => ` ${c.parsed.y} lbs`
+                    }
+                }
             },
             scales: {
                 x: {
-                    ticks: { color: axisColor, maxTicksLimit: 5, font: { size: 10 } },
-                    grid:  { color: gridColor },
+                    ticks: {
+                        color:          axisColor,
+                        maxTicksLimit:  5,
+                        font:           { size: 10, family: 'Satoshi, system-ui, sans-serif' }
+                    },
+                    grid: { color: gridColor },
+                    border: { color: gridColor }
                 },
                 y: {
                     beginAtZero: false,
-                    ticks: { color: axisColor, font: { size: 10 } },
-                    grid:  { color: gridColor },
+                    ticks: {
+                        color: axisColor,
+                        font: { size: 10, family: 'Satoshi, system-ui, sans-serif' }
+                    },
+                    grid:   { color: gridColor },
+                    border: { color: gridColor }
                 }
             }
         }
@@ -328,13 +407,6 @@ function renderChart(canvasId, points, color) {
 }
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
-function hexToRgba(hex, alpha) {
-    const r = parseInt(hex.slice(1,3), 16);
-    const g = parseInt(hex.slice(3,5), 16);
-    const b = parseInt(hex.slice(5,7), 16);
-    return `rgba(${r},${g},${b},${alpha})`;
-}
-
 function escHtml(str) {
     const d = document.createElement('div');
     d.appendChild(document.createTextNode(str || ''));

@@ -1,713 +1,806 @@
 {% extends "base.html" %}
 
-{% block title %}My Schedule - GymLog{% endblock %}
+{% block title %}Schedule — FitGlyph{% endblock %}
 
 {% block extra_css %}
 <style>
-    .template-card {
-        background: rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 15px;
-        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-        transition: all 0.3s ease;
-        margin-bottom: 15px;
-    }
-
-    .template-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.5);
-    }
-
-    body.dark-mode .template-card {
-        background: rgba(45, 45, 45, 0.3);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
-    }
-
-    body.dark-mode .template-card:hover {
-        background: rgba(45, 45, 45, 0.4);
-        box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.7);
-    }
-
-    .exercise-item {
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 8px;
-        padding: 10px;
+    /* ── Template list card ──────────────────────────────────────── */
+    .tmpl-card {
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-card);
         margin-bottom: 8px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    body.dark-mode .exercise-item {
-        background: rgba(60, 60, 60, 0.3);
-    }
-
-    .add-btn {
-        background: rgba(13, 110, 253, 0.2);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(13, 110, 253, 0.5);
-        border-radius: 50%;
-        width: 60px;
-        height: 60px;
-        font-size: 2rem;
-        position: fixed;
-        bottom: 90px;
-        right: 20px;
-        z-index: 999;
-        transition: all 0.3s ease;
-    }
-
-    .add-btn:hover {
-        transform: scale(1.1);
-        background: rgba(13, 110, 253, 0.4);
-    }
-
-    body.dark-mode .add-btn {
-        background: rgba(13, 110, 253, 0.3);
-        border-color: rgba(13, 110, 253, 0.6);
-    }
-
-    .exercise-form-row {
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 8px;
-        padding: 10px;
-        margin-bottom: 10px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    body.dark-mode .exercise-form-row {
-        background: rgba(60, 60, 60, 0.2);
-    }
-
-    /* Dark mode for modal */
-    body.dark-mode .modal-content {
-        background-color: #2d2d2d;
-        color: #ffffff;
-    }
-
-    body.dark-mode .modal-header {
-        border-bottom-color: #404040;
-    }
-
-    body.dark-mode .modal-footer {
-        border-top-color: #404040;
-    }
-
-    body.dark-mode .form-label {
-        color: #ffffff;
-    }
-
-    body.dark-mode .form-control,
-    body.dark-mode .form-select {
-        background-color: #1a1a1a;
-        color: #ffffff;
-        border-color: #404040;
-    }
-
-    body.dark-mode .form-control:focus,
-    body.dark-mode .form-select:focus {
-        background-color: #1a1a1a;
-        color: #ffffff;
-        border-color: #4a9eff;
-    }
-
-    body.dark-mode .btn-close {
-        filter: invert(1);
-    }
-
-    body.dark-mode .list-group-item {
-        background-color: #2d2d2d;
-        color: #ffffff;
-        border-color: #404040;
-    }
-
-    /* Dark mode text colors */
-    body.dark-mode h1,
-    body.dark-mode h2,
-    body.dark-mode h3,
-    body.dark-mode h4,
-    body.dark-mode h5,
-    body.dark-mode h6 {
-        color: #ffffff !important;
-    }
-
-    body.dark-mode .card-title {
-        color: #ffffff !important;
-    }
-
-    body.dark-mode p {
-        color: #e0e0e0;
-    }
-
-    body.dark-mode .text-muted,
-    body.dark-mode small.text-muted {
-        color: #a0a0a0 !important;
-    }
-
-    body.dark-mode small {
-        color: #ccc !important;
-    }
-
-    body.dark-mode strong {
-        color: #ffffff !important;
-    }
-
-    body.dark-mode input::placeholder {
-        color: #888 !important;
-    }
-
-    /* Color picker styles */
-    .color-option {
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-
-    .color-option:hover {
-        transform: scale(1.1);
-    }
-
-    .color-option.selected {
-        border-color: #fff !important;
-        box-shadow: 0 0 0 2px #0d6efd;
-    }
-
-    /* Template card color indicator */
-    .template-color-bar {
-        width: 4px;
-        border-radius: 4px 0 0 4px;
-        position: absolute;
-        left: 0;
-        top: 0;
-        bottom: 0;
-    }
-
-    .template-card {
-        position: relative;
         overflow: hidden;
     }
 
-    .template-card .card-body {
-        padding-left: 20px;
+    .tmpl-card__body {
+        padding: 14px;
+    }
+
+    .tmpl-card__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 6px;
+    }
+
+    .tmpl-card__name {
+        font-family: var(--font-body);
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--text);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .tmpl-card__actions {
+        display: flex;
+        gap: 6px;
+        flex-shrink: 0;
+    }
+
+    .tmpl-card__meta {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 12px;
+    }
+
+    .tmpl-card__days {
+        font-family: var(--font-body);
+        font-size: 12px;
+        color: var(--text-muted);
+    }
+
+    .tmpl-card__count {
+        font-family: var(--font-body);
+        font-size: 12px;
+        color: var(--text-faint);
+    }
+
+    .tmpl-card__footer {
+        display: flex;
+        gap: 8px;
+    }
+
+    /* ── Buttons on card ─────────────────────────────────────────── */
+    .tmpl-btn {
+        font-family: var(--font-body);
+        font-size: 13px;
+        font-weight: 500;
+        border-radius: var(--radius-btn);
+        padding: 8px 14px;
+        min-height: 44px;
+        min-width: 44px;
+        cursor: pointer;
+        border: none;
+        transition: opacity 0.15s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .tmpl-btn--primary {
+        background: var(--accent);
+        color: #0f0e0d;
+        flex: 1;
+    }
+
+    .tmpl-btn--primary:hover { opacity: 0.88; }
+
+    .tmpl-btn--ghost {
+        background: transparent;
+        color: var(--text-muted);
+        border: 1px solid var(--border);
+    }
+
+    .tmpl-btn--ghost:hover {
+        color: var(--text);
+        border-color: var(--text-muted);
+    }
+
+    .tmpl-btn--danger {
+        background: transparent;
+        color: var(--text-muted);
+        border: 1px solid var(--border);
+    }
+
+    .tmpl-btn--danger:hover {
+        color: var(--warning);
+        border-color: var(--warning);
+    }
+
+    /* ── Add template button ─────────────────────────────────────── */
+    .tmpl-add-btn {
+        width: 100%;
+        padding: 12px;
+        margin-top: 4px;
+        font-family: var(--font-body);
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--accent);
+        background: transparent;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-btn);
+        cursor: pointer;
+        min-height: 44px;
+        transition: border-color 0.15s;
+    }
+
+    .tmpl-add-btn:hover { border-color: var(--accent); }
+
+    /* ── Empty state ─────────────────────────────────────────────── */
+    .tmpl-empty {
+        padding: 32px 0 24px;
+    }
+
+    .tmpl-empty__title {
+        font-family: var(--font-body);
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--text);
+        margin: 0 0 4px;
+    }
+
+    .tmpl-empty__sub {
+        font-family: var(--font-body);
+        font-size: 13px;
+        color: var(--text-muted);
+        margin: 0;
+    }
+
+    /* ── Loading ─────────────────────────────────────────────────── */
+    .tmpl-spinner {
+        padding: 32px 0;
+        text-align: center;
+        color: var(--text-muted);
+        font-size: 13px;
+    }
+
+    .spinner-border {
+        color: var(--accent) !important;
+        width: 1.5rem;
+        height: 1.5rem;
+        border-width: 2px;
+    }
+
+    /* ── Modal chrome ────────────────────────────────────────────── */
+    .modal-content {
+        background: var(--bg-elevated) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: var(--radius-card) !important;
+        color: var(--text);
+    }
+
+    .modal-header {
+        border-bottom: 1px solid var(--border) !important;
+        padding: 16px !important;
+    }
+
+    .modal-body {
+        padding: 16px !important;
+    }
+
+    .modal-footer {
+        border-top: 1px solid var(--border) !important;
+        padding: 12px 16px !important;
+        gap: 8px;
+    }
+
+    .modal-title {
+        font-family: var(--font-body) !important;
+        font-size: 15px !important;
+        font-weight: 600 !important;
+        color: var(--text) !important;
+    }
+
+    .btn-close { filter: invert(0.7); }
+
+    /* ── Form labels ─────────────────────────────────────────────── */
+    .tmpl-label {
+        font-family: var(--font-body);
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--text-faint);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin: 0 0 8px;
+        display: block;
+    }
+
+    /* ── Form controls ───────────────────────────────────────────── */
+    .form-control {
+        background: var(--bg-base) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: var(--radius-input) !important;
+        color: var(--text) !important;
+        font-family: var(--font-body);
+        font-size: 14px;
+        min-height: 44px;
+    }
+
+    .form-control:focus {
+        border-color: var(--accent) !important;
+        box-shadow: 0 0 0 2px oklch(from #4f98a3 l c h / 0.20) !important;
+        background: var(--bg-base) !important;
+        color: var(--text) !important;
+        outline: none;
+    }
+
+    .form-control::placeholder { color: var(--text-faint) !important; }
+
+    .form-control-sm {
+        min-height: 36px;
+        font-size: 13px !important;
+    }
+
+    textarea.form-control { min-height: auto; }
+
+    /* ── Day toggle pills ────────────────────────────────────────── */
+    .day-toggles {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+
+    .day-toggle {
+        display: none;
+    }
+
+    .day-toggle + label {
+        font-family: var(--font-body);
+        font-size: 12px;
+        color: var(--text-muted);
+        padding: 6px 10px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-input);
+        cursor: pointer;
+        min-height: 36px;
+        display: flex;
+        align-items: center;
+        transition: border-color 0.12s, color 0.12s, background 0.12s;
+        user-select: none;
+    }
+
+    .day-toggle:checked + label {
+        color: var(--accent);
+        border-color: var(--accent);
+        background: oklch(from #4f98a3 l c h / 0.08);
+    }
+
+    /* ── Exercise rows in modal ──────────────────────────────────── */
+    .exrow {
+        background: var(--bg-base);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-input);
+        padding: 10px;
+        margin-bottom: 8px;
+    }
+
+    .exrow .form-control-sm { background: var(--bg-elevated) !important; }
+
+    /* ── Modal divider ───────────────────────────────────────────── */
+    .modal-divider {
+        border: none;
+        border-top: 1px solid var(--border);
+        margin: 16px 0;
+    }
+
+    /* ── Modal buttons ───────────────────────────────────────────── */
+    .tmpl-modal-btn {
+        font-family: var(--font-body);
+        font-size: 14px;
+        font-weight: 500;
+        padding: 10px 20px;
+        border-radius: var(--radius-btn);
+        cursor: pointer;
+        border: none;
+        min-height: 44px;
+        transition: opacity 0.15s;
+    }
+
+    .tmpl-modal-btn--primary {
+        background: var(--accent);
+        color: #0f0e0d;
+    }
+
+    .tmpl-modal-btn--primary:hover { opacity: 0.88; }
+
+    .tmpl-modal-btn--cancel {
+        background: transparent;
+        color: var(--text-muted);
+        border: 1px solid var(--border);
+    }
+
+    .tmpl-modal-btn--cancel:hover { color: var(--text); }
+
+    /* ── Add exercise button in modal ────────────────────────────── */
+    .exadd-btn {
+        font-family: var(--font-body);
+        font-size: 12px;
+        color: var(--accent);
+        background: transparent;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-btn);
+        padding: 6px 12px;
+        cursor: pointer;
+        min-height: 36px;
+        transition: border-color 0.12s;
+    }
+
+    .exadd-btn:hover { border-color: var(--accent); }
+
+    /* ── View modal exercise list ────────────────────────────────── */
+    .view-ex-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--border);
+        font-family: var(--font-body);
+    }
+
+    .view-ex-item:last-child { border-bottom: none; }
+
+    .view-ex-item__name {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--text);
+    }
+
+    .view-ex-item__detail {
+        font-size: 12px;
+        color: var(--text-muted);
+        font-variant-numeric: tabular-nums;
+    }
+
+    .view-ex-description {
+        font-family: var(--font-body);
+        font-size: 13px;
+        color: var(--text-muted);
+        margin: 0 0 12px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    /* ── Sections heading in modal ───────────────────────────────── */
+    .modal-section-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 10px;
+    }
+
+    .modal-section-head__label {
+        font-family: var(--font-body);
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--text-faint);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+
+    /* ── Reduced motion ──────────────────────────────────────────── */
+    @media (prefers-reduced-motion: reduce) {
+        .tmpl-btn, .tmpl-add-btn, .tmpl-modal-btn,
+        .day-toggle + label, .exadd-btn { transition: none; }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="row mb-3">
-    <div class="col-12">
-        <h4>My Schedule</h4>
-        <p class="text-muted">Manage your workout templates and splits</p>
+<h1 class="page-heading" style="font-family:var(--font-display);font-size:20px;font-weight:700;color:var(--text);margin:0 0 20px;">Schedule</h1>
+
+<!-- ── Loading ────────────────────────────────────────────────────── -->
+<div id="tmpl-loading" class="tmpl-spinner" aria-live="polite">
+    <div class="spinner-border" role="status">
+        <span class="visually-hidden">Loading…</span>
     </div>
 </div>
 
-<div class="row" id="templates-container">
-    <div class="col-12 text-center py-5">
-        <p class="text-muted">Loading templates...</p>
-    </div>
+<!-- ── Template list ──────────────────────────────────────────────── -->
+<div id="templates-container" class="d-none"></div>
+
+<!-- ── Empty state ────────────────────────────────────────────────── -->
+<div id="tmpl-empty" class="tmpl-empty d-none">
+    <p class="tmpl-empty__title">No templates yet</p>
+    <p class="tmpl-empty__sub">Create your first template to start tracking progress.</p>
 </div>
 
-<!-- Floating Add Button -->
-<button class="btn btn-primary add-btn" onclick="showCreateTemplateModal()">
-    <i class="bi bi-plus"></i>
-</button>
-
-<!-- Create/Edit Template Modal -->
-<div class="modal fade" id="templateModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="templateModalLabel">Create Workout Template</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="template-form">
-                    <input type="hidden" id="template-id">
-
-                    <div class="mb-3">
-                        <label class="form-label">Template Name</label>
-                        <input type="text" class="form-control" id="template-name" placeholder="e.g., Push Day 1, Pull Day" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Description (optional)</label>
-                        <textarea class="form-control" id="template-description" rows="2" placeholder="Notes about this workout"></textarea>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Color (for calendar)</label>
-                        <div class="d-flex flex-wrap gap-2" id="color-picker">
-                            <button type="button" class="btn color-option" data-color="#198754" style="background-color: #198754; width: 36px; height: 36px; border-radius: 8px; border: 2px solid transparent;" title="Green"></button>
-                            <button type="button" class="btn color-option" data-color="#0d6efd" style="background-color: #0d6efd; width: 36px; height: 36px; border-radius: 8px; border: 2px solid transparent;" title="Blue"></button>
-                            <button type="button" class="btn color-option" data-color="#dc3545" style="background-color: #dc3545; width: 36px; height: 36px; border-radius: 8px; border: 2px solid transparent;" title="Red"></button>
-                            <button type="button" class="btn color-option" data-color="#fd7e14" style="background-color: #fd7e14; width: 36px; height: 36px; border-radius: 8px; border: 2px solid transparent;" title="Orange"></button>
-                            <button type="button" class="btn color-option" data-color="#ffc107" style="background-color: #ffc107; width: 36px; height: 36px; border-radius: 8px; border: 2px solid transparent;" title="Yellow"></button>
-                            <button type="button" class="btn color-option" data-color="#20c997" style="background-color: #20c997; width: 36px; height: 36px; border-radius: 8px; border: 2px solid transparent;" title="Teal"></button>
-                            <button type="button" class="btn color-option" data-color="#6f42c1" style="background-color: #6f42c1; width: 36px; height: 36px; border-radius: 8px; border: 2px solid transparent;" title="Purple"></button>
-                            <button type="button" class="btn color-option" data-color="#e83e8c" style="background-color: #e83e8c; width: 36px; height: 36px; border-radius: 8px; border: 2px solid transparent;" title="Pink"></button>
-                        </div>
-                        <input type="hidden" id="template-color" value="#198754">
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Schedule for Days (select one or more)</label>
-                        <div class="row g-2" id="template-days">
-                            <div class="col-6 col-md-4">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" value="0" id="day-0">
-                                    <label class="form-check-label" for="day-0">Monday</label>
-                                </div>
-                            </div>
-                            <div class="col-6 col-md-4">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" value="1" id="day-1">
-                                    <label class="form-check-label" for="day-1">Tuesday</label>
-                                </div>
-                            </div>
-                            <div class="col-6 col-md-4">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" value="2" id="day-2">
-                                    <label class="form-check-label" for="day-2">Wednesday</label>
-                                </div>
-                            </div>
-                            <div class="col-6 col-md-4">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" value="3" id="day-3">
-                                    <label class="form-check-label" for="day-3">Thursday</label>
-                                </div>
-                            </div>
-                            <div class="col-6 col-md-4">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" value="4" id="day-4">
-                                    <label class="form-check-label" for="day-4">Friday</label>
-                                </div>
-                            </div>
-                            <div class="col-6 col-md-4">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" value="5" id="day-5">
-                                    <label class="form-check-label" for="day-5">Saturday</label>
-                                </div>
-                            </div>
-                            <div class="col-6 col-md-4">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" value="6" id="day-6">
-                                    <label class="form-check-label" for="day-6">Sunday</label>
-                                </div>
-                            </div>
-                        </div>
-                        <small class="text-muted">Leave all unchecked for unscheduled template</small>
-                    </div>
-
-                    <hr>
-
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h6 class="mb-0">Exercises</h6>
-                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addExerciseRow()">
-                            <i class="bi bi-plus"></i> Add Exercise
-                        </button>
-                    </div>
-
-                    <div id="exercises-container">
-                        <!-- Exercise rows will be added here -->
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="saveTemplate()">
-                    <i class="bi bi-check-circle"></i> Save Template
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- View Template Details Modal -->
-<div class="modal fade" id="viewTemplateModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="viewTemplateTitle">Template Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="viewTemplateBody">
-                <!-- Template details will be inserted here -->
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-
+<!-- ── Add template button ────────────────────────────────────────── -->
+<button class="tmpl-add-btn d-none" id="add-template-btn" onclick="showCreateTemplateModal()">+ New template</button>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-let templates = [];
+// ── State ──────────────────────────────────────────────────────────────────────
+let templates        = [];
 let editingTemplateId = null;
-let selectedColor = '#198754';
+let selectedColor    = '#198754'; // kept for API backwards compat; not shown in UI
 
-// Initialize color picker
-document.querySelectorAll('.color-option').forEach(btn => {
-    btn.addEventListener('click', function() {
-        // Remove selected from all
-        document.querySelectorAll('.color-option').forEach(b => b.classList.remove('selected'));
-        // Add selected to clicked
-        this.classList.add('selected');
-        // Update hidden input
-        selectedColor = this.dataset.color;
-        document.getElementById('template-color').value = selectedColor;
-    });
-});
+const DAY_SHORT  = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const DAY_FULL   = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-// Set default color as selected
-document.querySelector('.color-option[data-color="#198754"]').classList.add('selected');
+// ── Boot ───────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', loadTemplates);
 
-// Load all templates
+// ── Load templates ─────────────────────────────────────────────────────────────
 function loadTemplates() {
     fetch('/api/templates')
-        .then(response => response.json())
+        .then(r => r.json())
         .then(data => {
             templates = data;
-            displayTemplates();
+            renderTemplates();
         })
-        .catch(error => {
-            console.error('Error loading templates:', error);
-            document.getElementById('templates-container').innerHTML =
-                '<div class="col-12 text-center py-5"><p class="text-danger">Error loading templates</p></div>';
+        .catch(() => {
+            document.getElementById('tmpl-loading').innerHTML =
+                `<p style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);">Failed to load templates.</p>`;
         });
 }
 
-// Display templates
-function displayTemplates() {
+// ── Render template list ────────────────────────────────────────────────────────
+function renderTemplates() {
+    const loading   = document.getElementById('tmpl-loading');
     const container = document.getElementById('templates-container');
+    const empty     = document.getElementById('tmpl-empty');
+    const addBtn    = document.getElementById('add-template-btn');
+
+    loading.classList.add('d-none');
 
     if (templates.length === 0) {
-        container.innerHTML = `
-            <div class="col-12 text-center py-5">
-                <i class="bi bi-calendar-check" style="font-size: 3rem; opacity: 0.3;"></i>
-                <p class="text-muted mt-3">No workout templates yet. Click the + button to create your first one!</p>
-            </div>
-        `;
+        empty.classList.remove('d-none');
+        addBtn.classList.remove('d-none');
         return;
     }
 
-    const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    empty.classList.add('d-none');
+    container.innerHTML = '';
 
-    let html = '';
-    templates.forEach(template => {
-        // Use new scheduled_days array, or fall back to single day_of_week
-        let scheduledDayText = 'Unscheduled';
-        if (template.scheduled_days && template.scheduled_days.length > 0) {
-            scheduledDayText = template.scheduled_days.map(d => dayNames[d]).join(', ');
-        } else if (template.day_of_week !== null) {
-            scheduledDayText = dayNames[template.day_of_week];
-        }
-
-        const templateColor = template.color || '#198754';
-        html += `
-            <div class="col-md-6 col-lg-4">
-                <div class="template-card">
-                    <div class="template-color-bar" style="background-color: ${templateColor};"></div>
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <h6 class="card-title mb-0">${template.name}</h6>
-                            <div class="btn-group btn-group-sm">
-                                <button class="btn btn-outline-primary btn-sm" onclick="editTemplate(${template.id})" title="Edit">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                                <button class="btn btn-outline-danger btn-sm" onclick="deleteTemplate(${template.id})" title="Delete">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </div>
-                        </div>
-
-                        ${template.description ? `<p class="text-muted small mb-2">${template.description}</p>` : ''}
-
-                        <div class="mb-2">
-                            <small class="text-muted">
-                                <i class="bi bi-calendar"></i> ${scheduledDayText}
-                            </small>
-                        </div>
-                        <div class="mb-2">
-                            <small class="text-muted">
-                                <i class="bi bi-list-check"></i> ${template.exercises.length} exercise${template.exercises.length !== 1 ? 's' : ''}
-                            </small>
-                        </div>
-
-                        <div class="d-grid gap-2">
-                            <button class="btn btn-sm btn-primary" onclick="viewTemplate(${template.id})">
-                                <i class="bi bi-eye"></i> View Exercises
-                            </button>
-                            <button class="btn btn-sm btn-success" onclick="useTemplate(${template.id})">
-                                <i class="bi bi-play-circle"></i> Start Workout
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
+    templates.forEach(t => {
+        container.appendChild(buildTemplateCard(t));
     });
 
-    container.innerHTML = html;
+    container.classList.remove('d-none');
+    addBtn.classList.remove('d-none');
 }
 
-// Show create template modal
+function buildTemplateCard(t) {
+    // Scheduled days text
+    let daysText = 'Unscheduled';
+    if (t.scheduled_days && t.scheduled_days.length > 0) {
+        daysText = t.scheduled_days.map(d => DAY_SHORT[d]).join(' · ');
+    } else if (t.day_of_week !== null && t.day_of_week !== undefined) {
+        daysText = DAY_SHORT[t.day_of_week];
+    }
+
+    const exCount = t.exercises.length;
+    const exLabel = `${exCount} exercise${exCount !== 1 ? 's' : ''}`;
+
+    const card = document.createElement('article');
+    card.className = 'tmpl-card';
+    card.innerHTML = `
+        <div class="tmpl-card__body">
+            <div class="tmpl-card__header">
+                <span class="tmpl-card__name">${escHtml(t.name)}</span>
+                <div class="tmpl-card__actions">
+                    <button class="tmpl-btn tmpl-btn--ghost"
+                            onclick="editTemplate(${t.id})"
+                            aria-label="Edit ${escHtml(t.name)}"
+                            title="Edit">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                            <path d="M12.146.854a.5.5 0 0 1 .707 0l2.293 2.292a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zm.707 1.414L11.707 3.414 12.586 4.293 13.732 3.147 12.854 2.268zM11 4.121l-6.5 6.5.879.878 6.5-6.5L11 4.121zM3.793 12.793 3.146 14.85l2.057-.647-2.41-2.41z"/>
+                        </svg>
+                    </button>
+                    <button class="tmpl-btn tmpl-btn--danger"
+                            onclick="deleteTemplate(${t.id})"
+                            aria-label="Delete ${escHtml(t.name)}"
+                            title="Delete">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                            <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                            <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="tmpl-card__meta">
+                <span class="tmpl-card__days">${escHtml(daysText)}</span>
+                <span class="tmpl-card__count">${escHtml(exLabel)}</span>
+            </div>
+            <div class="tmpl-card__footer">
+                <button class="tmpl-btn tmpl-btn--primary" onclick="useTemplate(${t.id})">Start workout</button>
+                <button class="tmpl-btn tmpl-btn--ghost" onclick="viewTemplate(${t.id})" aria-label="View exercises">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                        <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
+                        <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>`;
+    return card;
+}
+
+// ── Show create modal ──────────────────────────────────────────────────────────
 function showCreateTemplateModal() {
     editingTemplateId = null;
-    document.getElementById('templateModalLabel').textContent = 'Create Workout Template';
-    document.getElementById('template-id').value = '';
+    document.getElementById('templateModalLabel').textContent = 'New template';
+    document.getElementById('template-id').value   = '';
     document.getElementById('template-name').value = '';
     document.getElementById('template-description').value = '';
 
-    // Reset color to default
-    selectedColor = '#198754';
-    document.getElementById('template-color').value = selectedColor;
-    document.querySelectorAll('.color-option').forEach(b => b.classList.remove('selected'));
-    document.querySelector('.color-option[data-color="#198754"]').classList.add('selected');
-
-    // Clear all day checkboxes
     for (let i = 0; i < 7; i++) {
         document.getElementById(`day-${i}`).checked = false;
     }
 
     document.getElementById('exercises-container').innerHTML = '';
-
-    // Add one default exercise row
     addExerciseRow();
 
-    const modal = new bootstrap.Modal(document.getElementById('templateModal'));
-    modal.show();
+    new bootstrap.Modal(document.getElementById('templateModal')).show();
 }
 
-// Add exercise row to form
+// ── Add exercise row ───────────────────────────────────────────────────────────
 function addExerciseRow(exercise = null) {
     const container = document.getElementById('exercises-container');
-    const index = container.children.length;
 
     const row = document.createElement('div');
-    row.className = 'exercise-form-row';
+    row.className = 'exrow';
     row.innerHTML = `
-        <div class="row g-2">
+        <div class="row g-2 align-items-center">
             <div class="col-12 col-md-4">
                 <input type="text" class="form-control form-control-sm" placeholder="Exercise name"
-                       value="${exercise ? exercise.name : ''}" data-field="name" required>
+                       value="${exercise ? escHtml(exercise.name) : ''}" data-field="name" required>
             </div>
-            <div class="col-4 col-md-2">
+            <div class="col-3 col-md-2">
                 <input type="number" class="form-control form-control-sm" placeholder="Sets"
                        value="${exercise ? exercise.sets : ''}" data-field="sets" min="1" required>
             </div>
-            <div class="col-4 col-md-2">
+            <div class="col-3 col-md-2">
                 <input type="number" class="form-control form-control-sm" placeholder="Reps"
                        value="${exercise ? exercise.reps : ''}" data-field="reps" min="1" required>
             </div>
-            <div class="col-4 col-md-2">
-                <input type="number" class="form-control form-control-sm" placeholder="Weight"
+            <div class="col-3 col-md-2">
+                <input type="number" class="form-control form-control-sm" placeholder="lbs"
                        value="${exercise ? exercise.weight : 0}" data-field="weight" min="0" step="0.5">
             </div>
-            <div class="col-10 col-md-2">
-                <input type="number" class="form-control form-control-sm" placeholder="Rest (s)"
-                       value="${exercise ? exercise.rest_time || '' : ''}" data-field="rest_time" min="0">
+            <div class="col-2 col-md-1">
+                <input type="number" class="form-control form-control-sm" placeholder="Rest"
+                       value="${exercise ? (exercise.rest_time || '') : ''}" data-field="rest_time" min="0">
             </div>
-            <div class="col-2 d-flex align-items-center">
-                <button type="button" class="btn btn-sm btn-danger w-100" onclick="this.parentElement.parentElement.parentElement.remove()">
-                    <i class="bi bi-trash"></i>
+            <div class="col-1 d-flex align-items-center justify-content-end">
+                <button type="button" class="tmpl-btn tmpl-btn--danger"
+                        style="min-height:36px;padding:6px 8px;"
+                        onclick="this.closest('.exrow').remove()"
+                        aria-label="Remove exercise">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                        <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                    </svg>
                 </button>
             </div>
-        </div>
-    `;
-
+        </div>`;
     container.appendChild(row);
 }
 
-// Edit template
+// ── Edit template ──────────────────────────────────────────────────────────────
 function editTemplate(templateId) {
-    const template = templates.find(t => t.id === templateId);
-    if (!template) return;
+    const t = templates.find(t => t.id === templateId);
+    if (!t) return;
 
     editingTemplateId = templateId;
-    document.getElementById('templateModalLabel').textContent = 'Edit Workout Template';
-    document.getElementById('template-id').value = templateId;
-    document.getElementById('template-name').value = template.name;
-    document.getElementById('template-description').value = template.description || '';
+    document.getElementById('templateModalLabel').textContent = 'Edit template';
+    document.getElementById('template-id').value   = templateId;
+    document.getElementById('template-name').value = t.name;
+    document.getElementById('template-description').value = t.description || '';
 
-    // Set color
-    selectedColor = template.color || '#198754';
-    document.getElementById('template-color').value = selectedColor;
-    document.querySelectorAll('.color-option').forEach(b => b.classList.remove('selected'));
-    const colorBtn = document.querySelector(`.color-option[data-color="${selectedColor}"]`);
-    if (colorBtn) {
-        colorBtn.classList.add('selected');
-    } else {
-        // If color not in predefined options, select first one
-        document.querySelector('.color-option').classList.add('selected');
-    }
+    // Preserve color for API compat
+    selectedColor = t.color || '#198754';
 
-    // Clear all checkboxes first
     for (let i = 0; i < 7; i++) {
         document.getElementById(`day-${i}`).checked = false;
     }
 
-    // Set checkboxes based on scheduled_days, or fall back to single day_of_week
-    const scheduledDays = template.scheduled_days && template.scheduled_days.length > 0
-        ? template.scheduled_days
-        : (template.day_of_week !== null ? [template.day_of_week] : []);
-
-    scheduledDays.forEach(day => {
-        document.getElementById(`day-${day}`).checked = true;
-    });
+    const scheduledDays = t.scheduled_days && t.scheduled_days.length > 0
+        ? t.scheduled_days
+        : (t.day_of_week !== null && t.day_of_week !== undefined ? [t.day_of_week] : []);
+    scheduledDays.forEach(d => { document.getElementById(`day-${d}`).checked = true; });
 
     document.getElementById('exercises-container').innerHTML = '';
+    t.exercises.sort((a, b) => a.order - b.order).forEach(ex => addExerciseRow(ex));
 
-    // Add exercise rows
-    template.exercises.sort((a, b) => a.order - b.order).forEach(ex => {
-        addExerciseRow(ex);
-    });
-
-    const modal = new bootstrap.Modal(document.getElementById('templateModal'));
-    modal.show();
+    new bootstrap.Modal(document.getElementById('templateModal')).show();
 }
 
-// Save template
+// ── Save template ──────────────────────────────────────────────────────────────
 function saveTemplate() {
     const name = document.getElementById('template-name').value.trim();
+    if (!name) { showWarning('Please enter a template name'); return; }
+
     const description = document.getElementById('template-description').value.trim();
 
-    if (!name) {
-        showWarning('Please enter a template name');
-        return;
-    }
-
-    // Collect exercises
     const exercisesContainer = document.getElementById('exercises-container');
-    const exerciseRows = exercisesContainer.children;
     const exercises = [];
 
-    for (let row of exerciseRows) {
+    for (const row of exercisesContainer.children) {
         const inputs = row.querySelectorAll('input');
-        const exercise = {
-            name: inputs[0].value.trim(),
-            sets: parseInt(inputs[1].value) || 0,
-            reps: parseInt(inputs[2].value) || 0,
-            weight: parseFloat(inputs[3].value) || 0,
-            rest_time: parseInt(inputs[4].value) || 0
+        const ex = {
+            name:      inputs[0].value.trim(),
+            sets:      parseInt(inputs[1].value)   || 0,
+            reps:      parseInt(inputs[2].value)   || 0,
+            weight:    parseFloat(inputs[3].value) || 0,
+            rest_time: parseInt(inputs[4].value)   || 0
         };
-
-        if (exercise.name && exercise.sets > 0 && exercise.reps > 0) {
-            exercises.push(exercise);
-        }
+        if (ex.name && ex.sets > 0 && ex.reps > 0) exercises.push(ex);
     }
 
-    if (exercises.length === 0) {
-        showWarning('Please add at least one exercise');
-        return;
-    }
+    if (exercises.length === 0) { showWarning('Please add at least one exercise'); return; }
 
-    // Collect checked days from checkboxes
     const scheduledDays = [];
     for (let i = 0; i < 7; i++) {
-        if (document.getElementById(`day-${i}`).checked) {
-            scheduledDays.push(i);
-        }
+        if (document.getElementById(`day-${i}`).checked) scheduledDays.push(i);
     }
 
-    const data = {
-        name: name,
-        description: description,
-        color: selectedColor,
+    const payload = {
+        name,
+        description,
+        color:          selectedColor,
         scheduled_days: scheduledDays,
-        exercises: exercises
+        exercises
     };
 
-    const url = editingTemplateId ? `/api/templates/${editingTemplateId}` : '/api/templates';
+    const url    = editingTemplateId ? `/api/templates/${editingTemplateId}` : '/api/templates';
     const method = editingTemplateId ? 'PUT' : 'POST';
 
     fetch(url, {
-        method: method,
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(data)
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
     })
-    .then(response => response.json())
+    .then(r => r.json())
     .then(result => {
         if (result.success) {
-            showSuccess(`Template ${editingTemplateId ? 'updated' : 'created'} successfully!`);
+            showSuccess(`Template ${editingTemplateId ? 'updated' : 'created'}.`);
             bootstrap.Modal.getInstance(document.getElementById('templateModal')).hide();
             loadTemplates();
         }
     })
-    .catch(error => {
-        console.error('Error saving template:', error);
-        showError('Error saving template');
-    });
+    .catch(() => showError('Error saving template'));
 }
 
-// View template details
+// ── View template ──────────────────────────────────────────────────────────────
 function viewTemplate(templateId) {
-    const template = templates.find(t => t.id === templateId);
-    if (!template) return;
+    const t = templates.find(t => t.id === templateId);
+    if (!t) return;
 
-    document.getElementById('viewTemplateTitle').textContent = template.name;
+    document.getElementById('viewTemplateTitle').textContent = t.name;
 
     let html = '';
-    if (template.description) {
-        html += `<p class="text-muted">${template.description}</p><hr>`;
+    if (t.description) {
+        html += `<p class="view-ex-description">${escHtml(t.description)}</p>`;
     }
 
-    html += '<div class="list-group">';
-    template.exercises.sort((a, b) => a.order - b.order).forEach((ex, idx) => {
-        html += `
-            <div class="list-group-item">
-                <div class="d-flex justify-content-between align-items-center">
-                    <strong>${idx + 1}. ${ex.name}</strong>
-                </div>
-                <small class="text-muted">
-                    ${ex.sets} sets × ${ex.reps} reps
-                    ${ex.weight > 0 ? ` @ ${ex.weight} lbs` : ''}
-                    ${ex.rest_time > 0 ? ` • ${ex.rest_time}s rest` : ''}
-                </small>
-            </div>
-        `;
+    t.exercises.sort((a, b) => a.order - b.order).forEach((ex, idx) => {
+        let detail = `${ex.sets} × ${ex.reps}`;
+        if (ex.weight > 0) detail += ` @ ${ex.weight} lbs`;
+        if (ex.rest_time > 0) detail += ` · ${ex.rest_time}s rest`;
+        html += `<div class="view-ex-item">
+            <span class="view-ex-item__name">${idx + 1}. ${escHtml(ex.name)}</span>
+            <span class="view-ex-item__detail">${escHtml(detail)}</span>
+        </div>`;
     });
-    html += '</div>';
 
-    document.getElementById('viewTemplateBody').innerHTML = html;
-
-    const modal = new bootstrap.Modal(document.getElementById('viewTemplateModal'));
-    modal.show();
+    document.getElementById('viewTemplateBody').innerHTML = html || '<p style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);">No exercises.</p>';
+    new bootstrap.Modal(document.getElementById('viewTemplateModal')).show();
 }
 
-// Delete template
+// ── Delete template ────────────────────────────────────────────────────────────
 function deleteTemplate(templateId) {
-    const template = templates.find(t => t.id === templateId);
-    if (!template) return;
+    const t = templates.find(t => t.id === templateId);
+    if (!t) return;
+    if (!confirm(`Delete template "${t.name}"?`)) return;
 
-    if (!confirm(`Delete template "${template.name}"?`)) return;
-
-    fetch(`/api/templates/${templateId}`, {
-        method: 'DELETE'
-    })
-    .then(response => response.json())
-    .then(result => {
-        if (result.success) {
-            showSuccess('Template deleted successfully!');
-            loadTemplates();
-        }
-    })
-    .catch(error => {
-        console.error('Error deleting template:', error);
-        showError('Error deleting template');
-    });
+    fetch(`/api/templates/${templateId}`, { method: 'DELETE' })
+        .then(r => r.json())
+        .then(result => {
+            if (result.success) {
+                showSuccess('Template deleted.');
+                loadTemplates();
+            }
+        })
+        .catch(() => showError('Error deleting template'));
 }
 
-// Use template to start a workout
+// ── Use template — navigate via URL param (no localStorage) ───────────────────
 function useTemplate(templateId) {
-    // Store template ID in localStorage and navigate to log page
-    localStorage.setItem('selectedTemplateId', templateId);
-    window.location.href = '/log';
+    window.location.href = `/log?template=${templateId}`;
 }
 
-// Load templates on page load
-loadTemplates();
+// ── Utilities ──────────────────────────────────────────────────────────────────
+function escHtml(str) {
+    const d = document.createElement('div');
+    d.appendChild(document.createTextNode(str || ''));
+    return d.innerHTML;
+}
 </script>
+
+<!-- ── Create / Edit Modal ────────────────────────────────────────── -->
+<div class="modal fade" id="templateModal" tabindex="-1" aria-labelledby="templateModalLabel" aria-modal="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="templateModalLabel">New template</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="template-form" onsubmit="return false;">
+                    <input type="hidden" id="template-id">
+
+                    <div class="mb-3">
+                        <label class="tmpl-label" for="template-name">Name</label>
+                        <input type="text" class="form-control" id="template-name"
+                               placeholder="e.g., Push A, Pull B" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="tmpl-label" for="template-description">Description <span style="font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></label>
+                        <textarea class="form-control" id="template-description" rows="2"
+                                  placeholder="Notes about this workout"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="tmpl-label">Scheduled days</label>
+                        <div class="day-toggles">
+                            <input type="checkbox" class="day-toggle" id="day-0" value="0">
+                            <label for="day-0">Mon</label>
+                            <input type="checkbox" class="day-toggle" id="day-1" value="1">
+                            <label for="day-1">Tue</label>
+                            <input type="checkbox" class="day-toggle" id="day-2" value="2">
+                            <label for="day-2">Wed</label>
+                            <input type="checkbox" class="day-toggle" id="day-3" value="3">
+                            <label for="day-3">Thu</label>
+                            <input type="checkbox" class="day-toggle" id="day-4" value="4">
+                            <label for="day-4">Fri</label>
+                            <input type="checkbox" class="day-toggle" id="day-5" value="5">
+                            <label for="day-5">Sat</label>
+                            <input type="checkbox" class="day-toggle" id="day-6" value="6">
+                            <label for="day-6">Sun</label>
+                        </div>
+                        <p style="font-family:var(--font-body);font-size:11px;color:var(--text-faint);margin:6px 0 0;">Leave all unchecked for an unscheduled template.</p>
+                    </div>
+
+                    <hr class="modal-divider">
+
+                    <div class="modal-section-head">
+                        <span class="modal-section-head__label">Exercises</span>
+                        <button type="button" class="exadd-btn" onclick="addExerciseRow()">+ Add exercise</button>
+                    </div>
+
+                    <div style="font-family:var(--font-body);font-size:11px;color:var(--text-faint);display:grid;grid-template-columns:4fr 2fr 2fr 2fr 1fr 1fr;gap:0 8px;margin-bottom:4px;padding:0 0 4px;">
+                        <span>Name</span><span>Sets</span><span>Reps</span><span>lbs</span><span>Rest</span><span></span>
+                    </div>
+
+                    <div id="exercises-container"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="tmpl-modal-btn tmpl-modal-btn--cancel" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="tmpl-modal-btn tmpl-modal-btn--primary" onclick="saveTemplate()">Save template</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── View Template Modal ────────────────────────────────────────── -->
+<div class="modal fade" id="viewTemplateModal" tabindex="-1" aria-labelledby="viewTemplateTitle" aria-modal="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="viewTemplateTitle">Template</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="viewTemplateBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="tmpl-modal-btn tmpl-modal-btn--cancel" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

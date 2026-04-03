@@ -1,285 +1,562 @@
 {% extends "base.html" %}
-
-{% block title %}Log Workout - GymLog{% endblock %}
+{% block title %}Log Workout — FitGlyph{% endblock %}
 
 {% block extra_css %}
 <style>
-    body.dark-mode .card {
-        background: rgba(45, 45, 45, 0.3);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        color: #ffffff;
+    /* ── Page layout ──────────────────────────────── */
+    .log-header {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        margin-bottom: 20px;
     }
 
-    body.dark-mode .card-body {
-        color: #ffffff;
+    .log-title {
+        font-family: var(--font-display);
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--text);
+        margin: 0;
     }
 
-    /* Superset styling */
-    .superset-card {
-        border-left: 4px solid #667eea;
-        background: rgba(102, 126, 234, 0.05);
-    }
-
-    body.dark-mode .superset-card {
-        background: rgba(102, 126, 234, 0.1);
-    }
-
-    .superset-toggle {
-        display: inline-flex;
+    /* ── Auto-save indicator ─────────────────────── */
+    .save-indicator {
+        font-family: var(--font-body);
+        font-size: 12px;
+        color: var(--text-faint);
+        display: flex;
         align-items: center;
-        gap: 6px;
-        padding: 4px 12px;
-        border-radius: 20px;
-        background: rgba(102, 126, 234, 0.1);
-        border: 1px solid rgba(102, 126, 234, 0.3);
-        transition: all 0.2s ease;
+        gap: 5px;
+    }
+
+    .save-indicator i { font-size: 13px; }
+
+    .save-indicator.saving {
+        color: var(--text-muted);
+        animation: pulse-opacity 1.5s ease-in-out infinite;
+    }
+
+    .save-indicator.saved  { color: var(--success); }
+    .save-indicator.error  { color: var(--warning);  }
+
+    @keyframes pulse-opacity {
+        0%, 100% { opacity: 1; }
+        50%       { opacity: 0.35; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .save-indicator.saving { animation: none; }
+    }
+
+    /* ── Metadata card ───────────────────────────── */
+    .log-meta {
+        background: var(--bg-raised);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-card);
+        padding: 16px;
+        margin-bottom: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    /* ── Form elements ───────────────────────────── */
+    .field-label {
+        display: block;
+        font-family: var(--font-body);
+        font-size: 12px;
+        color: var(--text-faint);
+        margin-bottom: 6px;
+    }
+
+    .field-optional { color: var(--text-faint); font-weight: 400; }
+
+    .log-input {
+        width: 100%;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-input);
+        color: var(--text);
+        font-family: var(--font-body);
+        font-size: 14px;
+        padding: 9px 12px;
+        outline: none;
+        transition: border-color 0.15s;
+        box-sizing: border-box;
+    }
+
+    .log-input:focus        { border-color: oklch(from #cdccca l c h / 0.30); }
+    .log-input::placeholder { color: var(--text-faint); }
+
+    textarea.log-input {
+        resize: vertical;
+        min-height: 60px;
+    }
+
+    select.log-input {
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%235a5957' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        padding-right: 32px;
+    }
+
+    .template-row              { display: flex; gap: 8px; }
+    .template-row .log-input   { flex: 1; }
+
+    .btn-load-template {
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        border-radius: var(--radius-btn);
+        font-family: var(--font-body);
+        font-size: 13px;
+        font-weight: 500;
+        padding: 0 16px;
         cursor: pointer;
-        font-size: 0.8rem;
+        white-space: nowrap;
+        min-height: 40px;
+        transition: opacity 0.15s;
+    }
+
+    .btn-load-template:hover { opacity: 0.88; }
+
+    /* ── Exercises section header ────────────────── */
+    .exercises-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+    }
+
+    .exercises-label {
+        font-family: var(--font-body);
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text-faint);
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+    }
+
+    .btn-add-exercise {
+        background: none;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-btn);
+        color: var(--text-muted);
+        font-family: var(--font-body);
+        font-size: 13px;
+        padding: 6px 12px;
+        cursor: pointer;
+        min-height: 44px;
+        transition: color 0.15s, border-color 0.15s;
+    }
+
+    .btn-add-exercise:hover {
+        color: var(--text);
+        border-color: oklch(from #cdccca l c h / 0.25);
+    }
+
+    /* ── Exercise card ───────────────────────────── */
+    .exercise-card {
+        background: var(--bg-raised);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-card);
+        box-shadow: var(--shadow-card);
+        padding: 14px 16px;
+        margin-bottom: 12px;
+    }
+
+    .exercise-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+    }
+
+    .exercise-card-title {
+        font-family: var(--font-body);
+        font-size: 12px;
+        color: var(--text-faint);
         font-weight: 500;
     }
 
-    .superset-toggle:hover {
-        background: rgba(102, 126, 234, 0.15);
-        border-color: rgba(102, 126, 234, 0.5);
-    }
-
-    body.dark-mode .superset-toggle {
-        background: rgba(102, 126, 234, 0.15);
-        border-color: rgba(102, 126, 234, 0.4);
-    }
-
-    body.dark-mode .superset-toggle:hover {
-        background: rgba(102, 126, 234, 0.2);
-        border-color: rgba(102, 126, 234, 0.6);
-    }
-
-    .superset-toggle.active {
-        background: rgba(102, 126, 234, 0.25);
-        border-color: #667eea;
-    }
-
-    body.dark-mode .superset-toggle.active {
-        background: rgba(102, 126, 234, 0.3);
-        border-color: #8b9ff0;
-    }
-
-    .superset-toggle input[type="checkbox"] {
-        display: none;
-    }
-
-    .superset-toggle-icon {
-        font-size: 0.9rem;
-        transition: transform 0.2s ease;
-    }
-
-    .superset-toggle.active .superset-toggle-icon {
-        transform: scale(1.1);
-    }
-
-    .superset-name-container {
+    .exercise-card-actions {
         display: flex;
-        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+    }
+
+    .btn-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        min-height: 44px;
+        background: none;
+        border: none;
+        border-radius: var(--radius-btn);
+        color: var(--text-faint);
+        cursor: pointer;
+        font-size: 17px;
+        transition: color 0.15s;
+        padding: 0;
+    }
+
+    .btn-icon:hover          { color: var(--text); }
+    .btn-icon.btn-remove:hover { color: var(--warning); }
+
+    /* ── Bootstrap dropdown overrides ────────────── */
+    .dropdown-menu {
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-card);
+        box-shadow: var(--shadow-hover);
+        padding: 4px;
+        min-width: 170px;
+    }
+
+    .dropdown-item {
+        color: var(--text);
+        font-family: var(--font-body);
+        font-size: 13px;
+        border-radius: 6px;
+        padding: 8px 12px;
+        display: flex;
+        align-items: center;
         gap: 8px;
     }
 
-    .exercise-name-label {
-        font-size: 0.75rem;
-        font-weight: 600;
-        color: #667eea;
+    .dropdown-item:hover,
+    .dropdown-item:focus {
+        background: oklch(from #cdccca l c h / 0.07);
+        color: var(--text);
+    }
+
+    .dropdown-divider { border-color: var(--border); margin: 4px 0; }
+
+    /* ── Exercise A/B labels (superset) ──────────── */
+    .exercise-ab-label {
+        font-family: var(--font-body);
+        font-size: 11px;
+        color: var(--text-faint);
+        margin-bottom: 4px;
+        display: none;
+    }
+
+    /* ── Equipment pills ─────────────────────────── */
+    .equipment-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 14px;
+    }
+
+    .equipment-pill {
+        background: none;
+        border: 1px solid var(--border);
+        border-radius: 9999px;
+        color: var(--text-faint);
+        font-family: var(--font-body);
+        font-size: 12px;
+        padding: 4px 12px;
+        cursor: pointer;
+        min-height: 28px;
+        transition: color 0.15s, border-color 0.15s;
+    }
+
+    .equipment-pill:hover  { color: var(--text-muted); }
+
+    .equipment-pill.active {
+        color: var(--text);
+        border-color: oklch(from #cdccca l c h / 0.35);
+    }
+
+    /* ── Sets section ────────────────────────────── */
+    .sets-section        { margin-bottom: 12px; }
+
+    .sets-section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+    }
+
+    .sets-section-label {
+        font-family: var(--font-body);
+        font-size: 12px;
+        color: var(--text-faint);
+        font-weight: 500;
+    }
+
+    .btn-add-set {
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        font-family: var(--font-body);
+        font-size: 12px;
+        cursor: pointer;
+        padding: 4px 0;
+        min-height: 44px;
+        transition: color 0.15s;
+    }
+
+    .btn-add-set:hover { color: var(--text); }
+
+    /* ── Set row ─────────────────────────────────── */
+    .set-wrapper { margin-bottom: 6px; }
+
+    .set-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .set-num {
+        font-family: var(--font-body);
+        font-size: 11px;
+        color: var(--text-faint);
+        min-width: 20px;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        flex-shrink: 0;
+    }
+
+    .log-input-sm {
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-input);
+        color: var(--text);
+        font-family: var(--font-body);
+        font-size: 13px;
+        padding: 6px 8px;
+        outline: none;
+        width: 0;
+        flex: 1;
+        min-width: 0;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .log-input-sm:focus        { border-color: oklch(from #cdccca l c h / 0.30); }
+    .log-input-sm::placeholder { color: var(--text-faint); font-size: 11px; }
+
+    /* Superset col wrapper */
+    .set-col-wrap {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .set-col-label {
+        font-family: var(--font-body);
+        font-size: 10px;
+        color: var(--text-faint);
+        text-align: center;
         margin-bottom: 2px;
     }
 
-    body.dark-mode .exercise-name-label {
-        color: #8b9ff0;
+    /* ── Drop toggle ─────────────────────────────── */
+    .drop-toggle {
+        display: none;
+        align-items: center;
+        gap: 3px;
+        padding: 4px 8px;
+        font-family: var(--font-body);
+        font-size: 11px;
+        color: var(--text-faint);
+        cursor: pointer;
+        min-height: 30px;
+        white-space: nowrap;
+        border: 1px solid transparent;
+        border-radius: 9999px;
+        transition: color 0.15s;
+        user-select: none;
     }
 
-    .superset-weight-header {
-        font-size: 0.7rem;
-        font-weight: 600;
-        text-align: center;
-        color: #666;
+    .exercise-advanced .drop-toggle { display: flex; }
+
+    .drop-toggle input[type="checkbox"] { display: none; }
+
+    .drop-toggle.active {
+        color: var(--text-muted);
+        border-color: var(--border);
     }
 
-    body.dark-mode .superset-weight-header {
-        color: #aaa;
+    /* ── Remove set button ───────────────────────── */
+    .btn-remove-set {
+        background: none;
+        border: none;
+        color: var(--text-faint);
+        cursor: pointer;
+        font-size: 16px;
+        padding: 0;
+        width: 28px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--radius-btn);
+        transition: color 0.15s;
+        flex-shrink: 0;
     }
 
-    /* Drop set styling */
-    .drop-set-container {
-        border-left: 3px solid #f59e0b;
-        padding-left: 10px;
-        margin-left: 5px;
-        margin-top: 8px;
-        background: rgba(245, 158, 11, 0.05);
-        border-radius: 4px;
-        padding: 8px 10px;
-    }
+    .btn-remove-set:hover { color: var(--text-muted); }
 
-    body.dark-mode .drop-set-container {
-        background: rgba(245, 158, 11, 0.1);
+    /* ── Drop set stages ─────────────────────────── */
+    .drop-stages {
+        border-top: 1px dashed oklch(from #cdccca l c h / 0.12);
+        padding-top: 8px;
+        margin-top: 6px;
     }
 
     .drop-stage {
-        padding: 4px 0;
-        border-bottom: 1px dashed rgba(245, 158, 11, 0.2);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 6px;
+        padding-bottom: 6px;
+        border-bottom: 1px dashed oklch(from #cdccca l c h / 0.07);
     }
 
-    .drop-stage:last-child {
-        border-bottom: none;
-    }
+    .drop-stage:last-child { border-bottom: none; margin-bottom: 0; }
 
     .drop-stage-label {
-        font-size: 0.7rem;
-        color: #f59e0b;
-        font-weight: 600;
+        font-family: var(--font-body);
+        font-size: 11px;
+        color: var(--text-faint);
+        min-width: 40px;
+        flex-shrink: 0;
     }
 
-    body.dark-mode .drop-stage-label {
-        color: #fbbf24;
-    }
-
-    /* Dropset toggles hidden by default; revealed when exercise is in advanced mode */
-    .drop-set-toggle {
-        display: none;
-        align-items: center;
-        gap: 4px;
-        padding: 2px 8px;
-        border-radius: 12px;
-        background: rgba(245, 158, 11, 0.1);
-        border: 1px solid rgba(245, 158, 11, 0.3);
-        transition: all 0.2s ease;
+    .btn-add-drop {
+        background: none;
+        border: 1px dashed var(--border);
+        border-radius: var(--radius-btn);
+        color: var(--text-faint);
+        font-family: var(--font-body);
+        font-size: 12px;
+        padding: 5px 10px;
         cursor: pointer;
-        font-size: 0.7rem;
-        font-weight: 500;
+        width: 100%;
+        margin-top: 6px;
+        min-height: 32px;
+        transition: color 0.15s;
     }
 
-    .exercise-advanced .drop-set-toggle {
-        display: inline-flex;
+    .btn-add-drop:hover { color: var(--text-muted); }
+
+    /* ── Rest row ────────────────────────────────── */
+    .rest-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 12px;
     }
 
-    .drop-set-toggle:hover {
-        background: rgba(245, 158, 11, 0.15);
-        border-color: rgba(245, 158, 11, 0.5);
+    .rest-label {
+        font-family: var(--font-body);
+        font-size: 12px;
+        color: var(--text-faint);
+        flex-shrink: 0;
     }
 
-    body.dark-mode .drop-set-toggle {
-        background: rgba(245, 158, 11, 0.15);
-        border-color: rgba(245, 158, 11, 0.4);
+    .rest-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
     }
 
-    body.dark-mode .drop-set-toggle:hover {
-        background: rgba(245, 158, 11, 0.2);
-        border-color: rgba(245, 158, 11, 0.6);
+    .log-input-rest {
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-input);
+        color: var(--text);
+        font-family: var(--font-body);
+        font-size: 13px;
+        padding: 5px 8px;
+        outline: none;
+        width: 68px;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
     }
 
-    .drop-set-toggle.active {
-        background: rgba(245, 158, 11, 0.25);
-        border-color: #f59e0b;
+    .log-input-rest:focus { border-color: oklch(from #cdccca l c h / 0.30); }
+
+    .btn-timer {
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        font-family: var(--font-body);
+        font-size: 12px;
+        cursor: pointer;
+        padding: 0;
+        min-height: 44px;
+        transition: color 0.15s;
+        white-space: nowrap;
     }
 
-    body.dark-mode .drop-set-toggle.active {
-        background: rgba(245, 158, 11, 0.3);
-        border-color: #fbbf24;
+    .btn-timer:hover { color: var(--text); }
+
+    /* ── Log footer ──────────────────────────────── */
+    .log-footer          { margin-top: 20px; display: flex; flex-direction: column; gap: 8px; }
+
+    .log-footer__meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 4px;
     }
 
-    .drop-set-toggle input[type="checkbox"] {
-        display: none;
+    .btn-clear {
+        background: none;
+        border: none;
+        color: var(--text-faint);
+        font-family: var(--font-body);
+        font-size: 12px;
+        cursor: pointer;
+        padding: 0;
+        min-height: 44px;
+        transition: color 0.15s;
     }
 
-    .drop-set-toggle-icon {
-        font-size: 0.75rem;
-        transition: transform 0.2s ease;
+    .btn-clear:hover { color: var(--warning); }
+
+    .btn-log-primary {
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        border-radius: var(--radius-btn);
+        font-family: var(--font-body);
+        font-size: 15px;
+        font-weight: 600;
+        padding: 13px;
+        cursor: pointer;
+        width: 100%;
+        min-height: 48px;
+        transition: opacity 0.15s;
     }
 
-    .drop-set-toggle.active .drop-set-toggle-icon {
-        transform: rotate(180deg);
+    .btn-log-primary:hover { opacity: 0.88; }
+
+    .btn-log-ghost {
+        background: var(--bg-raised);
+        color: var(--text-muted);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-btn);
+        font-family: var(--font-body);
+        font-size: 14px;
+        padding: 12px;
+        cursor: pointer;
+        width: 100%;
+        min-height: 46px;
+        transition: color 0.15s;
     }
 
-    body.dark-mode .form-control,
-    body.dark-mode .form-select {
-        background-color: #1a1a1a;
-        color: #ffffff;
-        border-color: #404040;
-    }
+    .btn-log-ghost:hover { color: var(--text); }
 
-    body.dark-mode .form-label {
-        color: #ffffff;
-    }
-
-    body.dark-mode .modal-content {
-        background-color: #2d2d2d;
-        color: #ffffff;
-    }
-
-    body.dark-mode .modal-header,
-    body.dark-mode .modal-footer {
-        border-color: #404040;
-    }
-
-    body.dark-mode .btn-close {
-        filter: invert(1);
-    }
-
-    body.dark-mode input::placeholder {
-        color: #888 !important;
-    }
-
-    body.dark-mode .text-muted {
-        color: #aaa !important;
-    }
-
-    body.dark-mode h3,
-    body.dark-mode h4,
-    body.dark-mode h5,
-    body.dark-mode h6 {
-        color: #ffffff !important;
-    }
-
-    body.dark-mode small {
-        color: #ccc !important;
-    }
-
-    body.dark-mode .form-control-sm {
-        background-color: #1a1a1a;
-        color: #ffffff;
-        border-color: #404040;
-    }
-
-    /* Auto-save status indicator */
-    #auto-save-status {
-        transition: all 0.3s ease;
-        font-weight: 500;
-    }
-
-    #auto-save-status.saving {
-        color: #fd7e14 !important;
-    }
-
-    #auto-save-status.saved {
-        color: #198754 !important;
-    }
-
-    body.dark-mode #auto-save-status.saving {
-        color: #ff922b !important;
-    }
-
-    body.dark-mode #auto-save-status.saved {
-        color: #28a745 !important;
-    }
-
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.5; }
-    }
-
-    #auto-save-status.saving {
-        animation: pulse 1.5s ease-in-out infinite;
-    }
-
-    /* Exercise autocomplete */
-    .exercise-autocomplete-wrapper {
-        position: relative;
-    }
+    /* ── Autocomplete ────────────────────────────── */
+    .exercise-autocomplete-wrapper { position: relative; }
 
     .exercise-dropdown {
         position: absolute;
@@ -287,149 +564,210 @@
         left: 0;
         right: 0;
         z-index: 1050;
-        background: #fff;
-        border: 1px solid #dee2e6;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
         border-top: none;
-        border-radius: 0 0 6px 6px;
+        border-radius: 0 0 var(--radius-input) var(--radius-input);
         max-height: 220px;
         overflow-y: auto;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        box-shadow: var(--shadow-card);
         display: none;
     }
 
-    .exercise-dropdown.show {
-        display: block;
-    }
+    .exercise-dropdown.show { display: block; }
 
     .exercise-dropdown-item {
-        padding: 8px 12px;
+        padding: 9px 12px;
         cursor: pointer;
-        font-size: 0.875rem;
+        font-family: var(--font-body);
+        font-size: 13px;
+        color: var(--text);
         display: flex;
         justify-content: space-between;
         align-items: center;
-        border-bottom: 1px solid rgba(0,0,0,0.05);
+        border-bottom: 1px solid oklch(from #cdccca l c h / 0.05);
     }
 
-    .exercise-dropdown-item:last-child {
-        border-bottom: none;
-    }
+    .exercise-dropdown-item:last-child { border-bottom: none; }
 
     .exercise-dropdown-item:hover,
     .exercise-dropdown-item.active {
-        background: #f0f4ff;
+        background: oklch(from #cdccca l c h / 0.07);
     }
 
     .exercise-dropdown-item .muscle-badge {
-        font-size: 0.7rem;
-        color: #777;
-        background: #f0f0f0;
-        padding: 2px 7px;
-        border-radius: 10px;
+        font-size: 11px;
+        color: var(--text-faint);
+        background: var(--bg-base);
+        padding: 2px 8px;
+        border-radius: 9999px;
         flex-shrink: 0;
         margin-left: 8px;
     }
 
     .exercise-dropdown-item.add-custom {
-        color: #667eea;
+        color: var(--accent);
         font-style: italic;
-        background: rgba(102,126,234,0.04);
     }
 
     .exercise-dropdown-item.add-custom:hover {
-        background: rgba(102,126,234,0.1);
+        background: oklch(from #4f98a3 l c h / 0.08);
     }
 
-    /* Dark mode */
-    body.dark-mode .exercise-dropdown {
-        background: #2d2d2d;
-        border-color: #404040;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    /* ── Bootstrap modal overrides ───────────────── */
+    .modal-content {
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-card);
+        color: var(--text);
     }
 
-    body.dark-mode .exercise-dropdown-item {
-        color: #e0e0e0;
-        border-bottom-color: rgba(255,255,255,0.05);
+    .modal-header {
+        border-bottom: 1px solid var(--border);
+        padding: 14px 16px;
     }
 
-    body.dark-mode .exercise-dropdown-item:hover,
-    body.dark-mode .exercise-dropdown-item.active {
-        background: rgba(102,126,234,0.15);
+    .modal-title {
+        font-family: var(--font-display);
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text);
     }
 
-    body.dark-mode .exercise-dropdown-item .muscle-badge {
-        background: #3a3a3a;
-        color: #aaa;
+    .modal-body {
+        padding: 16px;
+        font-family: var(--font-body);
+        font-size: 14px;
+        color: var(--text-muted);
+        line-height: 1.5;
     }
 
-    body.dark-mode .exercise-dropdown-item.add-custom {
-        background: rgba(102,126,234,0.08);
+    .modal-footer {
+        border-top: 1px solid var(--border);
+        padding: 12px 16px;
+        gap: 8px;
     }
 
-    body.dark-mode .exercise-dropdown-item.add-custom:hover {
-        background: rgba(102,126,234,0.18);
+    .btn-close { filter: invert(0.7); }
+
+    /* ── Timer display ───────────────────────────── */
+    .timer-display {
+        font-family: var(--font-body);
+        font-size: 40px;
+        font-weight: 700;
+        color: var(--text);
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+        margin: 16px 0;
+    }
+
+    .timer-controls {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+    }
+
+    .btn-timer-ctrl {
+        background: var(--bg-raised);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-btn);
+        color: var(--text-muted);
+        font-family: var(--font-body);
+        font-size: 14px;
+        padding: 8px 20px;
+        cursor: pointer;
+        min-height: 44px;
+        transition: color 0.15s;
+    }
+
+    .btn-timer-ctrl:hover { color: var(--text); }
+
+    .btn-timer-ctrl.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+    }
+
+    .btn-timer-ctrl.primary:hover { opacity: 0.88; }
+
+    .btn-timer-ctrl:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+    }
+
+    /* ── Modal action buttons ────────────────────── */
+    .btn-modal-secondary {
+        background: var(--bg-raised);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-btn);
+        color: var(--text-muted);
+        font-family: var(--font-body);
+        font-size: 14px;
+        padding: 8px 16px;
+        cursor: pointer;
+        min-height: 44px;
+    }
+
+    .btn-modal-danger {
+        background: none;
+        border: 1px solid var(--warning);
+        border-radius: var(--radius-btn);
+        color: var(--warning);
+        font-family: var(--font-body);
+        font-size: 14px;
+        padding: 8px 16px;
+        cursor: pointer;
+        min-height: 44px;
+        transition: background 0.15s;
+    }
+
+    .btn-modal-danger:hover {
+        background: oklch(from #bb653b l c h / 0.10);
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<h3>Log Workout</h3>
-
-<div class="card mb-3">
-    <div class="card-body">
-        <div class="mb-3">
-            <label for="workout-date" class="form-label">Date & Time</label>
-            <input type="datetime-local" class="form-control" id="workout-date">
-        </div>
-        <div class="mb-3">
-            <label for="workout-notes" class="form-label">Notes (optional)</label>
-            <textarea class="form-control" id="workout-notes" rows="2"></textarea>
-        </div>
-        <div class="mb-3">
-            <label for="template-select" class="form-label">Load from Template (optional)</label>
-            <div class="input-group">
-                <select class="form-select" id="template-select">
-                    <option value="">-- Select a template --</option>
-                </select>
-                <button class="btn btn-outline-primary" onclick="loadTemplate()">
-                    <i class="bi bi-download"></i> Load
-                </button>
-            </div>
-            <small class="text-muted">Select a workout template to pre-fill exercises</small>
-        </div>
-    </div>
+<div class="log-header">
+    <h1 class="log-title">Log workout</h1>
 </div>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h5>Exercises</h5>
-    <button class="btn btn-primary btn-sm" onclick="addExercise()">
-        <i class="bi bi-plus-circle"></i> Add Exercise
-    </button>
+<section class="log-meta" aria-label="Workout details">
+    <div>
+        <label class="field-label" for="workout-date">Date &amp; time</label>
+        <input type="datetime-local" class="log-input" id="workout-date">
+    </div>
+    <div>
+        <label class="field-label" for="workout-notes">Notes <span class="field-optional">(optional)</span></label>
+        <textarea class="log-input" id="workout-notes" rows="2" placeholder="How did it go?"></textarea>
+    </div>
+    <div>
+        <label class="field-label" for="template-select">Load template <span class="field-optional">(optional)</span></label>
+        <div class="template-row">
+            <select class="log-input" id="template-select">
+                <option value="">Select a template</option>
+            </select>
+            <button class="btn-load-template" onclick="loadTemplate()">Load</button>
+        </div>
+    </div>
+</section>
+
+<div class="exercises-header">
+    <span class="exercises-label">Exercises</span>
+    <button class="btn-add-exercise" onclick="addExercise()">+ Add exercise</button>
 </div>
 
 <div id="exercises-container"></div>
 
-<div class="mt-3 mb-3">
-    <div class="d-flex align-items-center justify-content-between mb-2">
-        <small id="auto-save-status" class="text-muted">
-            <i class="bi bi-cloud-check"></i> Auto-save enabled
-        </small>
-        <button type="button" class="btn btn-link btn-sm p-0 text-danger" onclick="confirmClear()">
-            <i class="bi bi-trash"></i> Clear
-        </button>
+<div class="log-footer">
+    <div class="log-footer__meta">
+        <span class="save-indicator" id="auto-save-status" aria-live="polite">
+            <i class="bi bi-cloud-check"></i> Auto-save on
+        </span>
+        <button class="btn-clear" onclick="confirmClear()">Clear</button>
     </div>
-    <div class="row g-2">
-        <div class="col-12">
-            <button class="btn btn-success w-100" onclick="saveWorkout()">
-                <i class="bi bi-check-circle"></i> Save Workout
-            </button>
-        </div>
-        <div class="col-12">
-            <button class="btn btn-outline-secondary w-100" onclick="saveRestDay()">
-                <i class="bi bi-moon-stars"></i> Log Rest Day
-            </button>
-        </div>
-    </div>
+    <button class="btn-log-primary" onclick="saveWorkout()">Save workout</button>
+    <button class="btn-log-ghost" onclick="saveRestDay()">Log rest day</button>
 </div>
 
 <!-- Clear Workout Confirmation Modal -->
@@ -437,16 +775,17 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="clearConfirmModalLabel">Clear Workout?</h5>
+                <h2 class="modal-title" id="clearConfirmModalLabel">Clear workout?</h2>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 All exercises and sets will be lost. This cannot be undone.
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" onclick="clearWorkout(); bootstrap.Modal.getInstance(document.getElementById('clearConfirmModal')).hide()">
-                    <i class="bi bi-trash"></i> Clear Workout
+                <button type="button" class="btn-modal-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn-modal-danger"
+                        onclick="clearWorkout(); bootstrap.Modal.getInstance(document.getElementById('clearConfirmModal')).hide()">
+                    Clear workout
                 </button>
             </div>
         </div>
@@ -454,19 +793,19 @@
 </div>
 
 <!-- Rest Timer Modal -->
-<div class="modal fade" id="timerModal" tabindex="-1">
+<div class="modal fade" id="timerModal" tabindex="-1" aria-label="Rest timer">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Rest Timer</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h2 class="modal-title">Rest timer</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body text-center">
-                <div class="display-1 mb-3" id="timer-display">0:00</div>
-                <div class="btn-group" role="group">
-                    <button class="btn btn-primary" onclick="startTimer()" id="start-btn">Start</button>
-                    <button class="btn btn-warning" onclick="pauseTimer()" id="pause-btn" disabled>Pause</button>
-                    <button class="btn btn-danger" onclick="resetTimer()">Reset</button>
+            <div class="modal-body">
+                <div class="timer-display" id="timer-display">0:00</div>
+                <div class="timer-controls">
+                    <button class="btn-timer-ctrl primary" onclick="startTimer()" id="start-btn">Start</button>
+                    <button class="btn-timer-ctrl" onclick="pauseTimer()" id="pause-btn" disabled>Pause</button>
+                    <button class="btn-timer-ctrl" onclick="resetTimer()">Reset</button>
                 </div>
             </div>
         </div>
@@ -485,33 +824,26 @@
     let autoSaveTimeout = null;
 
     // Set default date/time to browser's current local time
-    // The datetime-local input works in the browser's timezone
     function setDefaultWorkoutDate() {
-    // Get current time in UTC
-    const now = new Date();
-    
-    // Apply user's selected timezone offset
-    const offset = getTimezoneOffset(); // This is defined in base.html
-    now.setUTCHours(now.getUTCHours() + offset);
-    
-    // Format as datetime-local value (YYYY-MM-DDTHH:MM)
-    const year = now.getUTCFullYear();
-    const month = String(now.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(now.getUTCDate()).padStart(2, '0');
-    const hours = String(now.getUTCHours()).padStart(2, '0');
-    const minutes = String(now.getUTCMinutes()).padStart(2, '0');
+        const now = new Date();
+        const offset = getTimezoneOffset();
+        now.setUTCHours(now.getUTCHours() + offset);
 
-    document.getElementById('workout-date').value = `${year}-${month}-${day}T${hours}:${minutes}`;
-}
+        const year    = now.getUTCFullYear();
+        const month   = String(now.getUTCMonth() + 1).padStart(2, '0');
+        const day     = String(now.getUTCDate()).padStart(2, '0');
+        const hours   = String(now.getUTCHours()).padStart(2, '0');
+        const minutes = String(now.getUTCMinutes()).padStart(2, '0');
 
+        document.getElementById('workout-date').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+    }
 
-    // Set default date immediately
     setDefaultWorkoutDate();
 
-    // ===== SERVER-SIDE DRAFT AUTO-SAVE FUNCTIONS =====
+    // ── Draft auto-save ──────────────────────────────
 
-    let currentDraftId = null;  // Track current draft workout ID
-    let currentTemplateId = null;  // Track which template is being used
+    let currentDraftId    = null;
+    let currentTemplateId = null;
 
     function getWorkoutDataForSave() {
         const exercises = [];
@@ -519,31 +851,24 @@
             const nameEl = document.getElementById(`name-${i}`);
             if (!nameEl) continue;
 
-            const name = nameEl.value;
-            const rest = document.getElementById(`rest-${i}`).value || 0;
-            const sets = getSetsForExercise(i);
-            const isSuperset = document.getElementById(`superset-toggle-${i}`)?.checked || false;
+            const name        = nameEl.value;
+            const rest        = document.getElementById(`rest-${i}`).value || 0;
+            const sets        = getSetsForExercise(i);
+            const isSuperset  = document.getElementById(`superset-toggle-${i}`)?.checked || false;
             const supersetExerciseName = isSuperset ? document.getElementById(`name-b-${i}`)?.value : null;
 
             if (name || sets.length > 0) {
-                // Calculate totals for backward compatibility
                 const totalSets = sets.length || 1;
-                let avgReps = 0;
-                let avgWeight = null;
+                let avgReps = 0, avgWeight = null;
 
                 if (isSuperset) {
-                    // For supersets, average reps_a and weight_a for backward compatibility
-                    avgReps = sets.length > 0 ? Math.round(sets.reduce((sum, s) => sum + (s.reps_a || 0), 0) / sets.length) : 0;
-                    const setsWithWeight = sets.filter(s => s.weight_a !== null);
-                    avgWeight = setsWithWeight.length > 0
-                        ? Math.round(setsWithWeight.reduce((sum, s) => sum + s.weight_a, 0) / setsWithWeight.length * 10) / 10
-                        : null;
+                    avgReps = sets.length > 0 ? Math.round(sets.reduce((s, x) => s + (x.reps_a || 0), 0) / sets.length) : 0;
+                    const sw = sets.filter(s => s.weight_a !== null);
+                    avgWeight = sw.length > 0 ? Math.round(sw.reduce((s, x) => s + x.weight_a, 0) / sw.length * 10) / 10 : null;
                 } else {
-                    avgReps = sets.length > 0 ? Math.round(sets.reduce((sum, s) => sum + s.reps, 0) / sets.length) : 0;
-                    const setsWithWeight = sets.filter(s => s.weight !== null);
-                    avgWeight = setsWithWeight.length > 0
-                        ? Math.round(setsWithWeight.reduce((sum, s) => sum + s.weight, 0) / setsWithWeight.length * 10) / 10
-                        : null;
+                    avgReps = sets.length > 0 ? Math.round(sets.reduce((s, x) => s + x.reps, 0) / sets.length) : 0;
+                    const sw = sets.filter(s => s.weight !== null);
+                    avgWeight = sw.length > 0 ? Math.round(sw.reduce((s, x) => s + x.weight, 0) / sw.length * 10) / 10 : null;
                 }
 
                 exercises.push({
@@ -560,81 +885,62 @@
             }
         }
 
-        // Get the datetime-local value and convert to UTC for server
         const localDateValue = document.getElementById('workout-date').value;
-        const utcDate = localInputValueToUTC(localDateValue);
+        const utcDate        = localInputValueToUTC(localDateValue);
 
         return {
             date: utcDate,
             notes: document.getElementById('workout-notes').value,
-            exercises: exercises,
+            exercises,
             template_id: currentTemplateId
         };
     }
 
     async function saveDraftToServer() {
         const workoutData = getWorkoutDataForSave();
-
-        // Don't save if no meaningful data
         if (workoutData.exercises.length === 0 && !workoutData.notes) {
             updateSaveStatus('saved');
             return;
         }
-
         try {
             const response = await fetch('/api/workouts/draft', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(workoutData)
             });
-
             const result = await response.json();
-
             if (result.success) {
                 currentDraftId = result.workout.id;
-                console.log('Draft saved to server, ID:', currentDraftId);
                 updateSaveStatus('saved');
-
-                // Also save to localStorage as backup
                 saveWorkoutToLocalStorage();
             } else {
-                console.error('Server draft save failed:', result.message);
                 updateSaveStatus('error');
-                // Fall back to localStorage
                 saveWorkoutToLocalStorage();
             }
         } catch (e) {
-            console.error('Error saving draft to server:', e);
             updateSaveStatus('error');
-            // Fall back to localStorage
             saveWorkoutToLocalStorage();
         }
     }
 
     function saveWorkoutToLocalStorage() {
-        // Backup to localStorage in case server is unavailable
         const workoutData = {
             date: document.getElementById('workout-date').value,
             notes: document.getElementById('workout-notes').value,
             exercises: [],
-            exerciseCount: exerciseCount,
-            setCounters: setCounters,
+            exerciseCount,
+            setCounters,
             timestamp: new Date().toISOString()
         };
 
         for (let i = 1; i <= exerciseCount; i++) {
             const nameEl = document.getElementById(`name-${i}`);
             if (!nameEl) continue;
-
-            const name = nameEl.value || '';
-            const rest = document.getElementById(`rest-${i}`)?.value || '60';
-            const sets = getSetsForExercise(i);
-
             workoutData.exercises.push({
                 id: i,
-                name: name,
-                rest: rest,
-                sets: sets
+                name: nameEl.value || '',
+                rest: document.getElementById(`rest-${i}`)?.value || '60',
+                sets: getSetsForExercise(i)
             });
         }
 
@@ -646,92 +952,68 @@
     }
 
     function updateSaveStatus(status) {
-        const statusEl = document.getElementById('auto-save-status');
-        if (!statusEl) return;
-
-        statusEl.className = 'text-muted';
+        const el = document.getElementById('auto-save-status');
+        if (!el) return;
 
         if (status === 'saving') {
-            statusEl.className = 'saving';
-            statusEl.innerHTML = '<i class="bi bi-cloud-arrow-up"></i> Saving...';
+            el.className = 'save-indicator saving';
+            el.innerHTML = '<i class="bi bi-cloud-arrow-up"></i> Saving...';
         } else if (status === 'saved') {
-            statusEl.className = 'saved';
-            statusEl.innerHTML = '<i class="bi bi-cloud-check-fill"></i> Draft saved';
-
-            // Reset to default after 3 seconds
+            el.className = 'save-indicator saved';
+            el.innerHTML = '<i class="bi bi-cloud-check-fill"></i> Draft saved';
             setTimeout(() => {
-                statusEl.className = 'text-muted';
-                statusEl.innerHTML = '<i class="bi bi-cloud-check"></i> Auto-save enabled';
+                el.className = 'save-indicator';
+                el.innerHTML = '<i class="bi bi-cloud-check"></i> Auto-save on';
             }, 3000);
         } else if (status === 'error') {
-            statusEl.className = 'text-danger';
-            statusEl.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Save failed (using local backup)';
+            el.className = 'save-indicator error';
+            el.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Save failed';
         }
     }
 
     async function loadDraftFromServer() {
         try {
             const response = await fetch('/api/workouts/draft');
-            const result = await response.json();
+            const result   = await response.json();
 
             if (result.success && result.has_draft && result.workout) {
                 const draft = result.workout;
-                currentDraftId = draft.id;
+                currentDraftId    = draft.id;
                 currentTemplateId = draft.template_id || null;
 
-                // Clear existing exercises container
                 document.getElementById('exercises-container').innerHTML = '';
                 exerciseCount = 0;
-                setCounters = {};
+                setCounters   = {};
 
-                // Restore date (convert from UTC to local)
                 if (draft.date) {
                     const utcDate = new Date(draft.date);
-                    const offset = getTimezoneOffset();
+                    const offset  = getTimezoneOffset();
                     utcDate.setUTCHours(utcDate.getUTCHours() + offset);
 
-                    const year = utcDate.getUTCFullYear();
-                    const month = String(utcDate.getUTCMonth() + 1).padStart(2, '0');
-                    const day = String(utcDate.getUTCDate()).padStart(2, '0');
-                    const hours = String(utcDate.getUTCHours()).padStart(2, '0');
+                    const year    = utcDate.getUTCFullYear();
+                    const month   = String(utcDate.getUTCMonth() + 1).padStart(2, '0');
+                    const day     = String(utcDate.getUTCDate()).padStart(2, '0');
+                    const hours   = String(utcDate.getUTCHours()).padStart(2, '0');
                     const minutes = String(utcDate.getUTCMinutes()).padStart(2, '0');
-
                     document.getElementById('workout-date').value = `${year}-${month}-${day}T${hours}:${minutes}`;
                 }
 
-                // Restore notes
                 if (draft.notes) {
                     document.getElementById('workout-notes').value = draft.notes;
                 }
 
-                // Restore exercises
                 if (draft.exercises && draft.exercises.length > 0) {
                     for (const ex of draft.exercises) {
-                        // Use set_data if available, otherwise create from sets/reps/weight
                         if (ex.set_data && ex.set_data.length > 0) {
-                            addExercise({
-                                name: ex.name,
-                                rest_time: ex.rest_time,
-                                equipment_type: ex.equipment_type,
-                                set_data: ex.set_data
-                            });
+                            addExercise({ name: ex.name, rest_time: ex.rest_time, equipment_type: ex.equipment_type, set_data: ex.set_data });
                         } else {
-                            addExercise({
-                                name: ex.name,
-                                sets: ex.sets,
-                                reps: ex.reps,
-                                weight: ex.weight,
-                                rest_time: ex.rest_time,
-                                equipment_type: ex.equipment_type
-                            });
+                            addExercise({ name: ex.name, sets: ex.sets, reps: ex.reps, weight: ex.weight, rest_time: ex.rest_time, equipment_type: ex.equipment_type });
                         }
                     }
-
                     showInfo('Draft workout restored!', 3000);
                     return true;
                 }
             }
-
             return false;
         } catch (e) {
             console.error('Error loading draft from server:', e);
@@ -740,106 +1022,81 @@
     }
 
     function restoreWorkoutFromLocalStorage() {
-        // Fallback: restore from localStorage if server draft not available
         try {
             const savedData = localStorage.getItem('gymlog_workout_draft');
             if (!savedData) return false;
 
-            const workoutData = JSON.parse(savedData);
-
-            // Check if data is recent (within last 24 hours)
-            const savedTime = new Date(workoutData.timestamp);
-            const hoursSinceSave = (new Date() - savedTime) / (1000 * 60 * 60);
+            const workoutData  = JSON.parse(savedData);
+            const hoursSinceSave = (new Date() - new Date(workoutData.timestamp)) / (1000 * 60 * 60);
 
             if (hoursSinceSave > 24) {
-                console.log('Saved workout is too old, clearing');
                 localStorage.removeItem('gymlog_workout_draft');
                 return false;
             }
 
-            // Restore workout data
-            if (workoutData.date) {
-                document.getElementById('workout-date').value = workoutData.date;
-            }
-            if (workoutData.notes) {
-                document.getElementById('workout-notes').value = workoutData.notes;
-            }
+            if (workoutData.date)  document.getElementById('workout-date').value  = workoutData.date;
+            if (workoutData.notes) document.getElementById('workout-notes').value = workoutData.notes;
 
-            // Restore exercise count and set counters
             exerciseCount = workoutData.exerciseCount || 0;
-            setCounters = workoutData.setCounters || {};
+            setCounters   = workoutData.setCounters   || {};
 
-            // Restore exercises
             if (workoutData.exercises && workoutData.exercises.length > 0) {
                 document.getElementById('exercises-container').innerHTML = '';
 
                 workoutData.exercises.forEach(ex => {
-                    const container = document.getElementById('exercises-container');
+                    const container   = document.getElementById('exercises-container');
                     const exerciseDiv = document.createElement('div');
-                    exerciseDiv.className = 'card mb-3';
-                    exerciseDiv.id = `exercise-${ex.id}`;
+                    exerciseDiv.className = 'exercise-card';
+                    exerciseDiv.id        = `exercise-${ex.id}`;
                     exerciseDiv.innerHTML = `
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h6 class="mb-0">Exercise ${ex.id}</h6>
-                                <button class="btn btn-danger btn-sm" onclick="removeExercise(${ex.id})">
-                                    <i class="bi bi-trash"></i>
+                        <div class="exercise-card-header">
+                            <span class="exercise-card-title" id="exercise-header-${ex.id}">Exercise ${ex.id}</span>
+                            <button class="btn-icon btn-remove" onclick="removeExercise(${ex.id})" aria-label="Remove exercise">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                        <div class="mb-2">
+                            <input type="text" class="log-input" placeholder="Exercise name"
+                                   id="name-${ex.id}" value="${ex.name}" onchange="scheduleAutoSave()">
+                        </div>
+                        <div class="sets-section">
+                            <div class="sets-section-header">
+                                <span class="sets-section-label">Sets</span>
+                                <button class="btn-add-set" onclick="addSet(${ex.id})">+ Add set</button>
+                            </div>
+                            <div id="sets-container-${ex.id}"></div>
+                        </div>
+                        <div class="rest-row">
+                            <span class="rest-label">Rest (s)</span>
+                            <div class="rest-right">
+                                <input type="number" class="log-input-rest" id="rest-${ex.id}"
+                                       value="${ex.rest}" onchange="scheduleAutoSave()">
+                                <button class="btn-timer" onclick="openTimer(${ex.id})">
+                                    <i class="bi bi-stopwatch"></i> Timer
                                 </button>
-                            </div>
-                            <div class="mb-3">
-                                <input type="text" class="form-control" placeholder="Exercise name"
-                                       id="name-${ex.id}" value="${ex.name}" onchange="scheduleAutoSave()">
-                            </div>
-                            <div class="mb-2">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <small class="text-muted"><strong>Sets</strong></small>
-                                    <button class="btn btn-success btn-sm" onclick="addSet(${ex.id})">
-                                        <i class="bi bi-plus"></i> Add Set
-                                    </button>
-                                </div>
-                                <div id="sets-container-${ex.id}" class="mb-2"></div>
-                            </div>
-                            <div class="mb-2">
-                                <label class="form-label small">Rest Time (seconds)</label>
-                                <input type="number" class="form-control" placeholder="Rest (s)"
-                                       id="rest-${ex.id}" value="${ex.rest}" onchange="scheduleAutoSave()">
-                            </div>
-                            <div class="row g-2">
-                                <div class="col-12">
-                                    <button class="btn btn-outline-primary btn-sm w-100" onclick="openTimer(${ex.id})">
-                                        <i class="bi bi-stopwatch"></i> Rest Timer
-                                    </button>
-                                </div>
                             </div>
                         </div>
                     `;
                     container.appendChild(exerciseDiv);
 
-                    ex.sets.forEach(set => {
-                        const setNumber = Object.keys(document.getElementById(`sets-container-${ex.id}`).children).length + 1;
+                    ex.sets.forEach((set, idx) => {
+                        const setNumber   = idx + 1;
                         const setContainer = document.getElementById(`sets-container-${ex.id}`);
-                        const setDiv = document.createElement('div');
-                        setDiv.className = 'row g-2 mb-2 align-items-center';
-                        setDiv.id = `exercise-${ex.id}-set-${setNumber}`;
-                        setDiv.innerHTML = `
-                            <div class="col-2">
-                                <strong class="text-muted">Set ${setNumber}</strong>
-                            </div>
-                            <div class="col-4">
-                                <input type="number" class="form-control form-control-sm" placeholder="Reps"
-                                       id="exercise-${ex.id}-set-${setNumber}-reps" value="${set.reps}"
-                                       onchange="scheduleAutoSave()">
-                            </div>
-                            <div class="col-4">
-                                <input type="number" step="0.5" class="form-control form-control-sm" placeholder="Weight (optional)"
-                                       id="exercise-${ex.id}-set-${setNumber}-weight" value="${set.weight}"
-                                       onchange="scheduleAutoSave()">
-                            </div>
-                            <div class="col-2">
-                                <button class="btn btn-danger btn-sm" onclick="removeSet(${ex.id}, ${setNumber})">
-                                    <i class="bi bi-x"></i>
-                                </button>
-                            </div>
+                        const setDiv      = document.createElement('div');
+                        setDiv.className  = 'set-row';
+                        setDiv.id         = `exercise-${ex.id}-set-${setNumber}`;
+                        setDiv.innerHTML  = `
+                            <span class="set-num">${setNumber}</span>
+                            <input type="number" class="log-input-sm" placeholder="Reps"
+                                   id="exercise-${ex.id}-set-${setNumber}-reps" value="${set.reps}"
+                                   onchange="scheduleAutoSave()">
+                            <input type="number" step="0.5" class="log-input-sm" placeholder="Weight"
+                                   id="exercise-${ex.id}-set-${setNumber}-weight" value="${set.weight}"
+                                   onchange="scheduleAutoSave()">
+                            <button class="btn-remove-set" onclick="removeSet(${ex.id}, ${setNumber})"
+                                    aria-label="Remove set ${setNumber}">
+                                <i class="bi bi-x"></i>
+                            </button>
                         `;
                         setContainer.appendChild(setDiv);
                     });
@@ -848,7 +1105,6 @@
                 showInfo('Previous workout draft restored from backup!', 3000);
                 return true;
             }
-
             return false;
         } catch (e) {
             console.error('Error restoring from localStorage:', e);
@@ -858,98 +1114,57 @@
     }
 
     function scheduleAutoSave() {
-        // Show "saving" status immediately
         updateSaveStatus('saving');
-
-        // Debounce auto-save to avoid excessive writes
-        if (autoSaveTimeout) {
-            clearTimeout(autoSaveTimeout);
-        }
-        autoSaveTimeout = setTimeout(() => {
-            saveDraftToServer();
-        }, 1000); // Save 1 second after last change
+        if (autoSaveTimeout) clearTimeout(autoSaveTimeout);
+        autoSaveTimeout = setTimeout(() => saveDraftToServer(), 1000);
     }
 
     function clearWorkoutDraft() {
-        try {
-            localStorage.removeItem('gymlog_workout_draft');
-            console.log('Workout draft cleared from localStorage');
-        } catch (e) {
-            console.error('Error clearing localStorage:', e);
-        }
-
-        // Also delete server draft
+        try { localStorage.removeItem('gymlog_workout_draft'); } catch (e) {}
         fetch('/api/workouts/draft', { method: 'DELETE' })
-            .then(response => response.json())
-            .then(result => {
-                console.log('Server draft cleared:', result.message);
-                currentDraftId = null;
-            })
+            .then(r => r.json())
+            .then(() => { currentDraftId = null; })
             .catch(e => console.error('Error clearing server draft:', e));
     }
 
-    // Load templates on page load
+    // ── Templates ────────────────────────────────────
+
     loadTemplates();
 
-    // Initialize: Try to load draft from server first, then fall back to localStorage
     let restored = false;
 
     async function initializePage() {
-        // Check if a template was selected from the Schedule page
         const preselectedTemplateId = localStorage.getItem('selectedTemplateId');
 
         if (preselectedTemplateId) {
-            // If there's a preselected template, clear any existing draft and load the template
             localStorage.removeItem('selectedTemplateId');
-            await fetch('/api/workouts/draft', { method: 'DELETE' }); // Clear server draft
-            localStorage.removeItem('gymlog_workout_draft'); // Clear local draft
+            await fetch('/api/workouts/draft', { method: 'DELETE' });
+            localStorage.removeItem('gymlog_workout_draft');
 
-            // Wait for templates to load, then auto-load the selected template
             setTimeout(() => {
                 document.getElementById('template-select').value = preselectedTemplateId;
                 loadTemplate();
             }, 500);
         } else {
-            // Try to restore from server draft first
             restored = await loadDraftFromServer();
-
-            // If no server draft, try localStorage as fallback
-            if (!restored) {
-                restored = restoreWorkoutFromLocalStorage();
-            }
-
-            // If nothing was restored, add a default empty exercise
-            if (!restored) {
-                addExercise();
-            }
+            if (!restored) restored = restoreWorkoutFromLocalStorage();
+            if (!restored) addExercise();
         }
     }
 
-    // Run initialization
     initializePage();
 
-    // Add auto-save listeners to date and notes fields
     document.getElementById('workout-date').addEventListener('change', scheduleAutoSave);
-    document.getElementById('workout-notes').addEventListener('input', scheduleAutoSave);
+    document.getElementById('workout-notes').addEventListener('input',  scheduleAutoSave);
 
-    // Periodic auto-save every 30 seconds to server
     setInterval(() => {
-        // Only save if there are exercises
-        if (exerciseCount > 0) {
-            saveDraftToServer();
-        }
-    }, 30000); // 30 seconds
+        if (exerciseCount > 0) saveDraftToServer();
+    }, 30000);
 
-    // Warn user before leaving page if there's unsaved workout data
     let workoutSaved = false;
     window.addEventListener('beforeunload', (e) => {
-        // Check if there's any workout data
-        const hasData = exerciseCount > 0 ||
-                       document.getElementById('workout-notes').value.trim() !== '';
-
-        // If there's data and it hasn't been saved to the server
+        const hasData = exerciseCount > 0 || document.getElementById('workout-notes').value.trim() !== '';
         if (hasData && !workoutSaved) {
-            // Most modern browsers ignore custom messages, but setting returnValue triggers the warning
             e.preventDefault();
             e.returnValue = '';
             return '';
@@ -958,167 +1173,145 @@
 
     function loadTemplates() {
         fetch('/api/templates')
-            .then(response => response.json())
+            .then(r => r.json())
             .then(data => {
                 templates = data;
                 const select = document.getElementById('template-select');
-
-                data.forEach(template => {
+                data.forEach(t => {
                     const option = document.createElement('option');
-                    option.value = template.id;
-                    option.textContent = template.name;
+                    option.value       = t.id;
+                    option.textContent = t.name;
                     select.appendChild(option);
                 });
             })
-            .catch(error => {
-                console.error('Error loading templates:', error);
-            });
+            .catch(e => console.error('Error loading templates:', e));
     }
 
     function loadTemplate() {
         const templateId = document.getElementById('template-select').value;
-        if (!templateId) {
-            showWarning('Please select a template');
-            return;
-        }
+        if (!templateId) { showWarning('Please select a template'); return; }
 
         const template = templates.find(t => t.id == templateId);
-        if (!template) {
-            showError('Template not found');
-            return;
-        }
+        if (!template) { showError('Template not found'); return; }
 
-        // Track which template is being used
         currentTemplateId = parseInt(templateId);
-
-        // Clear existing exercises
         document.getElementById('exercises-container').innerHTML = '';
         exerciseCount = 0;
 
-        // Set notes if available
         if (template.description) {
             document.getElementById('workout-notes').value = template.description;
         }
 
-        // Add exercises from template
-        template.exercises.sort((a, b) => a.order - b.order).forEach(ex => {
-            addExercise(ex);
-        });
-
+        template.exercises.sort((a, b) => a.order - b.order).forEach(ex => addExercise(ex));
         showSuccess(`Loaded template: ${template.name}`);
     }
 
+    // ── Exercise cards ───────────────────────────────
+
     function addExercise(exerciseData = null) {
         exerciseCount++;
-        const container = document.getElementById('exercises-container');
+        const container   = document.getElementById('exercises-container');
         const exerciseDiv = document.createElement('div');
-        exerciseDiv.className = 'card mb-3';
-        exerciseDiv.id = `exercise-${exerciseCount}`;
+        exerciseDiv.className = 'exercise-card';
+        exerciseDiv.id        = `exercise-${exerciseCount}`;
         exerciseDiv.innerHTML = `
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="mb-0" id="exercise-header-${exerciseCount}">
-                        Exercise ${exerciseCount}
-                    </h6>
-                    <div class="d-flex align-items-center gap-2">
-                        <div class="dropdown">
-                            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="More options">
-                                <i class="bi bi-three-dots-vertical"></i>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                                <li>
-                                    <label class="dropdown-item d-flex align-items-center gap-2" for="superset-toggle-${exerciseCount}" id="superset-toggle-label-${exerciseCount}" style="cursor:pointer;">
-                                        <input type="checkbox" id="superset-toggle-${exerciseCount}"
-                                               onchange="toggleSuperset(${exerciseCount})">
-                                        <i class="bi bi-layers"></i>
-                                        Enable Superset
-                                    </label>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li>
-                                    <label class="dropdown-item d-flex align-items-center gap-2" for="advanced-toggle-${exerciseCount}" style="cursor:pointer;">
-                                        <input type="checkbox" id="advanced-toggle-${exerciseCount}"
-                                               onchange="toggleAdvanced(${exerciseCount})">
-                                        <i class="bi bi-chevron-double-down"></i>
-                                        Enable Drop Sets
-                                    </label>
-                                </li>
-                            </ul>
-                        </div>
-                        <button class="btn btn-danger btn-sm" onclick="removeExercise(${exerciseCount})">
-                            <i class="bi bi-trash"></i>
+            <div class="exercise-card-header">
+                <span class="exercise-card-title" id="exercise-header-${exerciseCount}">Exercise ${exerciseCount}</span>
+                <div class="exercise-card-actions">
+                    <div class="dropdown">
+                        <button class="btn-icon" type="button" data-bs-toggle="dropdown"
+                                aria-expanded="false" aria-label="More options">
+                            <i class="bi bi-three-dots-vertical"></i>
                         </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <label class="dropdown-item" for="superset-toggle-${exerciseCount}"
+                                       id="superset-toggle-label-${exerciseCount}" style="cursor:pointer;">
+                                    <input type="checkbox" id="superset-toggle-${exerciseCount}"
+                                           onchange="toggleSuperset(${exerciseCount})">
+                                    <i class="bi bi-layers"></i>
+                                    Enable superset
+                                </label>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <label class="dropdown-item" for="advanced-toggle-${exerciseCount}" style="cursor:pointer;">
+                                    <input type="checkbox" id="advanced-toggle-${exerciseCount}"
+                                           onchange="toggleAdvanced(${exerciseCount})">
+                                    <i class="bi bi-chevron-double-down"></i>
+                                    Enable drop sets
+                                </label>
+                            </li>
+                        </ul>
                     </div>
+                    <button class="btn-icon btn-remove" onclick="removeExercise(${exerciseCount})"
+                            aria-label="Remove exercise ${exerciseCount}">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
                 </div>
-                <div class="mb-3 superset-name-container" id="names-container-${exerciseCount}">
-                    <div>
-                        <div class="exercise-name-label" id="name-label-a-${exerciseCount}" style="display: none;">Exercise A</div>
-                        <input type="text" class="form-control" placeholder="Exercise name" id="name-${exerciseCount}" value="${exerciseData ? exerciseData.name : ''}" onchange="scheduleAutoSave()">
-                    </div>
-                    <div id="name-b-container-${exerciseCount}" style="display: none;">
-                        <div class="exercise-name-label">Exercise B</div>
-                        <input type="text" class="form-control" placeholder="Second exercise name" id="name-b-${exerciseCount}" value="${exerciseData && exerciseData.superset_exercise_name ? exerciseData.superset_exercise_name : ''}" onchange="scheduleAutoSave()">
-                    </div>
-                </div>
+            </div>
 
-                <!-- Equipment Type Selector -->
-                <div class="mb-3" id="equipment-selector-${exerciseCount}">
-                    <small class="text-muted d-block mb-1">Equipment <span class="text-muted" style="font-weight:normal;">(optional)</span></small>
-                    <div class="d-flex flex-wrap gap-1">
-                        <button type="button" class="btn btn-sm btn-outline-secondary equipment-btn" data-exercise="${exerciseCount}" data-type="barbell" onclick="toggleEquipment(${exerciseCount}, 'barbell')">Barbell</button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary equipment-btn" data-exercise="${exerciseCount}" data-type="free_weight" onclick="toggleEquipment(${exerciseCount}, 'free_weight')">Free Weight</button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary equipment-btn" data-exercise="${exerciseCount}" data-type="cable" onclick="toggleEquipment(${exerciseCount}, 'cable')">Cable</button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary equipment-btn" data-exercise="${exerciseCount}" data-type="machine" onclick="toggleEquipment(${exerciseCount}, 'machine')">Machine</button>
-                    </div>
+            <div class="superset-name-container" id="names-container-${exerciseCount}" style="margin-bottom:12px;">
+                <div>
+                    <div class="exercise-ab-label" id="name-label-a-${exerciseCount}">Exercise A</div>
+                    <input type="text" class="log-input" placeholder="Exercise name"
+                           id="name-${exerciseCount}" value="${exerciseData ? exerciseData.name : ''}"
+                           onchange="scheduleAutoSave()">
                 </div>
-
-                <!-- Sets Container -->
-                <div class="mb-2">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <small class="text-muted"><strong>Sets</strong></small>
-                        <button class="btn btn-success btn-sm" onclick="addSet(${exerciseCount})">
-                            <i class="bi bi-plus"></i> Add Set
-                        </button>
-                    </div>
-                    <div id="sets-container-${exerciseCount}" class="mb-2">
-                        <!-- Sets will be added here -->
-                    </div>
+                <div id="name-b-container-${exerciseCount}" style="display:none; margin-top:8px;">
+                    <div class="exercise-ab-label">Exercise B</div>
+                    <input type="text" class="log-input" placeholder="Second exercise name"
+                           id="name-b-${exerciseCount}"
+                           value="${exerciseData && exerciseData.superset_exercise_name ? exerciseData.superset_exercise_name : ''}"
+                           onchange="scheduleAutoSave()">
                 </div>
+            </div>
 
-                <div class="mb-2">
-                    <label class="form-label small">Rest Time (seconds)</label>
-                    <input type="number" class="form-control" placeholder="Rest (s)" id="rest-${exerciseCount}" value="${exerciseData && exerciseData.rest_time ? exerciseData.rest_time : '60'}" onchange="scheduleAutoSave()">
+            <div class="equipment-pills" id="equipment-selector-${exerciseCount}">
+                <button type="button" class="equipment-pill" data-exercise="${exerciseCount}" data-type="barbell"
+                        onclick="toggleEquipment(${exerciseCount}, 'barbell')">Barbell</button>
+                <button type="button" class="equipment-pill" data-exercise="${exerciseCount}" data-type="free_weight"
+                        onclick="toggleEquipment(${exerciseCount}, 'free_weight')">Free weight</button>
+                <button type="button" class="equipment-pill" data-exercise="${exerciseCount}" data-type="cable"
+                        onclick="toggleEquipment(${exerciseCount}, 'cable')">Cable</button>
+                <button type="button" class="equipment-pill" data-exercise="${exerciseCount}" data-type="machine"
+                        onclick="toggleEquipment(${exerciseCount}, 'machine')">Machine</button>
+            </div>
+
+            <div class="sets-section">
+                <div class="sets-section-header">
+                    <span class="sets-section-label">Sets</span>
+                    <button class="btn-add-set" onclick="addSet(${exerciseCount})">+ Add set</button>
                 </div>
+                <div id="sets-container-${exerciseCount}"></div>
+            </div>
 
-                <div class="row g-2">
-                    <div class="col-12">
-                        <button class="btn btn-outline-primary btn-sm w-100" onclick="openTimer(${exerciseCount})">
-                            <i class="bi bi-stopwatch"></i> Rest Timer
-                        </button>
-                    </div>
+            <div class="rest-row">
+                <span class="rest-label">Rest (s)</span>
+                <div class="rest-right">
+                    <input type="number" class="log-input-rest" id="rest-${exerciseCount}"
+                           value="${exerciseData && exerciseData.rest_time ? exerciseData.rest_time : '60'}"
+                           onchange="scheduleAutoSave()">
+                    <button class="btn-timer" onclick="openTimer(${exerciseCount})">
+                        <i class="bi bi-stopwatch"></i> Timer
+                    </button>
                 </div>
-
             </div>
         `;
         container.appendChild(exerciseDiv);
 
-        // Attach autocomplete to the exercise name input
         initExerciseAutocomplete(`name-${exerciseCount}`);
 
-        // Restore equipment type if provided
         if (exerciseData && exerciseData.equipment_type) {
             setEquipmentType(exerciseCount, exerciseData.equipment_type);
         }
 
-        // If this is a superset, enable superset mode
         if (exerciseData && exerciseData.is_superset) {
             document.getElementById(`superset-toggle-${exerciseCount}`).checked = true;
-            toggleSuperset(exerciseCount, true); // true = skip auto-save on init
+            toggleSuperset(exerciseCount, true);
         }
 
-        // Add initial set or load from template
         if (exerciseData && exerciseData.set_data) {
-            // Load sets from existing data
             exerciseData.set_data.forEach(set => {
                 if (exerciseData.is_superset) {
                     addSet(exerciseCount, set.reps_a || set.reps, set.weight_a, set.reps_b || set.reps, set.weight_b);
@@ -1127,12 +1320,10 @@
                 }
             });
         } else if (exerciseData) {
-            // Convert old format (single sets/reps/weight) to new format
             for (let i = 0; i < (exerciseData.sets || 1); i++) {
                 addSet(exerciseCount, exerciseData.reps, exerciseData.weight);
             }
         } else {
-            // Add one empty set by default
             addSet(exerciseCount);
         }
     }
@@ -1145,18 +1336,10 @@
     function toggleEquipment(exerciseId, type) {
         const selector = document.getElementById(`equipment-selector-${exerciseId}`);
         if (!selector) return;
-        const btn = selector.querySelector(`[data-type="${type}"]`);
-        const isActive = btn.classList.contains('btn-secondary');
-        // Deactivate all buttons first
-        selector.querySelectorAll('.equipment-btn').forEach(b => {
-            b.classList.remove('btn-secondary');
-            b.classList.add('btn-outline-secondary');
-        });
-        // Toggle: if wasn't active, activate it; if was active, leave deselected
-        if (!isActive) {
-            btn.classList.remove('btn-outline-secondary');
-            btn.classList.add('btn-secondary');
-        }
+        const btn      = selector.querySelector(`[data-type="${type}"]`);
+        const isActive = btn.classList.contains('active');
+        selector.querySelectorAll('.equipment-pill').forEach(b => b.classList.remove('active'));
+        if (!isActive) btn.classList.add('active');
         scheduleAutoSave();
     }
 
@@ -1164,21 +1347,15 @@
         if (!type) return;
         const selector = document.getElementById(`equipment-selector-${exerciseId}`);
         if (!selector) return;
-        selector.querySelectorAll('.equipment-btn').forEach(b => {
-            b.classList.remove('btn-secondary');
-            b.classList.add('btn-outline-secondary');
-        });
+        selector.querySelectorAll('.equipment-pill').forEach(b => b.classList.remove('active'));
         const btn = selector.querySelector(`[data-type="${type}"]`);
-        if (btn) {
-            btn.classList.remove('btn-outline-secondary');
-            btn.classList.add('btn-secondary');
-        }
+        if (btn) btn.classList.add('active');
     }
 
     function getEquipmentType(exerciseId) {
         const selector = document.getElementById(`equipment-selector-${exerciseId}`);
         if (!selector) return null;
-        const active = selector.querySelector('.equipment-btn.btn-secondary');
+        const active = selector.querySelector('.equipment-pill.active');
         return active ? active.dataset.type : null;
     }
 
@@ -1188,214 +1365,181 @@
     }
 
     function toggleSuperset(exerciseId, skipSave = false) {
-        const isChecked = document.getElementById(`superset-toggle-${exerciseId}`).checked;
-        const nameB = document.getElementById(`name-b-container-${exerciseId}`);
-        const labelA = document.getElementById(`name-label-a-${exerciseId}`);
-        const header = document.getElementById(`exercise-header-${exerciseId}`);
-        const card = document.getElementById(`exercise-${exerciseId}`);
+        const isChecked    = document.getElementById(`superset-toggle-${exerciseId}`).checked;
+        const nameB        = document.getElementById(`name-b-container-${exerciseId}`);
+        const labelA       = document.getElementById(`name-label-a-${exerciseId}`);
+        const header       = document.getElementById(`exercise-header-${exerciseId}`);
+        const card         = document.getElementById(`exercise-${exerciseId}`);
         const setsContainer = document.getElementById(`sets-container-${exerciseId}`);
-        const toggleLabel = document.getElementById(`superset-toggle-label-${exerciseId}`);
+        const toggleLabel  = document.getElementById(`superset-toggle-label-${exerciseId}`);
 
         if (isChecked) {
-            // Enable superset mode
             nameB.style.display = 'block';
             labelA.style.display = 'block';
             card.classList.add('superset-card');
             header.textContent = `Superset ${exerciseId}A & ${exerciseId}B`;
             if (toggleLabel) toggleLabel.classList.add('active');
 
-            // Attach autocomplete to the superset B name input (only once)
             initExerciseAutocomplete(`name-b-${exerciseId}`);
 
-            // Convert existing sets to dual weight format
             const setDivs = setsContainer.querySelectorAll('[id^="exercise-' + exerciseId + '-set-"]');
             setDivs.forEach(setDiv => {
-                const setId = setDiv.id;
-                const match = setId.match(/set-(\d+)$/);
-                if (match) {
-                    const setNumber = match[1];
-                    const repsInput = document.getElementById(`${setId}-reps`);
-                    const weightInput = document.getElementById(`${setId}-weight`);
-                    const currentReps = repsInput ? repsInput.value : '';
-                    const currentWeight = weightInput ? weightInput.value : '';
+                const match = setDiv.id.match(/set-(\d+)$/);
+                if (!match) return;
+                const setNumber    = match[1];
+                const repsInput    = document.getElementById(`${setDiv.id}-reps`);
+                const weightInput  = document.getElementById(`${setDiv.id}-weight`);
+                const currentReps  = repsInput   ? repsInput.value   : '';
+                const currentWeight = weightInput ? weightInput.value : '';
 
-                    // Replace single reps/weight with dual reps/weights
-                    setDiv.innerHTML = `
-                        <div class="col-1">
-                            <strong class="text-muted" style="font-size: 0.8rem;">Set ${setNumber}</strong>
-                        </div>
-                        <div class="col-2">
-                            <div class="superset-weight-header">Reps A</div>
-                            <input type="number" class="form-control form-control-sm" placeholder="Reps"
-                                   id="${setId}-reps-a" value="${currentReps}" onchange="scheduleAutoSave()">
-                        </div>
-                        <div class="col-2">
-                            <div class="superset-weight-header">Weight A</div>
-                            <input type="number" step="0.5" class="form-control form-control-sm" placeholder="Wt"
-                                   id="${setId}-weight-a" value="${currentWeight}" onchange="scheduleAutoSave()">
-                        </div>
-                        <div class="col-2">
-                            <div class="superset-weight-header">Reps B</div>
-                            <input type="number" class="form-control form-control-sm" placeholder="Reps"
-                                   id="${setId}-reps-b" value="${currentReps}" onchange="scheduleAutoSave()">
-                        </div>
-                        <div class="col-2">
-                            <div class="superset-weight-header">Weight B</div>
-                            <input type="number" step="0.5" class="form-control form-control-sm" placeholder="Wt"
-                                   id="${setId}-weight-b" value="" onchange="scheduleAutoSave()">
-                        </div>
-                        <div class="col-1">
-                            <button class="btn btn-danger btn-sm" onclick="removeSet(${exerciseId}, ${setNumber})">
-                                <i class="bi bi-x"></i>
-                            </button>
-                        </div>
-                    `;
-                }
+                setDiv.className = 'set-row set-row--superset';
+                setDiv.innerHTML = `
+                    <span class="set-num">${setNumber}</span>
+                    <div class="set-col-wrap">
+                        <span class="set-col-label">Reps A</span>
+                        <input type="number" class="log-input-sm"
+                               id="${setDiv.id}-reps-a" value="${currentReps}" onchange="scheduleAutoSave()">
+                    </div>
+                    <div class="set-col-wrap">
+                        <span class="set-col-label">Wt A</span>
+                        <input type="number" step="0.5" class="log-input-sm"
+                               id="${setDiv.id}-weight-a" value="${currentWeight}" onchange="scheduleAutoSave()">
+                    </div>
+                    <div class="set-col-wrap">
+                        <span class="set-col-label">Reps B</span>
+                        <input type="number" class="log-input-sm"
+                               id="${setDiv.id}-reps-b" value="${currentReps}" onchange="scheduleAutoSave()">
+                    </div>
+                    <div class="set-col-wrap">
+                        <span class="set-col-label">Wt B</span>
+                        <input type="number" step="0.5" class="log-input-sm"
+                               id="${setDiv.id}-weight-b" value="" onchange="scheduleAutoSave()">
+                    </div>
+                    <button class="btn-remove-set" onclick="removeSet(${exerciseId}, ${setNumber})"
+                            aria-label="Remove set ${setNumber}">
+                        <i class="bi bi-x"></i>
+                    </button>
+                `;
             });
         } else {
-            // Disable superset mode
-            nameB.style.display = 'none';
+            nameB.style.display  = 'none';
             labelA.style.display = 'none';
             card.classList.remove('superset-card');
             header.textContent = `Exercise ${exerciseId}`;
             document.getElementById(`name-b-${exerciseId}`).value = '';
             if (toggleLabel) toggleLabel.classList.remove('active');
 
-            // Convert dual weights back to single weight
             const setDivs = setsContainer.querySelectorAll('[id^="exercise-' + exerciseId + '-set-"]');
             setDivs.forEach(setDiv => {
-                const setId = setDiv.id;
-                const match = setId.match(/set-(\d+)$/);
-                if (match) {
-                    const setNumber = match[1];
-                    const repsAInput = document.getElementById(`${setId}-reps-a`);
-                    const weightAInput = document.getElementById(`${setId}-weight-a`);
-                    const currentReps = repsAInput ? repsAInput.value : '';
-                    const currentWeight = weightAInput ? weightAInput.value : '';
+                const match = setDiv.id.match(/set-(\d+)$/);
+                if (!match) return;
+                const setNumber    = match[1];
+                const repsAInput   = document.getElementById(`${setDiv.id}-reps-a`);
+                const weightAInput = document.getElementById(`${setDiv.id}-weight-a`);
+                const currentReps  = repsAInput   ? repsAInput.value   : '';
+                const currentWeight = weightAInput ? weightAInput.value : '';
 
-                    // Replace dual reps/weights with single reps/weight
-                    setDiv.innerHTML = `
-                        <div class="col-2">
-                            <strong class="text-muted">Set ${setNumber}</strong>
-                        </div>
-                        <div class="col-3">
-                            <input type="number" class="form-control form-control-sm" placeholder="Reps"
-                                   id="${setId}-reps" value="${currentReps}" onchange="scheduleAutoSave()">
-                        </div>
-                        <div class="col-3">
-                            <input type="number" step="0.5" class="form-control form-control-sm" placeholder="Weight (optional)"
-                                   id="${setId}-weight" value="${currentWeight}" onchange="scheduleAutoSave()">
-                        </div>
-                        <div class="col-2 d-flex align-items-center justify-content-center">
-                            <label class="drop-set-toggle" for="${setId}-dropset" id="drop-toggle-label-${exerciseId}-${setNumber}">
-                                <input type="checkbox" id="${setId}-dropset"
-                                       onchange="toggleDropSet(${exerciseId}, ${setNumber})">
-                                <i class="bi bi-chevron-down drop-set-toggle-icon"></i>
-                                <span>Drop</span>
-                            </label>
-                        </div>
-                        <div class="col-2">
-                            <button class="btn btn-danger btn-sm" onclick="removeSet(${exerciseId}, ${setNumber})">
-                                <i class="bi bi-x"></i>
-                            </button>
-                        </div>
-                    `;
-                }
+                setDiv.className = 'set-row';
+                setDiv.innerHTML = `
+                    <span class="set-num">${setNumber}</span>
+                    <input type="number" class="log-input-sm" placeholder="Reps"
+                           id="${setDiv.id}-reps" value="${currentReps}" onchange="scheduleAutoSave()">
+                    <input type="number" step="0.5" class="log-input-sm" placeholder="Weight"
+                           id="${setDiv.id}-weight" value="${currentWeight}" onchange="scheduleAutoSave()">
+                    <label class="drop-toggle" for="${setDiv.id}-dropset"
+                           id="drop-toggle-label-${exerciseId}-${setNumber}">
+                        <input type="checkbox" id="${setDiv.id}-dropset"
+                               onchange="toggleDropSet(${exerciseId}, ${setNumber})">
+                        Drop
+                    </label>
+                    <button class="btn-remove-set" onclick="removeSet(${exerciseId}, ${setNumber})"
+                            aria-label="Remove set ${setNumber}">
+                        <i class="bi bi-x"></i>
+                    </button>
+                `;
             });
         }
 
-        if (!skipSave) {
-            scheduleAutoSave();
-        }
+        if (!skipSave) scheduleAutoSave();
     }
 
-    let setCounters = {}; // Track set numbers per exercise
+    let setCounters = {};
 
     function addSet(exerciseId, reps_a = '', weight_a = '', reps_b = '', weight_b = '') {
-        if (!setCounters[exerciseId]) {
-            setCounters[exerciseId] = 0;
-        }
+        if (!setCounters[exerciseId]) setCounters[exerciseId] = 0;
         setCounters[exerciseId]++;
 
-        const setNumber = setCounters[exerciseId];
-        const container = document.getElementById(`sets-container-${exerciseId}`);
+        const setNumber  = setCounters[exerciseId];
+        const container  = document.getElementById(`sets-container-${exerciseId}`);
         const isSuperset = document.getElementById(`superset-toggle-${exerciseId}`)?.checked;
 
-        // Create wrapper for set and its drop stages
         const setWrapper = document.createElement('div');
-        setWrapper.className = 'mb-2';
-        setWrapper.id = `exercise-${exerciseId}-set-${setNumber}-wrapper`;
+        setWrapper.className = 'set-wrapper';
+        setWrapper.id        = `exercise-${exerciseId}-set-${setNumber}-wrapper`;
 
         const setDiv = document.createElement('div');
-        setDiv.className = 'row g-2 mb-1 align-items-center';
-        setDiv.id = `exercise-${exerciseId}-set-${setNumber}`;
+        setDiv.id    = `exercise-${exerciseId}-set-${setNumber}`;
 
         if (isSuperset) {
-            // Superset mode: dual reps and weight columns
+            setDiv.className = 'set-row set-row--superset';
             setDiv.innerHTML = `
-                <div class="col-1">
-                    <strong class="text-muted" style="font-size: 0.8rem;">Set ${setNumber}</strong>
+                <span class="set-num">${setNumber}</span>
+                <div class="set-col-wrap">
+                    <span class="set-col-label">Reps A</span>
+                    <input type="number" class="log-input-sm"
+                           id="exercise-${exerciseId}-set-${setNumber}-reps-a" value="${reps_a}"
+                           onchange="scheduleAutoSave()">
                 </div>
-                <div class="col-2">
-                    <div class="superset-weight-header">Reps A</div>
-                    <input type="number" class="form-control form-control-sm" placeholder="Reps"
-                           id="exercise-${exerciseId}-set-${setNumber}-reps-a" value="${reps_a}" onchange="scheduleAutoSave()">
+                <div class="set-col-wrap">
+                    <span class="set-col-label">Wt A</span>
+                    <input type="number" step="0.5" class="log-input-sm"
+                           id="exercise-${exerciseId}-set-${setNumber}-weight-a" value="${weight_a}"
+                           onchange="scheduleAutoSave()">
                 </div>
-                <div class="col-2">
-                    <div class="superset-weight-header">Weight A</div>
-                    <input type="number" step="0.5" class="form-control form-control-sm" placeholder="Wt"
-                           id="exercise-${exerciseId}-set-${setNumber}-weight-a" value="${weight_a}" onchange="scheduleAutoSave()">
+                <div class="set-col-wrap">
+                    <span class="set-col-label">Reps B</span>
+                    <input type="number" class="log-input-sm"
+                           id="exercise-${exerciseId}-set-${setNumber}-reps-b" value="${reps_b}"
+                           onchange="scheduleAutoSave()">
                 </div>
-                <div class="col-2">
-                    <div class="superset-weight-header">Reps B</div>
-                    <input type="number" class="form-control form-control-sm" placeholder="Reps"
-                           id="exercise-${exerciseId}-set-${setNumber}-reps-b" value="${reps_b}" onchange="scheduleAutoSave()">
+                <div class="set-col-wrap">
+                    <span class="set-col-label">Wt B</span>
+                    <input type="number" step="0.5" class="log-input-sm"
+                           id="exercise-${exerciseId}-set-${setNumber}-weight-b" value="${weight_b}"
+                           onchange="scheduleAutoSave()">
                 </div>
-                <div class="col-2">
-                    <div class="superset-weight-header">Weight B</div>
-                    <input type="number" step="0.5" class="form-control form-control-sm" placeholder="Wt"
-                           id="exercise-${exerciseId}-set-${setNumber}-weight-b" value="${weight_b}" onchange="scheduleAutoSave()">
-                </div>
-                <div class="col-1">
-                    <button class="btn btn-danger btn-sm btn-sm" onclick="removeSet(${exerciseId}, ${setNumber})">
-                        <i class="bi bi-x"></i>
-                    </button>
-                </div>
+                <button class="btn-remove-set" onclick="removeSet(${exerciseId}, ${setNumber})"
+                        aria-label="Remove set ${setNumber}">
+                    <i class="bi bi-x"></i>
+                </button>
             `;
         } else {
-            // Normal mode: single reps and weight column
+            setDiv.className = 'set-row';
             setDiv.innerHTML = `
-                <div class="col-2">
-                    <strong class="text-muted">Set ${setNumber}</strong>
-                </div>
-                <div class="col-3">
-                    <input type="number" class="form-control form-control-sm" placeholder="Reps"
-                           id="exercise-${exerciseId}-set-${setNumber}-reps" value="${reps_a || ''}" onchange="scheduleAutoSave()">
-                </div>
-                <div class="col-3">
-                    <input type="number" step="0.5" class="form-control form-control-sm" placeholder="Weight (optional)"
-                           id="exercise-${exerciseId}-set-${setNumber}-weight" value="${weight_a || ''}" onchange="scheduleAutoSave()">
-                </div>
-                <div class="col-2 d-flex align-items-center justify-content-center">
-                    <label class="drop-set-toggle" for="exercise-${exerciseId}-set-${setNumber}-dropset" id="drop-toggle-label-${exerciseId}-${setNumber}">
-                        <input type="checkbox" id="exercise-${exerciseId}-set-${setNumber}-dropset"
-                               onchange="toggleDropSet(${exerciseId}, ${setNumber})">
-                        <i class="bi bi-chevron-down drop-set-toggle-icon"></i>
-                        <span>Dropset</span>
-                    </label>
-                </div>
-                <div class="col-2">
-                    <button class="btn btn-danger btn-sm" onclick="removeSet(${exerciseId}, ${setNumber})">
-                        <i class="bi bi-x"></i>
-                    </button>
-                </div>
+                <span class="set-num">${setNumber}</span>
+                <input type="number" class="log-input-sm" placeholder="Reps"
+                       id="exercise-${exerciseId}-set-${setNumber}-reps" value="${reps_a || ''}"
+                       onchange="scheduleAutoSave()">
+                <input type="number" step="0.5" class="log-input-sm" placeholder="Weight"
+                       id="exercise-${exerciseId}-set-${setNumber}-weight" value="${weight_a || ''}"
+                       onchange="scheduleAutoSave()">
+                <label class="drop-toggle"
+                       for="exercise-${exerciseId}-set-${setNumber}-dropset"
+                       id="drop-toggle-label-${exerciseId}-${setNumber}">
+                    <input type="checkbox" id="exercise-${exerciseId}-set-${setNumber}-dropset"
+                           onchange="toggleDropSet(${exerciseId}, ${setNumber})">
+                    Drop
+                </label>
+                <button class="btn-remove-set" onclick="removeSet(${exerciseId}, ${setNumber})"
+                        aria-label="Remove set ${setNumber}">
+                    <i class="bi bi-x"></i>
+                </button>
             `;
         }
 
-        // Add container for drop stages
         const dropContainer = document.createElement('div');
-        dropContainer.id = `exercise-${exerciseId}-set-${setNumber}-drops`;
-        dropContainer.className = 'drop-set-container mt-1';
+        dropContainer.id        = `exercise-${exerciseId}-set-${setNumber}-drops`;
+        dropContainer.className = 'drop-stages';
         dropContainer.style.display = 'none';
 
         setWrapper.appendChild(setDiv);
@@ -1405,46 +1549,36 @@
 
     function removeSet(exerciseId, setNumber) {
         const setWrapper = document.getElementById(`exercise-${exerciseId}-set-${setNumber}-wrapper`);
-        if (setWrapper) {
-            setWrapper.remove();
-            scheduleAutoSave();
-        }
+        if (setWrapper) { setWrapper.remove(); scheduleAutoSave(); }
     }
 
-    let dropStageCounters = {}; // Track drop stage numbers per set
+    let dropStageCounters = {};
 
     function toggleDropSet(exerciseId, setNumber) {
-        const isChecked = document.getElementById(`exercise-${exerciseId}-set-${setNumber}-dropset`)?.checked;
+        const isChecked    = document.getElementById(`exercise-${exerciseId}-set-${setNumber}-dropset`)?.checked;
         const dropContainer = document.getElementById(`exercise-${exerciseId}-set-${setNumber}-drops`);
-        const toggleLabel = document.getElementById(`drop-toggle-label-${exerciseId}-${setNumber}`);
+        const toggleLabel  = document.getElementById(`drop-toggle-label-${exerciseId}-${setNumber}`);
 
         if (isChecked) {
-            // Enable drop set mode
             dropContainer.style.display = 'block';
             if (toggleLabel) toggleLabel.classList.add('active');
 
-            // Initialize drop stage counter
             const setKey = `${exerciseId}-${setNumber}`;
-            if (!dropStageCounters[setKey]) {
-                dropStageCounters[setKey] = 0;
-            }
+            if (!dropStageCounters[setKey]) dropStageCounters[setKey] = 0;
 
-            // Add "+ Add Drop Stage" button if not already present
             if (!document.getElementById(`exercise-${exerciseId}-set-${setNumber}-add-drop`)) {
                 const addDropBtn = document.createElement('button');
-                addDropBtn.className = 'btn btn-outline-warning btn-sm mt-1 w-100';
-                addDropBtn.id = `exercise-${exerciseId}-set-${setNumber}-add-drop`;
-                addDropBtn.innerHTML = '<i class="bi bi-plus"></i> Add Drop Stage';
-                addDropBtn.onclick = () => addDropStage(exerciseId, setNumber);
+                addDropBtn.className = 'btn-add-drop';
+                addDropBtn.id        = `exercise-${exerciseId}-set-${setNumber}-add-drop`;
+                addDropBtn.innerHTML = '+ Add drop stage';
+                addDropBtn.onclick   = () => addDropStage(exerciseId, setNumber);
                 dropContainer.appendChild(addDropBtn);
             }
         } else {
-            // Disable drop set mode
             dropContainer.style.display = 'none';
-            dropContainer.innerHTML = ''; // Clear all drop stages
+            dropContainer.innerHTML     = '';
             if (toggleLabel) toggleLabel.classList.remove('active');
-            const setKey = `${exerciseId}-${setNumber}`;
-            dropStageCounters[setKey] = 0;
+            dropStageCounters[`${exerciseId}-${setNumber}`] = 0;
         }
 
         scheduleAutoSave();
@@ -1452,57 +1586,48 @@
 
     function addDropStage(exerciseId, setNumber, reps = '', weight = '') {
         const setKey = `${exerciseId}-${setNumber}`;
-        if (!dropStageCounters[setKey]) {
-            dropStageCounters[setKey] = 0;
-        }
+        if (!dropStageCounters[setKey]) dropStageCounters[setKey] = 0;
         dropStageCounters[setKey]++;
 
-        const dropStageNum = dropStageCounters[setKey];
+        const dropStageNum  = dropStageCounters[setKey];
         const dropContainer = document.getElementById(`exercise-${exerciseId}-set-${setNumber}-drops`);
-        const addDropBtn = document.getElementById(`exercise-${exerciseId}-set-${setNumber}-add-drop`);
+        const addDropBtn    = document.getElementById(`exercise-${exerciseId}-set-${setNumber}-add-drop`);
 
-        const dropStage = document.createElement('div');
-        dropStage.className = 'drop-stage row g-2 align-items-center mb-1';
-        dropStage.id = `exercise-${exerciseId}-set-${setNumber}-drop-${dropStageNum}`;
-        dropStage.innerHTML = `
-            <div class="col-2">
-                <span class="drop-stage-label">Drop ${dropStageNum}</span>
-            </div>
-            <div class="col-4">
-                <input type="number" class="form-control form-control-sm" placeholder="Reps"
-                       id="exercise-${exerciseId}-set-${setNumber}-drop-${dropStageNum}-reps" value="${reps}" onchange="scheduleAutoSave()">
-            </div>
-            <div class="col-4">
-                <input type="number" step="0.5" class="form-control form-control-sm" placeholder="Weight"
-                       id="exercise-${exerciseId}-set-${setNumber}-drop-${dropStageNum}-weight" value="${weight}" onchange="scheduleAutoSave()">
-            </div>
-            <div class="col-2">
-                <button class="btn btn-danger btn-sm" onclick="removeDropStage(${exerciseId}, ${setNumber}, ${dropStageNum})">
-                    <i class="bi bi-x"></i>
-                </button>
-            </div>
+        const dropStage      = document.createElement('div');
+        dropStage.className  = 'drop-stage';
+        dropStage.id         = `exercise-${exerciseId}-set-${setNumber}-drop-${dropStageNum}`;
+        dropStage.innerHTML  = `
+            <span class="drop-stage-label">Drop ${dropStageNum}</span>
+            <input type="number" class="log-input-sm" placeholder="Reps"
+                   id="exercise-${exerciseId}-set-${setNumber}-drop-${dropStageNum}-reps"
+                   value="${reps}" onchange="scheduleAutoSave()">
+            <input type="number" step="0.5" class="log-input-sm" placeholder="Weight"
+                   id="exercise-${exerciseId}-set-${setNumber}-drop-${dropStageNum}-weight"
+                   value="${weight}" onchange="scheduleAutoSave()">
+            <button class="btn-remove-set"
+                    onclick="removeDropStage(${exerciseId}, ${setNumber}, ${dropStageNum})"
+                    aria-label="Remove drop stage ${dropStageNum}">
+                <i class="bi bi-x"></i>
+            </button>
         `;
 
-        // Insert before the add button
         dropContainer.insertBefore(dropStage, addDropBtn);
         scheduleAutoSave();
     }
 
     function removeDropStage(exerciseId, setNumber, dropStageNum) {
         const dropStage = document.getElementById(`exercise-${exerciseId}-set-${setNumber}-drop-${dropStageNum}`);
-        if (dropStage) {
-            dropStage.remove();
-            scheduleAutoSave();
-        }
+        if (dropStage) { dropStage.remove(); scheduleAutoSave(); }
     }
 
+    // ── Rest timer ───────────────────────────────────
+
     function openTimer(exerciseId) {
-        const restInput = document.getElementById(`rest-${exerciseId}`);
-        currentRestTime = parseInt(restInput.value) || 60;
-        timerSeconds = currentRestTime;
+        const restInput  = document.getElementById(`rest-${exerciseId}`);
+        currentRestTime  = parseInt(restInput.value) || 60;
+        timerSeconds     = currentRestTime;
         updateTimerDisplay();
-        const modal = new bootstrap.Modal(document.getElementById('timerModal'));
-        modal.show();
+        new bootstrap.Modal(document.getElementById('timerModal')).show();
         resetTimer();
     }
 
@@ -1515,13 +1640,11 @@
             timerInterval = setInterval(() => {
                 timerSeconds--;
                 updateTimerDisplay();
-
                 if (timerSeconds <= 0) {
                     clearInterval(timerInterval);
                     timerRunning = false;
                     document.getElementById('start-btn').disabled = false;
                     document.getElementById('pause-btn').disabled = true;
-                    // Play a sound or show notification
                     showSuccess('Rest time is up!', 5000);
                 }
             }, 1000);
@@ -1553,78 +1676,60 @@
             `${minutes}:${seconds.toString().padStart(2, '0')}`;
     }
 
+    // ── Set data collection ──────────────────────────
+
     function getSetsForExercise(exerciseId) {
-        const container = document.getElementById(`sets-container-${exerciseId}`);
+        const container  = document.getElementById(`sets-container-${exerciseId}`);
         if (!container) return [];
 
-        const sets = [];
-        const setDivs = container.querySelectorAll('[id^="exercise-' + exerciseId + '-set-"]');
+        const sets       = [];
+        const setDivs    = container.querySelectorAll('[id^="exercise-' + exerciseId + '-set-"]');
         const isSuperset = document.getElementById(`superset-toggle-${exerciseId}`)?.checked;
 
         setDivs.forEach(setDiv => {
-            const setId = setDiv.id;
+            const setId    = setDiv.id;
             const isDropSet = document.getElementById(`${setId}-dropset`)?.checked;
 
             if (isSuperset) {
-                // Get dual reps and weights for superset
-                const repsAInput = document.getElementById(`${setId}-reps-a`);
+                const repsAInput   = document.getElementById(`${setId}-reps-a`);
                 const weightAInput = document.getElementById(`${setId}-weight-a`);
-                const repsBInput = document.getElementById(`${setId}-reps-b`);
+                const repsBInput   = document.getElementById(`${setId}-reps-b`);
                 const weightBInput = document.getElementById(`${setId}-weight-b`);
 
                 if (repsAInput && repsBInput) {
-                    const reps_a = parseInt(repsAInput.value);
-                    const reps_b = parseInt(repsBInput.value);
+                    const reps_a   = parseInt(repsAInput.value);
+                    const reps_b   = parseInt(repsBInput.value);
                     const weight_a = weightAInput && weightAInput.value ? parseFloat(weightAInput.value) : null;
                     const weight_b = weightBInput && weightBInput.value ? parseFloat(weightBInput.value) : null;
-
-                    if (reps_a || reps_b) {
-                        sets.push({ reps_a, weight_a, reps_b, weight_b });
-                    }
+                    if (reps_a || reps_b) sets.push({ reps_a, weight_a, reps_b, weight_b });
                 }
             } else {
-                // Get single reps and weight for normal exercise
-                const repsInput = document.getElementById(`${setId}-reps`);
+                const repsInput   = document.getElementById(`${setId}-reps`);
                 const weightInput = document.getElementById(`${setId}-weight`);
 
                 if (isDropSet) {
-                    // Collect drop set data
-                    const stages = [];
-                    const mainReps = repsInput ? parseInt(repsInput.value) : 0;
+                    const stages    = [];
+                    const mainReps  = repsInput ? parseInt(repsInput.value) : 0;
                     const mainWeight = weightInput && weightInput.value ? parseFloat(weightInput.value) : null;
+                    if (mainReps) stages.push({ reps: mainReps, weight: mainWeight });
 
-                    if (mainReps) {
-                        stages.push({ reps: mainReps, weight: mainWeight });
-                    }
-
-                    // Get all drop stages
                     const dropContainer = document.getElementById(`${setId}-drops`);
                     if (dropContainer) {
-                        const dropStages = dropContainer.querySelectorAll('[id$="-reps"]');
-                        dropStages.forEach(dropRepsInput => {
-                            const dropId = dropRepsInput.id.replace('-reps', '');
-                            const dropWeightInput = document.getElementById(`${dropId}-weight`);
-                            const dropReps = parseInt(dropRepsInput.value);
-                            const dropWeight = dropWeightInput && dropWeightInput.value ? parseFloat(dropWeightInput.value) : null;
-
-                            if (dropReps) {
-                                stages.push({ reps: dropReps, weight: dropWeight });
-                            }
+                        dropContainer.querySelectorAll('[id$="-reps"]').forEach(dropRepsInput => {
+                            const dropId       = dropRepsInput.id.replace('-reps', '');
+                            const dropWeightIn = document.getElementById(`${dropId}-weight`);
+                            const dropReps     = parseInt(dropRepsInput.value);
+                            const dropWeight   = dropWeightIn && dropWeightIn.value ? parseFloat(dropWeightIn.value) : null;
+                            if (dropReps) stages.push({ reps: dropReps, weight: dropWeight });
                         });
                     }
 
-                    if (stages.length > 0) {
-                        sets.push({ is_drop_set: true, stages });
-                    }
+                    if (stages.length > 0) sets.push({ is_drop_set: true, stages });
                 } else {
-                    // Regular set
                     if (repsInput) {
-                        const reps = parseInt(repsInput.value);
+                        const reps   = parseInt(repsInput.value);
                         const weight = weightInput && weightInput.value ? parseFloat(weightInput.value) : null;
-
-                        if (reps) {
-                            sets.push({ reps, weight });
-                        }
+                        if (reps) sets.push({ reps, weight });
                     }
                 }
             }
@@ -1633,37 +1738,32 @@
         return sets;
     }
 
+    // ── Save / clear ─────────────────────────────────
+
     function saveWorkout() {
         const exercises = [];
         for (let i = 1; i <= exerciseCount; i++) {
             const nameEl = document.getElementById(`name-${i}`);
             if (!nameEl) continue;
 
-            const name = nameEl.value;
-            const rest = document.getElementById(`rest-${i}`).value || 0;
-            const sets = getSetsForExercise(i);
+            const name       = nameEl.value;
+            const rest       = document.getElementById(`rest-${i}`).value || 0;
+            const sets       = getSetsForExercise(i);
             const isSuperset = document.getElementById(`superset-toggle-${i}`)?.checked || false;
             const supersetExerciseName = isSuperset ? document.getElementById(`name-b-${i}`)?.value : null;
 
             if (name && sets.length > 0) {
-                // Calculate totals for backward compatibility
                 const totalSets = sets.length;
-                let avgReps = 0;
-                let avgWeight = null;
+                let avgReps = 0, avgWeight = null;
 
                 if (isSuperset) {
-                    // For supersets, average reps_a and weight_a for backward compatibility
-                    avgReps = Math.round(sets.reduce((sum, s) => sum + (s.reps_a || 0), 0) / sets.length);
-                    const setsWithWeight = sets.filter(s => s.weight_a !== null);
-                    avgWeight = setsWithWeight.length > 0
-                        ? Math.round(setsWithWeight.reduce((sum, s) => sum + s.weight_a, 0) / setsWithWeight.length * 10) / 10
-                        : null;
+                    avgReps = Math.round(sets.reduce((s, x) => s + (x.reps_a || 0), 0) / sets.length);
+                    const sw = sets.filter(s => s.weight_a !== null);
+                    avgWeight = sw.length > 0 ? Math.round(sw.reduce((s, x) => s + x.weight_a, 0) / sw.length * 10) / 10 : null;
                 } else {
-                    avgReps = Math.round(sets.reduce((sum, s) => sum + s.reps, 0) / sets.length);
-                    const setsWithWeight = sets.filter(s => s.weight !== null);
-                    avgWeight = setsWithWeight.length > 0
-                        ? Math.round(setsWithWeight.reduce((sum, s) => sum + s.weight, 0) / setsWithWeight.length * 10) / 10
-                        : null;
+                    avgReps = Math.round(sets.reduce((s, x) => s + x.reps, 0) / sets.length);
+                    const sw = sets.filter(s => s.weight !== null);
+                    avgWeight = sw.length > 0 ? Math.round(sw.reduce((s, x) => s + x.weight, 0) / sw.length * 10) / 10 : null;
                 }
 
                 exercises.push({
@@ -1680,23 +1780,18 @@
             }
         }
 
-        if (exercises.length === 0) {
-            showWarning('Please add at least one exercise');
-            return;
-        }
+        if (exercises.length === 0) { showWarning('Please add at least one exercise'); return; }
 
-        // Get the datetime-local value and convert to UTC for server
         const localDateValue = document.getElementById('workout-date').value;
-        const utcDate = localInputValueToUTC(localDateValue);
+        const utcDate        = localInputValueToUTC(localDateValue);
 
         const data = {
             date: utcDate,
             notes: document.getElementById('workout-notes').value,
-            exercises: exercises,
+            exercises,
             template_id: currentTemplateId
         };
 
-        // Use draft completion endpoint if we have a draft, otherwise use regular save
         const endpoint = currentDraftId ? '/api/workouts/draft/complete' : '/log';
 
         fetch(endpoint, {
@@ -1704,32 +1799,24 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         })
-        .then(response => response.json())
+        .then(r => r.json())
         .then(result => {
             if (result.success) {
-                // Mark workout as saved (prevents beforeunload warning)
                 workoutSaved = true;
-
-                // Clear the workout draft from localStorage (server draft is already converted)
                 localStorage.removeItem('gymlog_workout_draft');
                 currentDraftId = null;
-
-                showSuccess('Workout saved successfully!');
-                setTimeout(() => {
-                    window.location.href = '/history';
-                }, 1000);
+                showSuccess('Workout saved!');
+                setTimeout(() => { window.location.href = '/history'; }, 1000);
             } else {
                 showError('Error saving workout: ' + (result.message || 'Unknown error'));
             }
         })
-        .catch(error => {
-            showError('Error saving workout: ' + error);
-        });
+        .catch(error => showError('Error saving workout: ' + error));
     }
 
     function saveRestDay() {
         const localDateValue = document.getElementById('workout-date').value;
-        const utcDate = localInputValueToUTC(localDateValue);
+        const utcDate        = localInputValueToUTC(localDateValue);
         const data = {
             date: utcDate,
             notes: document.getElementById('workout-notes').value,
@@ -1760,56 +1847,38 @@
     }
 
     function clearWorkout() {
-        // Clear all exercises
         document.getElementById('exercises-container').innerHTML = '';
         exerciseCount = 0;
-        setCounters = {};
-
-        // Clear notes
-        document.getElementById('workout-notes').value = '';
-
-        // Clear template selection
+        setCounters   = {};
+        document.getElementById('workout-notes').value  = '';
         document.getElementById('template-select').value = '';
         currentTemplateId = null;
-
-        // Reset date/time to current
         setDefaultWorkoutDate();
-
-        // Clear drafts
         clearWorkoutDraft();
-
-        // Add one empty exercise
         addExercise();
-
         showSuccess('Workout cleared!');
     }
 
-    // Note: First exercise is added in initializePage() if no draft is restored
-
-    // ===== EXERCISE BANK AUTOCOMPLETE =====
+    // ── Exercise autocomplete ────────────────────────
 
     function initExerciseAutocomplete(inputId) {
         const input = document.getElementById(inputId);
         if (!input || input.dataset.autocompleteInit) return;
         input.dataset.autocompleteInit = '1';
 
-        // Wrap the input
         const wrapper = document.createElement('div');
         wrapper.className = 'exercise-autocomplete-wrapper';
         input.parentNode.insertBefore(wrapper, input);
         wrapper.appendChild(input);
 
-        // Create dropdown
         const dropdown = document.createElement('div');
         dropdown.className = 'exercise-dropdown';
         wrapper.appendChild(dropdown);
 
         let debounceTimer = null;
-        let activeIndex = -1;
+        let activeIndex   = -1;
 
-        function getItems() {
-            return dropdown.querySelectorAll('.exercise-dropdown-item');
-        }
+        function getItems() { return dropdown.querySelectorAll('.exercise-dropdown-item'); }
 
         function setActive(index) {
             const items = getItems();
@@ -1833,32 +1902,28 @@
             activeIndex = -1;
 
             results.forEach(ex => {
-                const item = document.createElement('div');
+                const item     = document.createElement('div');
                 item.className = 'exercise-dropdown-item';
 
-                const nameSpan = document.createElement('span');
+                const nameSpan     = document.createElement('span');
                 nameSpan.textContent = ex.name;
                 item.appendChild(nameSpan);
 
                 if (ex.muscle_group) {
-                    const badge = document.createElement('span');
-                    badge.className = 'muscle-badge';
-                    badge.textContent = ex.muscle_group;
+                    const badge         = document.createElement('span');
+                    badge.className     = 'muscle-badge';
+                    badge.textContent   = ex.muscle_group;
                     item.appendChild(badge);
                 }
 
-                item.addEventListener('mousedown', (e) => {
-                    e.preventDefault();
-                    selectItem(ex.name);
-                });
+                item.addEventListener('mousedown', (e) => { e.preventDefault(); selectItem(ex.name); });
                 dropdown.appendChild(item);
             });
 
-            // "Add to my exercises" option when typed text doesn't exactly match anything
-            const q = query.trim();
+            const q          = query.trim();
             const exactMatch = results.some(r => r.name.toLowerCase() === q.toLowerCase());
             if (q.length > 1 && !exactMatch) {
-                const addItem = document.createElement('div');
+                const addItem     = document.createElement('div');
                 addItem.className = 'exercise-dropdown-item add-custom';
                 addItem.innerHTML = `<span><i class="bi bi-plus-circle"></i> Add "<strong>${q}</strong>" to my exercises</span>`;
                 addItem.addEventListener('mousedown', async (e) => {
@@ -1866,14 +1931,13 @@
                     try {
                         const resp = await fetch('/api/exercise_bank', {
                             method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({name: q}),
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ name: q })
                         });
                         const saved = await resp.json();
                         selectItem(saved.name);
                         showSuccess(`"${saved.name}" added to your exercise library`);
                     } catch (err) {
-                        // Fall back to using whatever was typed
                         selectItem(q);
                     }
                 });
@@ -1888,12 +1952,9 @@
         }
 
         async function search(query) {
-            if (!query.trim()) {
-                dropdown.classList.remove('show');
-                return;
-            }
+            if (!query.trim()) { dropdown.classList.remove('show'); return; }
             try {
-                const resp = await fetch(`/api/exercise_bank?q=${encodeURIComponent(query)}`);
+                const resp    = await fetch(`/api/exercise_bank?q=${encodeURIComponent(query)}`);
                 const results = await resp.json();
                 renderResults(results, query);
             } catch (err) {
@@ -1901,38 +1962,25 @@
             }
         }
 
-        input.addEventListener('input', () => {
+        input.addEventListener('input',  () => {
             clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => search(input.value), 250);
         });
 
         input.addEventListener('focus', () => {
-            if (input.value.trim().length > 0) {
-                search(input.value);
-            }
+            if (input.value.trim().length > 0) search(input.value);
         });
 
         input.addEventListener('keydown', (e) => {
             const items = getItems();
             if (!dropdown.classList.contains('show')) return;
-
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                setActive(Math.min(activeIndex + 1, items.length - 1));
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                setActive(Math.max(activeIndex - 1, 0));
-            } else if (e.key === 'Enter' && activeIndex >= 0) {
-                e.preventDefault();
-                items[activeIndex].dispatchEvent(new MouseEvent('mousedown', {bubbles: true}));
-            } else if (e.key === 'Escape') {
-                dropdown.classList.remove('show');
-                activeIndex = -1;
-            }
+            if      (e.key === 'ArrowDown')  { e.preventDefault(); setActive(Math.min(activeIndex + 1, items.length - 1)); }
+            else if (e.key === 'ArrowUp')    { e.preventDefault(); setActive(Math.max(activeIndex - 1, 0)); }
+            else if (e.key === 'Enter' && activeIndex >= 0) { e.preventDefault(); items[activeIndex].dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); }
+            else if (e.key === 'Escape')     { dropdown.classList.remove('show'); activeIndex = -1; }
         });
 
         input.addEventListener('blur', () => {
-            // Small delay so mousedown on dropdown items fires first
             setTimeout(() => dropdown.classList.remove('show'), 150);
         });
     }

@@ -1,136 +1,315 @@
 {% extends "base.html" %}
 
-{% block title %}Settings - FitGlyph{% endblock %}
+{% block title %}Settings — FitGlyph{% endblock %}
 
 {% block extra_css %}
 <style>
+    /* ── Page Layout ──────────────────────────────────────────── */
+    .settings-container {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 0 0 80px;
+    }
+
+    .settings-page-header {
+        font-family: 'Cabinet Grotesk', sans-serif;
+        font-size: 28px;
+        font-weight: 700;
+        color: #cdccca;
+        letter-spacing: -0.02em;
+        margin: 0 0 24px;
+    }
+
+    /* ── Section Card ─────────────────────────────────────────── */
     .settings-section {
-        background: rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 15px;
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
+        background: #161513;
+        border: 1px solid rgba(205, 204, 202, 0.10);
+        border-radius: 10px;
+        padding: 0 20px;
+        margin-bottom: 10px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.20), 0 4px 16px rgba(0, 0, 0, 0.14);
     }
 
-    body.dark-mode .settings-section {
-        background: rgba(45, 45, 45, 0.3);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+    .settings-section-header {
+        font-family: 'Satoshi', sans-serif;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        color: #5a5957;
+        padding: 16px 0 0;
+        margin: 0 0 4px;
     }
 
+    /* ── Row Item ─────────────────────────────────────────────── */
     .settings-item {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 15px 0;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 13px 0;
+        border-top: 1px solid rgba(205, 204, 202, 0.06);
+        gap: 24px;
     }
 
-    .settings-item:last-child {
-        border-bottom: none;
-    }
-
-    body.dark-mode .settings-item {
-        border-bottom-color: rgba(255, 255, 255, 0.05);
+    .settings-item-content {
+        flex: 1;
+        min-width: 0;
     }
 
     .settings-label {
+        font-family: 'Satoshi', sans-serif;
+        font-size: 14px;
         font-weight: 500;
-        margin-bottom: 5px;
+        color: #cdccca;
+        margin-bottom: 2px;
     }
 
     .settings-description {
-        font-size: 0.85rem;
-        color: #888;
+        font-family: 'Satoshi', sans-serif;
+        font-size: 13px;
+        color: #797876;
+        line-height: 1.45;
     }
 
-    body.dark-mode .settings-description {
-        color: #aaa;
+    .settings-value {
+        font-family: 'Satoshi', sans-serif;
+        font-size: 14px;
+        color: #5a5957;
+        font-variant-numeric: tabular-nums;
+        flex-shrink: 0;
     }
 
-    .form-switch .form-check-input {
-        width: 50px;
-        height: 25px;
+    /* ── Select ───────────────────────────────────────────────── */
+    .settings-select {
+        background: #1c1b19;
+        border: 1px solid rgba(205, 204, 202, 0.12);
+        border-radius: 6px;
+        color: #cdccca;
+        font-family: 'Satoshi', sans-serif;
+        font-size: 13px;
+        padding: 6px 28px 6px 10px;
+        cursor: pointer;
+        outline: none;
+        -webkit-appearance: none;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%23797876' d='M5 6L0 0h10z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        flex-shrink: 0;
+    }
+
+    .settings-select:focus {
+        border-color: rgba(79, 152, 163, 0.50);
+        box-shadow: 0 0 0 2px rgba(79, 152, 163, 0.12);
+    }
+
+    .settings-select option {
+        background: #1c1b19;
+        color: #cdccca;
+    }
+
+    /* ── Buttons ──────────────────────────────────────────────── */
+    .btn-fg {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-family: 'Satoshi', sans-serif;
+        font-size: 13px;
+        font-weight: 500;
+        padding: 6px 14px;
+        min-height: 32px;
+        border-radius: 6px;
+        border: 1px solid transparent;
+        cursor: pointer;
+        white-space: nowrap;
+        text-decoration: none;
+        background: none;
+        transition: background 0.12s, border-color 0.12s, color 0.12s;
+    }
+
+    .btn-fg:disabled {
+        opacity: 0.38;
+        cursor: not-allowed;
+    }
+
+    .btn-fg-accent {
+        background: rgba(79, 152, 163, 0.10);
+        border-color: rgba(79, 152, 163, 0.28);
+        color: #4f98a3;
+    }
+    .btn-fg-accent:hover:not(:disabled) {
+        background: rgba(79, 152, 163, 0.18);
+        border-color: rgba(79, 152, 163, 0.45);
+    }
+
+    .btn-fg-ghost {
+        background: transparent;
+        border-color: rgba(205, 204, 202, 0.12);
+        color: #797876;
+    }
+    .btn-fg-ghost:hover:not(:disabled) {
+        border-color: rgba(205, 204, 202, 0.22);
+        color: #cdccca;
+    }
+
+    .btn-fg-danger {
+        background: rgba(220, 53, 69, 0.08);
+        border-color: rgba(220, 53, 69, 0.20);
+        color: #a84050;
+    }
+    .btn-fg-danger:hover:not(:disabled) {
+        background: rgba(220, 53, 69, 0.14);
+        border-color: rgba(220, 53, 69, 0.35);
+        color: #dc3545;
+    }
+
+    /* ── Toggle Switch ────────────────────────────────────────── */
+    .fg-switch {
+        position: relative;
+        display: inline-block;
+        width: 40px;
+        height: 22px;
+        flex-shrink: 0;
         cursor: pointer;
     }
 
-    .danger-zone {
-        border-color: rgba(220, 53, 69, 0.3) !important;
+    .fg-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+        position: absolute;
     }
 
-    body.dark-mode h1,
-    body.dark-mode h2,
-    body.dark-mode h3,
-    body.dark-mode h4,
-    body.dark-mode h5,
-    body.dark-mode h6,
-    body.dark-mode .settings-label {
-        color: #ffffff !important;
+    .fg-switch-track {
+        position: absolute;
+        inset: 0;
+        background: rgba(205, 204, 202, 0.10);
+        border: 1px solid rgba(205, 204, 202, 0.14);
+        border-radius: 9999px;
+        transition: background 0.2s, border-color 0.2s;
     }
 
-    body.dark-mode .form-select,
-    body.dark-mode .form-control {
-        background-color: #1a1a1a;
-        color: #ffffff;
-        border-color: #404040;
+    .fg-switch input:checked + .fg-switch-track {
+        background: rgba(79, 152, 163, 0.22);
+        border-color: rgba(79, 152, 163, 0.50);
     }
 
-    body.dark-mode .btn-outline-danger {
-        color: #dc3545;
-        border-color: #dc3545;
+    .fg-switch-thumb {
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 14px;
+        height: 14px;
+        background: #5a5957;
+        border-radius: 9999px;
+        transition: transform 0.2s, background 0.2s;
+        pointer-events: none;
     }
 
-    body.dark-mode .btn-outline-danger:hover {
-        background-color: #dc3545;
-        color: white;
+    .fg-switch input:checked ~ .fg-switch-thumb {
+        transform: translateX(18px);
+        background: #4f98a3;
+    }
+
+    /* ── Danger Zone ──────────────────────────────────────────── */
+    .settings-section.danger-zone {
+        border-color: rgba(220, 53, 69, 0.16);
+    }
+
+    .settings-section.danger-zone .settings-section-header {
+        color: rgba(168, 64, 80, 0.80);
+    }
+
+    /* ── Normalization Preview ────────────────────────────────── */
+    .normalization-preview {
+        font-family: 'Satoshi', sans-serif;
+        font-size: 12px;
+        color: #4f98a3;
+        margin-top: 6px;
+        display: none;
+    }
+
+    .normalization-preview a {
+        color: #4f98a3;
+        text-decoration-line: underline;
+        text-underline-offset: 2px;
+    }
+
+    /* ── Button Group ─────────────────────────────────────────── */
+    .btn-group-fg {
+        display: flex;
+        gap: 8px;
+        flex-shrink: 0;
+    }
+
+    /* ── Inline Spinner ───────────────────────────────────────── */
+    .spinner-xs {
+        display: inline-block;
+        width: 11px;
+        height: 11px;
+        border: 1.5px solid currentColor;
+        border-right-color: transparent;
+        border-radius: 50%;
+        animation: fg-spin 0.6s linear infinite;
+        vertical-align: -1px;
+    }
+
+    @keyframes fg-spin {
+        to { transform: rotate(360deg); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .spinner-xs { animation-duration: 0s; }
+        .fg-switch-track,
+        .fg-switch-thumb,
+        .btn-fg { transition: none; }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container" style="max-width: 800px;">
-    <h2 class="mb-4">Settings</h2>
+<div class="settings-container">
+    <h1 class="settings-page-header">Settings</h1>
 
-    <!-- Appearance Section -->
-    <div class="settings-section">
-        <h5 class="mb-3">Appearance</h5>
+    <!-- Appearance -->
+    <section class="settings-section" aria-labelledby="hd-appearance">
+        <p class="settings-section-header" id="hd-appearance">Appearance</p>
 
         <div class="settings-item">
-            <div>
+            <div class="settings-item-content">
                 <div class="settings-label">Dark Mode</div>
                 <div class="settings-description">Switch between light and dark theme</div>
             </div>
-            <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" id="darkModeSwitch" onclick="toggleTheme()">
-            </div>
+            <label class="fg-switch" aria-label="Toggle dark mode">
+                <input type="checkbox" id="darkModeSwitch" onclick="toggleTheme()">
+                <span class="fg-switch-track"></span>
+                <span class="fg-switch-thumb"></span>
+            </label>
         </div>
-    </div>
+    </section>
 
-    <!-- Preferences Section -->
-    <div class="settings-section">
-        <h5 class="mb-3">Preferences</h5>
+    <!-- Preferences -->
+    <section class="settings-section" aria-labelledby="hd-prefs">
+        <p class="settings-section-header" id="hd-prefs">Preferences</p>
 
         <div class="settings-item">
-            <div style="flex: 1;">
-                <div class="settings-label">Timezone Offset</div>
+            <div class="settings-item-content">
+                <div class="settings-label">Timezone</div>
                 <div class="settings-description">Adjust time display to your local timezone</div>
             </div>
-            <select class="form-select" id="timezoneOffset" style="width: 180px;" onchange="saveTimezoneOffset()">
-                <option value="-12">UTC-12:00</option>
-                <option value="-11">UTC-11:00</option>
-                <option value="-10">UTC-10:00 (Hawaii)</option>
-                <option value="-9">UTC-09:00 (Alaska)</option>
-                <option value="-8">UTC-08:00 (Pacific)</option>
-                <option value="-7">UTC-07:00 (Mountain)</option>
-                <option value="-6">UTC-06:00 (Central)</option>
-                <option value="-5">UTC-05:00 (Eastern)</option>
-                <option value="-4">UTC-04:00 (Atlantic)</option>
-                <option value="-3">UTC-03:00</option>
-                <option value="-2">UTC-02:00</option>
-                <option value="-1">UTC-01:00</option>
+            <select class="settings-select" id="timezoneOffset" style="width: 164px;" onchange="saveTimezoneOffset()">
+                <option value="-12">UTC−12:00</option>
+                <option value="-11">UTC−11:00</option>
+                <option value="-10">UTC−10:00 (Hawaii)</option>
+                <option value="-9">UTC−09:00 (Alaska)</option>
+                <option value="-8">UTC−08:00 (Pacific)</option>
+                <option value="-7">UTC−07:00 (Mountain)</option>
+                <option value="-6">UTC−06:00 (Central)</option>
+                <option value="-5">UTC−05:00 (Eastern)</option>
+                <option value="-4">UTC−04:00 (Atlantic)</option>
+                <option value="-3">UTC−03:00</option>
+                <option value="-2">UTC−02:00</option>
+                <option value="-1">UTC−01:00</option>
                 <option value="0">UTC+00:00 (GMT)</option>
                 <option value="1">UTC+01:00</option>
                 <option value="2">UTC+02:00</option>
@@ -148,36 +327,36 @@
         </div>
 
         <div class="settings-item">
-            <div style="flex: 1;">
+            <div class="settings-item-content">
                 <div class="settings-label">Weight Unit</div>
-                <div class="settings-description">Choose your preferred weight measurement</div>
+                <div class="settings-description">Preferred weight measurement</div>
             </div>
-            <select class="form-select" id="weightUnit" style="width: 120px;" onchange="saveWeightUnit()">
+            <select class="settings-select" id="weightUnit" style="width: 136px;" onchange="saveWeightUnit()">
                 <option value="lbs">Pounds (lbs)</option>
                 <option value="kg">Kilograms (kg)</option>
             </select>
         </div>
 
         <div class="settings-item">
-            <div style="flex: 1;">
+            <div class="settings-item-content">
                 <div class="settings-label">Default Rest Time</div>
-                <div class="settings-description">Default rest period between sets</div>
+                <div class="settings-description">Rest period between sets</div>
             </div>
-            <select class="form-select" id="defaultRestTime" style="width: 120px;" onchange="saveRestTime()">
-                <option value="60">60 seconds</option>
-                <option value="90">90 seconds</option>
-                <option value="120">2 minutes</option>
-                <option value="180">3 minutes</option>
-                <option value="300">5 minutes</option>
+            <select class="settings-select" id="defaultRestTime" style="width: 136px;" onchange="saveRestTime()">
+                <option value="60">60 sec</option>
+                <option value="90">90 sec</option>
+                <option value="120">2 min</option>
+                <option value="180">3 min</option>
+                <option value="300">5 min</option>
             </select>
         </div>
 
         <div class="settings-item">
-            <div style="flex: 1;">
+            <div class="settings-item-content">
                 <div class="settings-label">Weekly Workout Goal</div>
                 <div class="settings-description">Target workouts per week shown on the dashboard</div>
             </div>
-            <select class="form-select" id="weeklyGoal" style="width: 160px;" onchange="saveWeeklyGoal(this.value)">
+            <select class="settings-select" id="weeklyGoal" style="width: 136px;" onchange="saveWeeklyGoal(this.value)">
                 <option value="1">1 / week</option>
                 <option value="2">2 / week</option>
                 <option value="3">3 / week</option>
@@ -187,135 +366,128 @@
                 <option value="7">7 / week</option>
             </select>
         </div>
-    </div>
+    </section>
 
-    <!-- Account Section -->
-    <div class="settings-section">
-        <h5 class="mb-3">Account</h5>
+    <!-- Account -->
+    <section class="settings-section" aria-labelledby="hd-account">
+        <p class="settings-section-header" id="hd-account">Account</p>
 
         <div class="settings-item">
-            <div>
+            <div class="settings-item-content">
                 <div class="settings-label">Username</div>
-                <div class="settings-description">{{ current_user.username }}</div>
             </div>
+            <span class="settings-value">{{ current_user.username }}</span>
         </div>
 
         <div class="settings-item">
-            <div>
+            <div class="settings-item-content">
                 <div class="settings-label">Email</div>
-                <div class="settings-description">{{ current_user.email }}</div>
             </div>
+            <span class="settings-value">{{ current_user.email }}</span>
         </div>
 
         <div class="settings-item">
-            <div>
+            <div class="settings-item-content">
                 <div class="settings-label">Member Since</div>
-                <div class="settings-description" id="memberSince"></div>
             </div>
+            <span class="settings-value" id="memberSince"></span>
         </div>
-    </div>
+    </section>
 
-    <!-- Data & Privacy Section -->
-    <div class="settings-section">
-        <h5 class="mb-3">Data & Privacy</h5>
+    <!-- Data & Privacy -->
+    <section class="settings-section" aria-labelledby="hd-data">
+        <p class="settings-section-header" id="hd-data">Data &amp; Privacy</p>
 
         <div class="settings-item">
-            <div>
+            <div class="settings-item-content">
                 <div class="settings-label">Export Data</div>
-                <div class="settings-description">Download all your workout and nutrition data</div>
+                <div class="settings-description">Download all workout and nutrition data as JSON</div>
             </div>
-            <button class="btn btn-sm btn-outline-primary" onclick="exportData()">
+            <button class="btn-fg btn-fg-accent" onclick="exportData()">
                 <i class="bi bi-download"></i> Export
             </button>
         </div>
-    </div>
+    </section>
 
-    <!-- Exercise Management Section -->
-    <div class="settings-section">
-        <h5 class="mb-3">Exercise Management</h5>
+    <!-- Exercise Management -->
+    <section class="settings-section" aria-labelledby="hd-exercises">
+        <p class="settings-section-header" id="hd-exercises">Exercise Management</p>
 
         <div class="settings-item">
-            <div>
+            <div class="settings-item-content">
                 <div class="settings-label">Normalize Exercise Names</div>
-                <div class="settings-description">Clean up inconsistent exercise names (e.g., "db press" → "Dumbbell Press")</div>
-                <div class="settings-description text-primary mt-2" id="normalization-preview" style="display: none;">
-                    <small><i class="bi bi-info-circle"></i> <span id="preview-text"></span></small>
+                <div class="settings-description">Clean up inconsistent names — e.g. "db press" → "Dumbbell Press"</div>
+                <div class="normalization-preview" id="normalization-preview">
+                    <span id="preview-text"></span>
                 </div>
             </div>
-            <div class="d-flex gap-2">
-                <button class="btn btn-sm btn-outline-info" onclick="previewNormalization()" id="preview-btn">
+            <div class="btn-group-fg">
+                <button class="btn-fg btn-fg-ghost" onclick="previewNormalization()" id="preview-btn">
                     <i class="bi bi-eye"></i> Preview
                 </button>
-                <button class="btn btn-sm btn-outline-success" onclick="executeNormalization()" id="normalize-btn" disabled>
-                    <i class="bi bi-magic"></i> Normalize
+                <button class="btn-fg btn-fg-accent" onclick="executeNormalization()" id="normalize-btn" disabled>
+                    <i class="bi bi-magic"></i> Apply
                 </button>
             </div>
         </div>
-    </div>
+    </section>
 
     <!-- Danger Zone -->
-    <div class="settings-section danger-zone">
-        <h5 class="mb-3 text-danger">Danger Zone</h5>
+    <section class="settings-section danger-zone" aria-labelledby="hd-danger">
+        <p class="settings-section-header" id="hd-danger">Danger Zone</p>
 
         <div class="settings-item">
-            <div>
+            <div class="settings-item-content">
                 <div class="settings-label">Clear All Data</div>
-                <div class="settings-description">Permanently delete all workouts, nutrition logs, and metrics</div>
+                <div class="settings-description">Permanently delete all workouts, nutrition logs, and body metrics</div>
             </div>
-            <button class="btn btn-sm btn-outline-danger" onclick="showWarning('This feature is not yet implemented')">
-                <i class="bi bi-trash"></i> Clear Data
+            <button class="btn-fg btn-fg-danger" onclick="showWarning('This feature is not yet implemented')">
+                Clear Data
             </button>
         </div>
 
         <div class="settings-item">
-            <div>
+            <div class="settings-item-content">
                 <div class="settings-label">Delete Account</div>
                 <div class="settings-description">Permanently delete your account and all associated data</div>
             </div>
-            <button class="btn btn-sm btn-outline-danger" onclick="showWarning('This feature is not yet implemented')">
-                <i class="bi bi-x-circle"></i> Delete Account
+            <button class="btn-fg btn-fg-danger" onclick="showWarning('This feature is not yet implemented')">
+                Delete Account
             </button>
         </div>
-    </div>
+    </section>
 
-    <!-- App Info -->
-    <div class="settings-section">
-        <h5 class="mb-3">About</h5>
+    <!-- About -->
+    <section class="settings-section" aria-labelledby="hd-about">
+        <p class="settings-section-header" id="hd-about">About</p>
 
         <div class="settings-item">
-            <div>
-                <div class="settings-label">Getting Started Tour</div>
-                <div class="settings-description">Replay the interactive tour to learn about FitGlyph features</div>
+            <div class="settings-item-content">
+                <div class="settings-label">Interactive Tour</div>
+                <div class="settings-description">Replay the onboarding tour to learn FitGlyph features</div>
             </div>
-            <button class="btn btn-sm btn-outline-primary" onclick="restartTour()">
-                <i class="bi bi-play-circle"></i> Restart Tour
+            <button class="btn-fg btn-fg-ghost" onclick="restartTour()">
+                Restart Tour
             </button>
         </div>
 
         <div class="settings-item">
-            <div>
-                <div class="settings-label">FitGlyph Version</div>
-                <div class="settings-description">1.0.0</div>
+            <div class="settings-item-content">
+                <div class="settings-label">Version</div>
             </div>
+            <span class="settings-value">2.0.2</span>
         </div>
 
         <div class="settings-item">
-            <div>
-                <div class="settings-label">GitHub</div>
+            <div class="settings-item-content">
+                <div class="settings-label">Source</div>
                 <div class="settings-description">View source code and report issues</div>
             </div>
-            <a href="https://github.com/peytonramsey/gymlog" target="_blank" class="btn btn-sm btn-outline-primary">
+            <a href="https://github.com/peytonramsey/gymlog" target="_blank" rel="noopener noreferrer" class="btn-fg btn-fg-ghost">
                 <i class="bi bi-github"></i> GitHub
             </a>
         </div>
-    </div>
-
-    <!-- Back Button -->
-    <div class="text-center mt-4 mb-4">
-        <a href="/" class="btn btn-secondary">
-            <i class="bi bi-arrow-left"></i> Back to Home
-        </a>
-    </div>
+    </section>
 </div>
 {% endblock %}
 
@@ -475,7 +647,7 @@
 
         // Disable button and show loading
         previewBtn.disabled = true;
-        previewBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Loading...';
+        previewBtn.innerHTML = '<span class="spinner-xs"></span> Loading…';
 
         fetch('/api/exercises/normalize/preview')
             .then(r => r.json())
@@ -484,14 +656,14 @@
 
                 if (data.total_changes === 0) {
                     previewDiv.style.display = 'block';
-                    previewText.innerHTML = 'No exercises need normalization. All exercise names are already clean!';
+                    previewText.innerHTML = 'All exercise names are already clean.';
                     normalizeBtn.disabled = true;
                 } else {
                     previewDiv.style.display = 'block';
 
                     // Show summary
                     const totalAffected = data.changes.reduce((sum, change) => sum + change.total_count, 0);
-                    previewText.innerHTML = `Found ${data.total_changes} exercise name(s) to normalize, affecting ${totalAffected} workout(s)/template(s). <a href="#" onclick="showNormalizationDetails(event)">View details</a>`;
+                    previewText.innerHTML = `${data.total_changes} name${data.total_changes !== 1 ? 's' : ''} to normalize, affecting ${totalAffected} record${totalAffected !== 1 ? 's' : ''}. <a href="#" onclick="showNormalizationDetails(event)">View details</a>`;
 
                     normalizeBtn.disabled = false;
                 }
@@ -513,37 +685,36 @@
 
         if (normalizationChanges.length === 0) return;
 
-        // Build detailed list
-        let html = '<div class="alert alert-info"><h6>Normalization Preview</h6>';
-        html += '<small class="d-block mb-2">The following changes will be made:</small>';
-        html += '<table class="table table-sm" style="font-size: 0.85rem;"><thead><tr><th>Current Name</th><th>→</th><th>Normalized Name</th><th>Uses</th></tr></thead><tbody>';
+        // Build detail table
+        let rows = normalizationChanges.map(change =>
+            `<tr style="border-top:1px solid rgba(205,204,202,0.08);">
+                <td style="padding:8px 12px 8px 0;color:#797876;font-size:13px;">${change.original}</td>
+                <td style="padding:8px 6px;color:#5a5957;font-size:12px;">→</td>
+                <td style="padding:8px 0;color:#cdccca;font-size:13px;font-weight:500;">${change.normalized}</td>
+                <td style="padding:8px 0 8px 16px;color:#5a5957;font-size:12px;font-variant-numeric:tabular-nums;">${change.total_count}</td>
+            </tr>`
+        ).join('');
 
-        normalizationChanges.forEach(change => {
-            html += `<tr>
-                <td><code>${change.original}</code></td>
-                <td>→</td>
-                <td><strong>${change.normalized}</strong></td>
-                <td><span class="badge bg-secondary">${change.total_count}</span></td>
-            </tr>`;
-        });
+        let html = `<p style="font-family:'Satoshi',sans-serif;font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#5a5957;margin:0 0 12px;">Normalization Preview</p>
+            <table style="width:100%;border-collapse:collapse;">
+                <thead><tr>
+                    <th style="padding:0 12px 8px 0;font-size:11px;font-weight:600;color:#5a5957;text-align:left;">Current</th>
+                    <th style="padding:0 6px 8px;font-size:11px;font-weight:600;color:#5a5957;text-align:left;"></th>
+                    <th style="padding:0 0 8px;font-size:11px;font-weight:600;color:#5a5957;text-align:left;">Normalized</th>
+                    <th style="padding:0 0 8px 16px;font-size:11px;font-weight:600;color:#5a5957;text-align:left;">Uses</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+            </table>`;
 
-        html += '</tbody></table></div>';
-
-        // Show in a modal-like alert
         const modal = document.createElement('div');
-        modal.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 9999; max-width: 600px; max-height: 80vh; overflow-y: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);';
+        modal.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;max-width:560px;width:calc(100% - 32px);max-height:80vh;overflow-y:auto;background:#161513;border:1px solid rgba(205,204,202,0.12);border-radius:10px;padding:24px;box-shadow:0 2px 4px rgba(0,0,0,0.28),0 12px 32px rgba(0,0,0,0.40);font-family:\'Satoshi\',sans-serif;';
 
-        if (document.body.classList.contains('dark-mode')) {
-            modal.style.background = '#2d2d2d';
-            modal.style.color = '#fff';
-        }
-
-        modal.innerHTML = html + '<button class="btn btn-sm btn-secondary mt-2" onclick="this.parentElement.remove(); document.getElementById(\'modal-backdrop\').remove()">Close</button>';
+        modal.innerHTML = html + `<button style="margin-top:20px;display:inline-flex;align-items:center;font-family:'Satoshi',sans-serif;font-size:13px;font-weight:500;padding:6px 14px;min-height:32px;border-radius:6px;border:1px solid rgba(205,204,202,0.12);background:transparent;color:#797876;cursor:pointer;" onclick="this.parentElement.remove();document.getElementById('modal-backdrop').remove()">Close</button>`;
 
         // Add backdrop
         const backdrop = document.createElement('div');
         backdrop.id = 'modal-backdrop';
-        backdrop.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9998;';
+        backdrop.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.60);z-index:9998;';
         backdrop.onclick = () => {
             modal.remove();
             backdrop.remove();
@@ -567,7 +738,7 @@
 
         const normalizeBtn = document.getElementById('normalize-btn');
         normalizeBtn.disabled = true;
-        normalizeBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Normalizing...';
+        normalizeBtn.innerHTML = '<span class="spinner-xs"></span> Normalizing…';
 
         fetch('/api/exercises/normalize/execute', {
             method: 'POST',
@@ -582,18 +753,18 @@
                     normalizationChanges = [];
                     document.getElementById('normalization-preview').style.display = 'none';
                     normalizeBtn.disabled = true;
-                    normalizeBtn.innerHTML = '<i class="bi bi-magic"></i> Normalize';
+                    normalizeBtn.innerHTML = '<i class="bi bi-magic"></i> Apply';
                 } else {
                     showError(data.message);
                     normalizeBtn.disabled = false;
-                    normalizeBtn.innerHTML = '<i class="bi bi-magic"></i> Normalize';
+                    normalizeBtn.innerHTML = '<i class="bi bi-magic"></i> Apply';
                 }
             })
             .catch(err => {
                 console.error('Error executing normalization:', err);
                 showError('Failed to normalize exercises');
                 normalizeBtn.disabled = false;
-                normalizeBtn.innerHTML = '<i class="bi bi-magic"></i> Normalize';
+                normalizeBtn.innerHTML = '<i class="bi bi-magic"></i> Apply';
             });
     }
 </script>

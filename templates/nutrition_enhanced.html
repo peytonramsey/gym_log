@@ -1,213 +1,730 @@
 {% extends "base.html" %}
 
-{% block title %}Nutrition Tracker - GymLog{% endblock %}
+{% block title %}Nutrition — FitGlyph{% endblock %}
 
 {% block extra_css %}
 <style>
-    .progress-thin {
-        height: 8px;
+    /* ─── Page header ──────────────────────────────────────── */
+    .nut-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 20px;
     }
-    .macro-circle {
-        width: 80px;
-        height: 80px;
-        border-radius: 50%;
+
+    .nut-header h1 {
+        font-family: var(--font-display);
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--text);
+        margin: 0;
+        line-height: 1;
+    }
+
+    /* ─── Shared card shell ────────────────────────────────── */
+    .fg-card {
+        background: var(--bg-raised);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-card);
+        box-shadow: var(--shadow-card);
+        margin-bottom: 12px;
+    }
+
+    .fg-card__body    { padding: 16px; }
+    .fg-card__header  {
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-faint);
+    }
+
+    /* ─── Button tokens ────────────────────────────────────── */
+    .btn-fg-outline {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 14px;
+        background: transparent;
+        border: 1px solid var(--accent);
+        color: var(--accent);
+        border-radius: var(--radius-btn);
+        font-family: var(--font-body);
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        min-height: 44px;
+        transition: background 0.15s;
+        text-decoration: none;
+    }
+    .btn-fg-outline:hover { background: oklch(from var(--accent) l c h / 0.08); color: var(--accent); }
+
+    .btn-fg-primary {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        font-weight: bold;
-        font-size: 0.9rem;
-    }
-    .goal-card {
+        gap: 6px;
+        width: 100%;
+        padding: 11px 16px;
+        background: var(--accent);
+        border: none;
+        color: #0f0e0d;
+        border-radius: var(--radius-btn);
+        font-family: var(--font-body);
+        font-size: 15px;
+        font-weight: 700;
         cursor: pointer;
-        transition: all 0.2s;
+        min-height: 44px;
+        transition: opacity 0.15s;
     }
-    .goal-card:hover {
-        transform: scale(1.02);
+    .btn-fg-primary:hover { opacity: 0.88; }
+
+    .btn-fg-ghost {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 6px 10px;
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+        border-radius: var(--radius-btn);
+        font-family: var(--font-body);
+        font-size: 13px;
+        cursor: pointer;
+        min-height: 44px;
+        transition: color 0.15s, border-color 0.15s;
+    }
+    .btn-fg-ghost:hover { color: var(--text); border-color: oklch(from #cdccca l c h / 0.22); }
+
+    .btn-fg-danger {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 6px 10px;
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--warning);
+        border-radius: var(--radius-btn);
+        font-family: var(--font-body);
+        font-size: 13px;
+        cursor: pointer;
+        min-height: 44px;
+        transition: color 0.15s;
+    }
+    .btn-fg-danger:hover { color: #d9763f; }
+
+    /* ─── Calorie hero ─────────────────────────────────────── */
+    .cal-hero {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+        margin-bottom: 4px;
+    }
+
+    .cal-hero__value {
+        font-family: var(--font-body);
+        font-size: 40px;
+        font-weight: 700;
+        color: var(--text);
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+    }
+
+    .cal-hero__unit {
+        font-size: 16px;
+        color: var(--text-muted);
+        font-weight: 400;
+    }
+
+    .cal-hero__label {
+        font-size: 12px;
+        color: var(--text-faint);
+        margin-bottom: 10px;
+    }
+
+    /* ─── Progress track ───────────────────────────────────── */
+    .fg-track {
+        width: 100%;
+        height: 4px;
+        background: var(--bg-elevated);
+        border-radius: 9999px;
+        overflow: hidden;
+        margin-bottom: 16px;
+    }
+
+    .fg-track__fill {
+        height: 100%;
+        background: var(--accent);
+        border-radius: 9999px;
+        transition: width 0.4s ease;
+    }
+
+    /* ─── Macro rows ───────────────────────────────────────── */
+    .macro-divider {
+        height: 1px;
+        background: var(--border);
+        margin: 0 0 12px;
+    }
+
+    .macro-row {
+        display: grid;
+        grid-template-columns: 64px 1fr 56px;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    .macro-row__label {
+        font-size: 12px;
+        color: var(--text-faint);
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+
+    .macro-row__track {
+        height: 3px;
+        background: var(--bg-elevated);
+        border-radius: 9999px;
+        overflow: hidden;
+    }
+
+    .macro-row__fill {
+        height: 100%;
+        background: var(--text-muted);
+        border-radius: 9999px;
+        transition: width 0.4s ease;
+    }
+
+    .macro-row__nums {
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+        color: var(--text-muted);
+        text-align: right;
+        white-space: nowrap;
+    }
+
+    .macro-row__nums strong {
+        font-weight: 700;
+        color: var(--text);
+    }
+
+    /* ─── Macro split line ─────────────────────────────────── */
+    .macro-split {
+        display: flex;
+        gap: 16px;
+        margin-top: 4px;
+        padding-top: 10px;
+        border-top: 1px solid var(--border);
+    }
+
+    .macro-split__item {
+        font-size: 12px;
+        color: var(--text-faint);
+    }
+
+    .macro-split__item strong {
+        color: var(--text-muted);
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* ─── Form inputs ──────────────────────────────────────── */
+    .fg-label {
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-faint);
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        margin-bottom: 6px;
+    }
+
+    .fg-input,
+    .fg-select {
+        width: 100%;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-input);
+        color: var(--text);
+        font-family: var(--font-body);
+        font-size: 15px;
+        padding: 9px 12px;
+        min-height: 44px;
+        transition: border-color 0.15s;
+        appearance: none;
+    }
+
+    .fg-input:focus,
+    .fg-select:focus {
+        outline: none;
+        border-color: var(--accent);
+    }
+
+    .fg-input::placeholder { color: var(--text-faint); }
+
+    .fg-select {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235a5957' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        padding-right: 34px;
+    }
+
+    .fg-input-group {
+        display: flex;
+        gap: 8px;
+    }
+
+    .fg-input-group .fg-input { flex: 1; }
+
+    .fg-hint {
+        font-size: 12px;
+        color: var(--text-faint);
+        margin-top: 5px;
+    }
+
+    .fg-field { margin-bottom: 14px; }
+
+    /* ─── Search results ───────────────────────────────────── */
+    .search-result-list {
+        border: 1px solid var(--border);
+        border-radius: var(--radius-card);
+        overflow: hidden;
+        background: var(--bg-elevated);
+    }
+
+    .search-result-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--border);
+        cursor: pointer;
+        transition: background 0.12s;
+        text-decoration: none;
+        color: var(--text);
+    }
+
+    .search-result-item:last-child { border-bottom: none; }
+    .search-result-item:hover { background: var(--bg-raised); }
+
+    .search-result-item__name {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text);
+    }
+
+    .search-result-item__macros {
+        font-size: 11px;
+        color: var(--text-faint);
+        margin-top: 1px;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .search-result-item__cal {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--text-muted);
+        font-variant-numeric: tabular-nums;
+        flex-shrink: 0;
+        margin-left: 12px;
+    }
+
+    /* ─── Selected food items ──────────────────────────────── */
+    .selected-food-list {
+        border: 1px solid var(--border);
+        border-radius: var(--radius-card);
+        overflow: hidden;
+        background: var(--bg-elevated);
+    }
+
+    .selected-food-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .selected-food-item:last-child { border-bottom: none; }
+
+    .selected-food-item__info { flex: 1; min-width: 0; }
+
+    .selected-food-item__name {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .selected-food-item__macros {
+        font-size: 11px;
+        color: var(--text-faint);
+        font-variant-numeric: tabular-nums;
+        margin-top: 1px;
+    }
+
+    .selected-food-item__controls {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-shrink: 0;
+    }
+
+    .fg-input-sm {
+        width: 72px;
+        background: var(--bg-raised);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-input);
+        color: var(--text);
+        font-family: var(--font-body);
+        font-size: 13px;
+        padding: 5px 8px;
+        height: 36px;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .fg-input-sm:focus {
+        outline: none;
+        border-color: var(--accent);
+    }
+
+    .fg-select-sm {
+        width: 76px;
+        background: var(--bg-raised);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-input);
+        color: var(--text);
+        font-family: var(--font-body);
+        font-size: 13px;
+        padding: 5px 8px;
+        height: 36px;
+        appearance: none;
+        cursor: pointer;
+    }
+
+    .fg-select-sm:focus {
+        outline: none;
+        border-color: var(--accent);
+    }
+
+    /* ─── Recent meals ─────────────────────────────────────── */
+    .meal-row {
+        padding: 12px 0;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .meal-row:last-child { border-bottom: none; }
+    .meal-row:first-child { padding-top: 0; }
+
+    .meal-row__top {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 2px;
+    }
+
+    .meal-row__type {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--text);
+    }
+
+    .meal-row__time {
+        font-size: 12px;
+        color: var(--text-faint);
+        font-variant-numeric: tabular-nums;
+    }
+
+    .meal-row__foods {
+        font-size: 13px;
+        color: var(--text-muted);
+        margin-bottom: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .meal-row__nums {
+        font-size: 12px;
+        color: var(--text-faint);
+        font-variant-numeric: tabular-nums;
+    }
+
+    .meal-row__nums strong {
+        color: var(--text-muted);
+        font-weight: 700;
+    }
+
+    /* ─── Chart canvas ─────────────────────────────────────── */
+    .chart-wrap { padding: 16px 16px 8px; }
+
+    /* ─── Modal shell ──────────────────────────────────────── */
+    .fg-modal .modal-content {
+        background: var(--bg-raised);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-card);
+        color: var(--text);
+        box-shadow: var(--shadow-hover);
+    }
+
+    .fg-modal .modal-header {
+        border-bottom: 1px solid var(--border);
+        padding: 14px 16px;
+    }
+
+    .fg-modal .modal-title {
+        font-family: var(--font-display);
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--text);
+    }
+
+    .fg-modal .btn-close {
+        filter: invert(0.6);
+    }
+
+    .fg-modal .modal-body { padding: 16px; }
+
+    .fg-modal .modal-footer {
+        border-top: 1px solid var(--border);
+        padding: 12px 16px;
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+    }
+
+    .btn-fg-secondary {
+        padding: 8px 16px;
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+        border-radius: var(--radius-btn);
+        font-family: var(--font-body);
+        font-size: 14px;
+        cursor: pointer;
+        min-height: 44px;
+        transition: color 0.15s;
+    }
+    .btn-fg-secondary:hover { color: var(--text); }
+
+    .btn-fg-save {
+        padding: 8px 20px;
+        background: var(--accent);
+        border: none;
+        color: #0f0e0d;
+        border-radius: var(--radius-btn);
+        font-family: var(--font-body);
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        min-height: 44px;
+        transition: opacity 0.15s;
+    }
+    .btn-fg-save:hover { opacity: 0.88; }
+
+    /* ─── Loading / empty states ───────────────────────────── */
+    .fg-empty {
+        font-size: 13px;
+        color: var(--text-faint);
+        text-align: left;
+        padding: 8px 0;
+    }
+
+    .fg-spinner {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border: 2px solid var(--border);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: fg-spin 0.6s linear infinite;
+        vertical-align: middle;
+        margin-right: 6px;
+    }
+
+    @keyframes fg-spin { to { transform: rotate(360deg); } }
+
+    @media (prefers-reduced-motion: reduce) {
+        .fg-track__fill,
+        .macro-row__fill { transition: none; }
+        .fg-spinner { animation: none; }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="row mb-3">
-    <div class="col-12 d-flex justify-content-between align-items-center">
-        <h4>Nutrition Tracker </h4>
-        <button class="btn btn-sm btn-outline-primary" onclick="showGoalsModal()">
-            <i class="bi bi-gear"></i> Set Goals
-        </button>
-    </div>
+
+<!-- ── Page header ──────────────────────────────────────────── -->
+<div class="nut-header">
+    <h1>Nutrition</h1>
+    <button class="btn-fg-outline" onclick="showGoalsModal()" aria-label="Set nutrition goals">
+        <i class="bi bi-sliders" aria-hidden="true"></i> Goals
+    </button>
 </div>
 
-<!-- Daily Summary with Goals -->
-<div class="row mb-3">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-body">
-                <h6 class="card-title mb-3">Today's Progress</h6>
+<!-- ── Daily intake summary ─────────────────────────────────── -->
+<section class="fg-card" aria-label="Today's intake">
+    <div class="fg-card__body">
 
-                <!-- Calories -->
-                <div class="mb-3">
-                    <div class="d-flex justify-content-between mb-1">
-                        <span><strong>Calories</strong></span>
-                        <span id="calories-text">0 / 2000 kcal</span>
-                    </div>
-                    <div class="progress progress-thin">
-                        <div class="progress-bar bg-primary" id="calories-bar" style="width: 0%"></div>
-                    </div>
-                </div>
+        <!-- Calorie hero -->
+        <div class="cal-hero">
+            <span class="cal-hero__value" id="calories-value">0</span>
+            <span class="cal-hero__unit">kcal</span>
+        </div>
+        <div class="cal-hero__label" id="calories-text">0 / 2000 kcal</div>
 
-                <!-- Macros Row -->
-                <div class="row text-center">
-                    <div class="col-4">
-                        <div class="mb-1"><strong>Protein</strong></div>
-                        <div class="text-danger fw-bold" id="protein-text">0g</div>
-                        <small class="text-muted" id="protein-goal">/ 150g</small>
-                        <div class="progress progress-thin mt-1">
-                            <div class="progress-bar bg-danger" id="protein-bar" style="width: 0%"></div>
-                        </div>
-                    </div>
-                    <div class="col-4">
-                        <div class="mb-1"><strong>Carbs</strong></div>
-                        <div class="text-warning fw-bold" id="carbs-text">0g</div>
-                        <small class="text-muted" id="carbs-goal">/ 200g</small>
-                        <div class="progress progress-thin mt-1">
-                            <div class="progress-bar bg-warning" id="carbs-bar" style="width: 0%"></div>
-                        </div>
-                    </div>
-                    <div class="col-4">
-                        <div class="mb-1"><strong>Fats</strong></div>
-                        <div class="text-info fw-bold" id="fats-text">0g</div>
-                        <small class="text-muted" id="fats-goal">/ 65g</small>
-                        <div class="progress progress-thin mt-1">
-                            <div class="progress-bar bg-info" id="fats-bar" style="width: 0%"></div>
-                        </div>
-                    </div>
-                </div>
+        <!-- Calorie progress track -->
+        <div class="fg-track" role="progressbar" aria-label="Calories" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+            <div class="fg-track__fill" id="calories-bar" style="width: 0%"></div>
+        </div>
 
-                <!-- Macro Split Percentages -->
-                <div class="row text-center mt-3">
-                    <div class="col-12">
-                        <small class="text-muted">Macro Split:</small>
-                        <div class="mt-2">
-                            <span class="badge bg-danger me-2" id="protein-percent">0%</span>
-                            <span class="badge bg-warning me-2" id="carbs-percent">0%</span>
-                            <span class="badge bg-info" id="fats-percent">0%</span>
-                        </div>
-                    </div>
-                </div>
+        <div class="macro-divider"></div>
+
+        <!-- Protein row -->
+        <div class="macro-row">
+            <span class="macro-row__label">Protein</span>
+            <div class="macro-row__track">
+                <div class="macro-row__fill" id="protein-bar" style="width: 0%"></div>
+            </div>
+            <div class="macro-row__nums">
+                <strong id="protein-text">0g</strong>
+                <span id="protein-goal" style="color:var(--text-faint)"> / 150g</span>
             </div>
         </div>
-    </div>
-</div>
 
-<!-- Log New Meal -->
-<div class="row mb-3">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <strong>Log Meal</strong>
+        <!-- Carbs row -->
+        <div class="macro-row">
+            <span class="macro-row__label">Carbs</span>
+            <div class="macro-row__track">
+                <div class="macro-row__fill" id="carbs-bar" style="width: 0%"></div>
             </div>
-            <div class="card-body">
-                <form id="meal-form">
-                    <div class="mb-3">
-                        <label class="form-label">Meal Type</label>
-                        <select class="form-select" id="meal-type">
-                            <option value="Breakfast">Breakfast</option>
-                            <option value="Lunch">Lunch</option>
-                            <option value="Dinner">Dinner</option>
-                            <option value="Snack">Snack</option>
-                        </select>
-                    </div>
+            <div class="macro-row__nums">
+                <strong id="carbs-text">0g</strong>
+                <span id="carbs-goal" style="color:var(--text-faint)"> / 200g</span>
+            </div>
+        </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Search Food</label>
-                        <div class="input-group">
-                            <input type="text" class="form-control" id="food-search" placeholder="e.g., chicken breast, banana">
-                            <button type="button" class="btn btn-primary" onclick="searchFood()">
-                                <i class="bi bi-search"></i> Search
-                            </button>
-                        </div>
-                        <small class="text-muted">Search USDA database for nutrition info</small>
-                    </div>
+        <!-- Fats row -->
+        <div class="macro-row" style="margin-bottom: 0;">
+            <span class="macro-row__label">Fats</span>
+            <div class="macro-row__track">
+                <div class="macro-row__fill" id="fats-bar" style="width: 0%"></div>
+            </div>
+            <div class="macro-row__nums">
+                <strong id="fats-text">0g</strong>
+                <span id="fats-goal" style="color:var(--text-faint)"> / 65g</span>
+            </div>
+        </div>
 
-                    <!-- Search Results -->
-                    <div id="search-results" class="mb-3" style="display: none;"></div>
+        <!-- Macro split -->
+        <div class="macro-split">
+            <span class="macro-split__item">P <strong id="protein-percent">0%</strong></span>
+            <span class="macro-split__item">C <strong id="carbs-percent">0%</strong></span>
+            <span class="macro-split__item">F <strong id="fats-percent">0%</strong></span>
+        </div>
 
-                    <!-- Selected Foods -->
-                    <div id="selected-foods" class="mb-3"></div>
+    </div>
+</section>
 
-                    <div class="mb-3">
-                        <label class="form-label">Notes (optional)</label>
-                        <input type="text" class="form-control" id="meal-notes" placeholder="e.g., Post-workout meal">
-                    </div>
+<!-- ── Log meal ──────────────────────────────────────────────── -->
+<section class="fg-card" aria-label="Log a meal">
+    <div class="fg-card__header">Log Meal</div>
+    <div class="fg-card__body">
+        <form id="meal-form">
 
-                    <button type="submit" class="btn btn-success w-100">
-                        <i class="bi bi-check-circle"></i> Save Meal
+            <div class="fg-field">
+                <label class="fg-label" for="meal-type">Meal type</label>
+                <select class="fg-select" id="meal-type">
+                    <option value="Breakfast">Breakfast</option>
+                    <option value="Lunch">Lunch</option>
+                    <option value="Dinner">Dinner</option>
+                    <option value="Snack">Snack</option>
+                </select>
+            </div>
+
+            <div class="fg-field">
+                <label class="fg-label" for="food-search">Search food</label>
+                <div class="fg-input-group">
+                    <input type="text" class="fg-input" id="food-search"
+                           placeholder="e.g. chicken breast, banana"
+                           autocomplete="off">
+                    <button type="button" class="btn-fg-outline" onclick="searchFood()" style="flex-shrink:0;">
+                        <i class="bi bi-search" aria-hidden="true"></i> Search
                     </button>
-                </form>
+                </div>
+                <p class="fg-hint">USDA database</p>
             </div>
-        </div>
-    </div>
-</div>
 
-<!-- Weekly Chart -->
-<div class="row mb-3">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <strong>7-Day Nutrition Trends</strong>
-            </div>
-            <div class="card-body">
-                <canvas id="weeklyChart" style="max-height: 250px;"></canvas>
-            </div>
-        </div>
-    </div>
-</div>
+            <!-- Search results -->
+            <div id="search-results" class="fg-field" style="display: none;"></div>
 
-<!-- Recent Meals -->
-<div class="row">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <strong>Recent Meals</strong>
-            </div>
-            <div class="card-body" id="recent-meals">
-                <p class="text-muted text-center">Loading...</p>
-            </div>
-        </div>
-    </div>
-</div>
+            <!-- Selected foods -->
+            <div id="selected-foods" class="fg-field"></div>
 
-<!-- Goals Modal -->
-<div class="modal fade" id="goalsModal" tabindex="-1">
-    <div class="modal-dialog">
+            <div class="fg-field">
+                <label class="fg-label" for="meal-notes">Notes <span style="font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></label>
+                <input type="text" class="fg-input" id="meal-notes" placeholder="e.g. post-workout">
+            </div>
+
+            <button type="submit" class="btn-fg-primary">
+                <i class="bi bi-check" aria-hidden="true"></i> Save meal
+            </button>
+
+        </form>
+    </div>
+</section>
+
+<!-- ── 7-day trends ──────────────────────────────────────────── -->
+<section class="fg-card" aria-label="7-day nutrition trends">
+    <div class="fg-card__header">7-Day Trends</div>
+    <div class="chart-wrap">
+        <canvas id="weeklyChart" style="max-height: 220px;"></canvas>
+    </div>
+</section>
+
+<!-- ── Recent meals ──────────────────────────────────────────── -->
+<section class="fg-card" aria-label="Recent meals">
+    <div class="fg-card__header">Recent Meals</div>
+    <div class="fg-card__body" id="recent-meals">
+        <p class="fg-empty"><span class="fg-spinner"></span> Loading…</p>
+    </div>
+</section>
+
+<!-- ── Goals modal ───────────────────────────────────────────── -->
+<div class="modal fade fg-modal" id="goalsModal" tabindex="-1" aria-labelledby="goalsModalLabel" aria-modal="true" role="dialog">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Set Nutrition Goals</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h2 class="modal-title" id="goalsModalLabel">Nutrition Goals</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <form id="goals-form">
-                    <div class="mb-3">
-                        <label class="form-label">Daily Calorie Goal</label>
-                        <input type="number" class="form-control" id="goal-calories" value="2000 cal">
+                    <div class="fg-field">
+                        <label class="fg-label" for="goal-calories">Daily calories</label>
+                        <input type="number" class="fg-input" id="goal-calories" value="2000" min="0">
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Protein Goal (g)</label>
-                        <input type="number" class="form-control" id="goal-protein" value="150g protein">
+                    <div class="fg-field">
+                        <label class="fg-label" for="goal-protein">Protein (g)</label>
+                        <input type="number" class="fg-input" id="goal-protein" value="150" min="0">
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Carbs Goal (g)</label>
-                        <input type="number" class="form-control" id="goal-carbs" value="200g carbs">
+                    <div class="fg-field">
+                        <label class="fg-label" for="goal-carbs">Carbs (g)</label>
+                        <input type="number" class="fg-input" id="goal-carbs" value="200" min="0">
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Fats Goal (g)</label>
-                        <input type="number" class="form-control" id="goal-fats" value="65g fats">
+                    <div class="fg-field" style="margin-bottom:0;">
+                        <label class="fg-label" for="goal-fats">Fats (g)</label>
+                        <input type="number" class="fg-input" id="goal-fats" value="65" min="0">
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="saveGoals()">Save Goals</button>
+                <button type="button" class="btn-fg-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn-fg-save" onclick="saveGoals()">Save</button>
             </div>
         </div>
     </div>
@@ -273,17 +790,21 @@ function loadDailyData() {
     fetch(`/api/nutrition/daily/${today}/with-goals`)
         .then(response => response.json())
         .then(data => {
-            // Update totals
+            // Update calorie hero
+            const calVal = Math.round(data.calories);
+            document.getElementById('calories-value').textContent = calVal.toLocaleString();
             document.getElementById('calories-text').textContent =
-                `${Math.round(data.calories)} / ${data.goals.calories_goal} kcal`;
+                `${calVal.toLocaleString()} / ${data.goals.calories_goal.toLocaleString()} kcal`;
+
+            // Update macro values
             document.getElementById('protein-text').textContent = `${Math.round(data.protein)}g`;
             document.getElementById('carbs-text').textContent = `${Math.round(data.carbs)}g`;
             document.getElementById('fats-text').textContent = `${Math.round(data.fats)}g`;
 
             // Update goals text
-            document.getElementById('protein-goal').textContent = `/ ${data.goals.protein_goal}g`;
-            document.getElementById('carbs-goal').textContent = `/ ${data.goals.carbs_goal}g`;
-            document.getElementById('fats-goal').textContent = `/ ${data.goals.fats_goal}g`;
+            document.getElementById('protein-goal').textContent = ` / ${data.goals.protein_goal}g`;
+            document.getElementById('carbs-goal').textContent = ` / ${data.goals.carbs_goal}g`;
+            document.getElementById('fats-goal').textContent = ` / ${data.goals.fats_goal}g`;
 
             // Update progress bars
             document.getElementById('calories-bar').style.width = Math.min(data.percentages.calories, 100) + '%';
@@ -291,10 +812,10 @@ function loadDailyData() {
             document.getElementById('carbs-bar').style.width = Math.min(data.percentages.carbs, 100) + '%';
             document.getElementById('fats-bar').style.width = Math.min(data.percentages.fats, 100) + '%';
 
-            // Update macro split percentages
-            document.getElementById('protein-percent').textContent = `Protein ${data.macro_split.protein}%`;
-            document.getElementById('carbs-percent').textContent = `Carbs ${data.macro_split.carbs}%`;
-            document.getElementById('fats-percent').textContent = `Fats ${data.macro_split.fats}%`;
+            // Update macro split
+            document.getElementById('protein-percent').textContent = `${data.macro_split.protein}%`;
+            document.getElementById('carbs-percent').textContent = `${data.macro_split.carbs}%`;
+            document.getElementById('fats-percent').textContent = `${data.macro_split.fats}%`;
         });
 }
 
@@ -307,24 +828,22 @@ function searchFood() {
     }
 
     const resultsDiv = document.getElementById('search-results');
-    resultsDiv.innerHTML = '<p class="text-center"><span class="spinner-border spinner-border-sm"></span> Searching...</p>';
+    resultsDiv.innerHTML = '<p style="font-size:13px;color:var(--text-faint);"><span class="fg-spinner"></span> Searching…</p>';
     resultsDiv.style.display = 'block';
 
     fetch(`/api/food/search/${encodeURIComponent(query)}`)
         .then(response => response.json())
         .then(data => {
             if (data.success && data.results.length > 0) {
-                let html = '<div class="list-group">';
+                let html = '<div class="search-result-list">';
                 data.results.forEach((food, index) => {
                     html += `
-                        <a href="#" class="list-group-item list-group-item-action" onclick="addFood(${index}); return false;">
-                            <div class="d-flex justify-content-between">
-                                <strong>${food.name}</strong>
-                                <small>${food.calories} cal/100g</small>
+                        <a href="#" class="search-result-item" onclick="addFood(${index}); return false;">
+                            <div>
+                                <div class="search-result-item__name">${food.name}</div>
+                                <div class="search-result-item__macros">P ${food.protein}g · C ${food.carbs}g · F ${food.fats}g &nbsp;per 100g</div>
                             </div>
-                            <small class="text-muted">
-                                P: ${food.protein}g | C: ${food.carbs}g | F: ${food.fats}g (per 100g)
-                            </small>
+                            <div class="search-result-item__cal">${food.calories} kcal</div>
                         </a>
                     `;
                 });
@@ -332,11 +851,11 @@ function searchFood() {
                 resultsDiv.innerHTML = html;
                 window.searchResults = data.results;
             } else {
-                resultsDiv.innerHTML = '<p class="text-muted">No foods found. Try a different search term.</p>';
+                resultsDiv.innerHTML = '<p class="fg-empty">No foods found. Try a different search term.</p>';
             }
         })
         .catch(error => {
-            resultsDiv.innerHTML = '<p class="text-danger">Error searching for food</p>';
+            resultsDiv.innerHTML = '<p style="font-size:13px;color:var(--warning);">Error searching for food.</p>';
             console.error(error);
         });
 }
@@ -358,40 +877,37 @@ function updateSelectedFoods() {
         return;
     }
 
-    let html = '<div class="border rounded p-2"><strong>Selected Foods:</strong>';
+    let html = '<div class="selected-food-list">';
     selectedFoods.forEach((food, index) => {
-        // Calculate scaled nutrition
-        const factor = food.quantity / 100; // Since API returns per 100g
-        const scaledCals = Math.round(food.calories * factor);
-        const scaledProtein = Math.round(food.protein * factor);
-        const scaledCarbs = Math.round(food.carbs * factor);
-        const scaledFats = Math.round(food.fats * factor);
+        const factor = food.quantity / 100;
+        const scaledCals    = Math.round(food.calories * factor);
+        const scaledProtein = Math.round(food.protein  * factor);
+        const scaledCarbs   = Math.round(food.carbs    * factor);
+        const scaledFats    = Math.round(food.fats     * factor);
 
         html += `
-            <div class="d-flex justify-content-between align-items-center mt-2 border-bottom pb-2">
-                <div class="flex-grow-1">
-                    <div><strong>${food.name}</strong></div>
-                    <small class="text-muted">${scaledCals} cal | P: ${scaledProtein}g | C: ${scaledCarbs}g | F: ${scaledFats}g</small>
+            <div class="selected-food-item">
+                <div class="selected-food-item__info">
+                    <div class="selected-food-item__name">${food.name}</div>
+                    <div class="selected-food-item__macros">${scaledCals} kcal · P ${scaledProtein}g · C ${scaledCarbs}g · F ${scaledFats}g</div>
                 </div>
-                <div class="d-flex align-items-center gap-2">
-                    <input type="number" class="form-control form-control-sm" style="width: 80px;"
-                           value="${food.quantity}" min="1" step="1"
-                           onchange="updateQuantity(${index}, this.value)">
-                    <select class="form-select form-select-sm" style="width: 90px;"
-                            onchange="updateUnit(${index}, this.value)">
-                        <option value="g" ${food.unit === 'g' ? 'selected' : ''}>g</option>
-                        <option value="oz" ${food.unit === 'oz' ? 'selected' : ''}>oz</option>
-                        <option value="kg" ${food.unit === 'kg' ? 'selected' : ''}>kg</option>
-                        <option value="lb" ${food.unit === 'lb' ? 'selected' : ''}>lb</option>
-                        <option value="ml" ${food.unit === 'ml' ? 'selected' : ''}>ml</option>
-                        <option value="l" ${food.unit === 'l' ? 'selected' : ''}>L</option>
-                        <option value="fl oz" ${food.unit === 'fl oz' ? 'selected' : ''}>fl oz</option>
-                        <option value="cup" ${food.unit === 'cup' ? 'selected' : ''}>cup</option>
-                        <option value="tbsp" ${food.unit === 'tbsp' ? 'selected' : ''}>tbsp</option>
-                        <option value="tsp" ${food.unit === 'tsp' ? 'selected' : ''}>tsp</option>
+                <div class="selected-food-item__controls">
+                    <input type="number" class="fg-input-sm" value="${food.quantity}" min="1" step="1"
+                           onchange="updateQuantity(${index}, this.value)" aria-label="Quantity">
+                    <select class="fg-select-sm" onchange="updateUnit(${index}, this.value)" aria-label="Unit">
+                        <option value="g"    ${food.unit === 'g'     ? 'selected' : ''}>g</option>
+                        <option value="oz"   ${food.unit === 'oz'    ? 'selected' : ''}>oz</option>
+                        <option value="kg"   ${food.unit === 'kg'    ? 'selected' : ''}>kg</option>
+                        <option value="lb"   ${food.unit === 'lb'    ? 'selected' : ''}>lb</option>
+                        <option value="ml"   ${food.unit === 'ml'    ? 'selected' : ''}>ml</option>
+                        <option value="l"    ${food.unit === 'l'     ? 'selected' : ''}>L</option>
+                        <option value="fl oz"${food.unit === 'fl oz' ? 'selected' : ''}>fl oz</option>
+                        <option value="cup"  ${food.unit === 'cup'   ? 'selected' : ''}>cup</option>
+                        <option value="tbsp" ${food.unit === 'tbsp'  ? 'selected' : ''}>tbsp</option>
+                        <option value="tsp"  ${food.unit === 'tsp'   ? 'selected' : ''}>tsp</option>
                     </select>
-                    <button class="btn btn-sm btn-danger" onclick="removeFood(${index})">
-                        <i class="bi bi-trash"></i>
+                    <button class="btn-fg-danger" onclick="removeFood(${index})" aria-label="Remove ${food.name}">
+                        <i class="bi bi-trash" aria-hidden="true"></i>
                     </button>
                 </div>
             </div>
@@ -463,26 +979,25 @@ function loadRecentMeals() {
         .then(data => {
             const container = document.getElementById('recent-meals');
             if (data.length === 0) {
-                container.innerHTML = '<p class="text-muted text-center">No meals logged yet</p>';
+                container.innerHTML = '<p class="fg-empty">No meals logged yet.</p>';
                 return;
             }
 
             let html = '';
             data.slice(0, 10).forEach(meal => {
+                const foods = meal.food_items.map(item => `${item.name} (${item.quantity}${item.unit})`).join(', ');
                 html += `
-                    <div class="border-bottom pb-2 mb-2">
-                        <div class="d-flex justify-content-between">
-                            <strong>${meal.meal_type}</strong>
-                            <small class="text-muted">${new Date(meal.date).toLocaleString()}</small>
+                    <div class="meal-row">
+                        <div class="meal-row__top">
+                            <span class="meal-row__type">${meal.meal_type}</span>
+                            <span class="meal-row__time">${new Date(meal.date).toLocaleString('en-US', {month:'short', day:'numeric', hour:'numeric', minute:'2-digit', hour12:true})}</span>
                         </div>
-                        <div class="small">
-                            ${meal.food_items.map(item => `${item.name} (${item.quantity}${item.unit})`).join(', ')}
-                        </div>
-                        <div class="mt-1">
-                            <span class="badge bg-secondary">${Math.round(meal.totals.calories)} cal</span>
-                            <span class="badge bg-danger">P: ${Math.round(meal.totals.protein)}g</span>
-                            <span class="badge bg-warning text-dark">C: ${Math.round(meal.totals.carbs)}g</span>
-                            <span class="badge bg-info">F: ${Math.round(meal.totals.fats)}g</span>
+                        <div class="meal-row__foods">${foods}</div>
+                        <div class="meal-row__nums">
+                            <strong>${Math.round(meal.totals.calories)}</strong> kcal
+                            &nbsp;·&nbsp; P <strong>${Math.round(meal.totals.protein)}g</strong>
+                            &nbsp;·&nbsp; C <strong>${Math.round(meal.totals.carbs)}g</strong>
+                            &nbsp;·&nbsp; F <strong>${Math.round(meal.totals.fats)}g</strong>
                         </div>
                     </div>
                 `;
@@ -496,17 +1011,18 @@ function loadWeeklyChart() {
     fetch('/api/nutrition/weekly')
         .then(response => response.json())
         .then(data => {
-            const labels = data.map(d => new Date(d.date).toLocaleDateString('en-US', {weekday: 'short'}));
+            const labels  = data.map(d => new Date(d.date).toLocaleDateString('en-US', {weekday: 'short'}));
             const calories = data.map(d => d.calories);
-            const protein = data.map(d => d.protein);
-            const carbs = data.map(d => d.carbs);
-            const fats = data.map(d => d.fats);
+            const protein  = data.map(d => d.protein);
+            const carbs    = data.map(d => d.carbs);
+            const fats     = data.map(d => d.fats);
 
             const ctx = document.getElementById('weeklyChart').getContext('2d');
 
-            if (weeklyChart) {
-                weeklyChart.destroy();
-            }
+            if (weeklyChart) { weeklyChart.destroy(); }
+
+            Chart.defaults.color = '#797876';
+            Chart.defaults.font.family = "'Satoshi', system-ui, sans-serif";
 
             weeklyChart = new Chart(ctx, {
                 type: 'line',
@@ -516,60 +1032,80 @@ function loadWeeklyChart() {
                         {
                             label: 'Calories',
                             data: calories,
-                            borderColor: 'rgb(13, 110, 253)',
-                            backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                            borderColor: '#4f98a3',
+                            backgroundColor: 'rgba(79,152,163,0.07)',
+                            borderWidth: 2,
+                            pointRadius: 3,
+                            pointBackgroundColor: '#4f98a3',
+                            tension: 0.3,
                             yAxisID: 'y'
                         },
                         {
-                            label: 'Protein (g)',
+                            label: 'Protein g',
                             data: protein,
-                            borderColor: 'rgb(220, 53, 69)',
-                            backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                            borderColor: '#cdccca',
+                            backgroundColor: 'transparent',
+                            borderWidth: 1.5,
+                            pointRadius: 2,
+                            pointBackgroundColor: '#cdccca',
+                            tension: 0.3,
                             yAxisID: 'y1'
                         },
                         {
-                            label: 'Carbs (g)',
+                            label: 'Carbs g',
                             data: carbs,
-                            borderColor: 'rgb(255, 193, 7)',
-                            backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                            borderColor: '#797876',
+                            backgroundColor: 'transparent',
+                            borderWidth: 1.5,
+                            pointRadius: 2,
+                            pointBackgroundColor: '#797876',
+                            tension: 0.3,
                             yAxisID: 'y1'
                         },
                         {
-                            label: 'Fats (g)',
+                            label: 'Fats g',
                             data: fats,
-                            borderColor: 'rgb(13, 202, 240)',
-                            backgroundColor: 'rgba(13, 202, 240, 0.1)',
+                            borderColor: '#5a5957',
+                            backgroundColor: 'transparent',
+                            borderWidth: 1.5,
+                            pointRadius: 2,
+                            pointBackgroundColor: '#5a5957',
+                            tension: 0.3,
                             yAxisID: 'y1'
                         }
                     ]
                 },
                 options: {
                     responsive: true,
-                    interaction: {
-                        mode: 'index',
-                        intersect: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#5a5957',
+                                font: { size: 11 },
+                                boxWidth: 10,
+                                padding: 14
+                            }
+                        }
                     },
                     scales: {
+                        x: {
+                            grid: { color: 'oklch(from #cdccca l c h / 0.07)' },
+                            ticks: { color: '#5a5957', font: { size: 11 } }
+                        },
                         y: {
                             type: 'linear',
-                            display: true,
                             position: 'left',
-                            title: {
-                                display: true,
-                                text: 'Calories'
-                            }
+                            grid: { color: 'oklch(from #cdccca l c h / 0.07)' },
+                            ticks: { color: '#5a5957', font: { size: 11 } },
+                            title: { display: true, text: 'kcal', color: '#5a5957', font: { size: 10 } }
                         },
                         y1: {
                             type: 'linear',
-                            display: true,
                             position: 'right',
-                            title: {
-                                display: true,
-                                text: 'Macros (g)'
-                            },
-                            grid: {
-                                drawOnChartArea: false,
-                            }
+                            grid: { drawOnChartArea: false },
+                            ticks: { color: '#5a5957', font: { size: 11 } },
+                            title: { display: true, text: 'g', color: '#5a5957', font: { size: 10 } }
                         }
                     }
                 }

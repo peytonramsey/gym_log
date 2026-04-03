@@ -1,293 +1,451 @@
 {% extends "base.html" %}
 
-{% block title %}Body Metrics - GymLog{% endblock %}
+{% block title %}Body Metrics — FitGlyph{% endblock %}
 
 {% block extra_css %}
 <style>
-    /* Glassmorphism styles */
-    .glass-card {
-        background: rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 15px;
-        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-        transition: all 0.3s ease;
+    /* ── Form controls ───────────────────────────────────────── */
+    .form-control {
+        background-color: var(--bg-elevated) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: var(--radius-input) !important;
+        color: var(--text) !important;
+        font-family: var(--font-body);
+        font-size: 14px;
     }
 
-    body.dark-mode .glass-card {
-        background: rgba(45, 45, 45, 0.3);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+    .form-control:focus {
+        background-color: var(--bg-elevated) !important;
+        border-color: var(--accent) !important;
+        color: var(--text) !important;
+        box-shadow: 0 0 0 2px oklch(from #4f98a3 l c h / 0.20) !important;
+        outline: none;
     }
 
-    body.dark-mode .card {
-        background: rgba(45, 45, 45, 0.3);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        color: #ffffff;
+    .form-control::placeholder { color: var(--text-faint); }
+
+    .form-control:disabled {
+        background-color: var(--bg-raised) !important;
+        color: var(--text-faint) !important;
+        cursor: not-allowed;
     }
 
-    body.dark-mode .card-header {
-        background: rgba(60, 60, 60, 0.4);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        color: #ffffff;
+    .form-select {
+        background-color: var(--bg-elevated) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: var(--radius-input) !important;
+        color: var(--text) !important;
+        font-family: var(--font-body);
+        font-size: 14px;
     }
 
-    body.dark-mode .form-control,
-    body.dark-mode .form-select {
-        background-color: #1a1a1a;
-        color: #ffffff;
-        border-color: #404040;
+    .form-select:focus {
+        background-color: var(--bg-elevated) !important;
+        border-color: var(--accent) !important;
+        color: var(--text) !important;
+        box-shadow: 0 0 0 2px oklch(from #4f98a3 l c h / 0.20) !important;
+        outline: none;
     }
 
-    body.dark-mode .form-label {
-        color: #ffffff;
+    .form-select option {
+        background: var(--bg-elevated);
+        color: var(--text);
     }
 
-    body.dark-mode .text-muted {
-        color: #a0a0a0 !important;
+    .form-label {
+        font-family: var(--font-body);
+        font-size: 12px;
+        color: var(--text-faint);
+        margin-bottom: 4px;
     }
 
-    .result-card {
-        background: rgba(13, 110, 253, 0.1);
-        border: 1px solid rgba(13, 110, 253, 0.3);
-        border-radius: 10px;
-        padding: 15px;
-        margin-bottom: 10px;
+    /* ── Section cards ───────────────────────────────────────── */
+    .bm-card {
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-card);
+        padding: 16px;
+        margin-bottom: 12px;
     }
 
-    body.dark-mode .result-card {
-        background: rgba(13, 110, 253, 0.15);
-        border: 1px solid rgba(13, 110, 253, 0.4);
+    .bm-card__title {
+        font-family: var(--font-body);
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--text);
+        margin: 0 0 16px;
     }
 
-    .predictor-section {
-        background: rgba(255, 255, 255, 0.05);
-        padding: 20px;
-        border-radius: 15px;
+    .bm-section-label {
+        font-family: var(--font-body);
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--text-faint);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin: 0 0 12px;
+    }
+
+    /* ── Buttons ─────────────────────────────────────────────── */
+    .bm-btn {
+        display: block;
+        width: 100%;
+        padding: 10px 16px;
+        font-family: var(--font-body);
+        font-size: 14px;
+        font-weight: 500;
+        border-radius: var(--radius-btn);
+        cursor: pointer;
+        text-align: center;
+        border: none;
+        transition: opacity 0.15s;
+        min-height: 44px;
+    }
+
+    .bm-btn--primary {
+        background: var(--accent);
+        color: #0f0e0d;
+    }
+
+    .bm-btn--secondary {
+        background: transparent;
+        color: var(--accent);
+        border: 1px solid var(--accent);
+    }
+
+    .bm-btn:hover { opacity: 0.85; }
+
+    /* ── Prediction results ──────────────────────────────────── */
+    .bm-results {
+        border-top: 1px solid var(--border);
+        margin-top: 20px;
+        padding-top: 20px;
+    }
+
+    .bm-results__title {
+        font-family: var(--font-body);
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--text-faint);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin: 0 0 16px;
+    }
+
+    /* Hero stat blocks */
+    .bm-results__stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
         margin-bottom: 20px;
     }
 
-    body.dark-mode .predictor-section {
-        background: rgba(60, 60, 60, 0.2);
+    .bm-stat__number {
+        font-family: var(--font-body);
+        font-size: 40px;
+        font-weight: 700;
+        color: var(--text);
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
     }
 
-    body.dark-mode .alert-info {
-        background-color: rgba(13, 110, 253, 0.2);
-        border-color: rgba(13, 110, 253, 0.4);
-        color: #9ec5fe;
+    .bm-stat__unit {
+        font-size: 16px;
+        font-weight: 400;
+        color: var(--text-muted);
+    }
+
+    .bm-stat__label {
+        font-family: var(--font-body);
+        font-size: 12px;
+        color: var(--text-faint);
+        margin-top: 4px;
+    }
+
+    .bm-stat__sub {
+        font-family: var(--font-body);
+        font-size: 12px;
+        color: var(--text-muted);
+        font-variant-numeric: tabular-nums;
+        margin-top: 2px;
+    }
+
+    /* Macro data strip */
+    .bm-results__macros {
+        display: flex;
+        gap: 24px;
+        margin-bottom: 16px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .bm-macro__number {
+        font-family: var(--font-body);
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--text);
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+    }
+
+    .bm-macro__label {
+        font-family: var(--font-body);
+        font-size: 12px;
+        color: var(--text-faint);
+        margin-top: 2px;
+    }
+
+    /* Body composition key/value */
+    .bm-composition { margin-bottom: 12px; }
+
+    .bm-comp-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        padding: 4px 0;
+        font-family: var(--font-body);
+        font-size: 13px;
+    }
+
+    .bm-comp-row__label { color: var(--text-muted); }
+
+    .bm-comp-row__value {
+        font-weight: 500;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .delta--positive { color: var(--success); }
+    .delta--negative { color: var(--text-muted); }
+
+    /* Disclaimer */
+    .bm-note {
+        font-family: var(--font-body);
+        font-size: 12px;
+        color: var(--text-faint);
+        line-height: 1.5;
+        margin: 12px 0 16px;
+    }
+
+    /* ── Weight trend chart ──────────────────────────────────── */
+    .bm-chart-wrap {
+        position: relative;
+        height: 130px;
+    }
+
+    .bm-chart-wrap canvas {
+        width: 100% !important;
+        height: 130px !important;
+    }
+
+    /* ── Metrics history list ────────────────────────────────── */
+    .bm-history-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--border);
+        font-family: var(--font-body);
+    }
+
+    .bm-history-item:last-child { border-bottom: none; }
+
+    .bm-history-item__date {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--text);
+    }
+
+    .bm-history-item__values {
+        font-size: 13px;
+        color: var(--text-muted);
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* ── Reduced motion ──────────────────────────────────────── */
+    @media (prefers-reduced-motion: reduce) {
+        .bm-btn { transition: none; }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<h3>Body Metrics</h3>
+<h1 class="page-heading" style="font-family:var(--font-display);font-size:20px;font-weight:700;color:var(--text);margin:0 0 20px;">Body Metrics</h1>
 
-<div class="card mb-3">
-    <div class="card-body">
-        <h5 class="card-title">Log Metrics</h5>
-        <div class="mb-3">
-            <label for="metric-date" class="form-label">Date</label>
-            <input type="date" class="form-control" id="metric-date">
-        </div>
-        <div class="mb-3">
-            <label for="weight" class="form-label">Weight (lbs)</label>
-            <input type="number" step="0.1" class="form-control" id="weight" placeholder="e.g., 180.5">
-        </div>
-        <div class="mb-3">
-            <label for="height" class="form-label">Height (inches)</label>
-            <input type="number" step="0.1" class="form-control" id="height" placeholder="e.g., 70">
-        </div>
-        <button class="btn btn-primary w-100" onclick="saveMetrics()">Save Metrics</button>
+<!-- ── Log Metrics ────────────────────────────────────────────── -->
+<div class="bm-card">
+    <p class="bm-card__title">Log Metrics</p>
+    <div class="mb-3">
+        <label for="metric-date" class="form-label">Date</label>
+        <input type="date" class="form-control" id="metric-date">
     </div>
+    <div class="mb-3">
+        <label for="weight" class="form-label">Weight (lbs)</label>
+        <input type="number" step="0.1" class="form-control" id="weight" placeholder="e.g., 180.5">
+    </div>
+    <div class="mb-3">
+        <label for="height" class="form-label">Height (inches)</label>
+        <input type="number" step="0.1" class="form-control" id="height" placeholder="e.g., 70">
+    </div>
+    <button class="bm-btn bm-btn--primary" onclick="saveMetrics()">Save Metrics</button>
 </div>
 
-<!-- Weight Goal Predictor -->
-<div class="card mb-3">
-    <div class="card-body">
-        <h5 class="card-title mb-3">Weight Goal Predictor</h5>
+<!-- ── Weight Goal Predictor ──────────────────────────────────── -->
+<div class="bm-card">
+    <p class="bm-card__title">Weight Goal Predictor</p>
 
+    <div class="row">
+        <!-- Current Stats -->
+        <div class="col-md-6 mb-3">
+            <p class="bm-section-label">Current Stats</p>
+            <div class="mb-3">
+                <label class="form-label">Current Weight (lbs)</label>
+                <input type="number" step="0.1" class="form-control" id="pred-current-weight" placeholder="180">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Height (inches)</label>
+                <input type="number" step="0.1" class="form-control" id="pred-height" placeholder="70">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Age</label>
+                <input type="number" class="form-control" id="pred-age" placeholder="25">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Sex</label>
+                <select class="form-select" id="pred-sex">
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Activity & Goals -->
+        <div class="col-md-6 mb-3">
+            <p class="bm-section-label">Activity &amp; Goals</p>
+            <div class="mb-3">
+                <label class="form-label">Activity Level</label>
+                <select class="form-select" id="pred-activity">
+                    <option value="1.2">Sedentary (little or no exercise)</option>
+                    <option value="1.375">Lightly Active (1–3 days/week)</option>
+                    <option value="1.55" selected>Moderately Active (3–5 days/week)</option>
+                    <option value="1.725">Very Active (6–7 days/week)</option>
+                    <option value="1.9">Extremely Active (athlete, 2×/day)</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Training Experience</label>
+                <select class="form-select" id="pred-training-level">
+                    <option value="beginner">Beginner (&lt;1 year)</option>
+                    <option value="intermediate" selected>Intermediate (1–3 years)</option>
+                    <option value="advanced">Advanced (3+ years)</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Goal</label>
+                <select class="form-select" id="pred-goal">
+                    <option value="cut">Cut (Lose Fat)</option>
+                    <option value="maintain">Maintain Weight</option>
+                    <option value="lean-bulk">Lean Bulk (Slow Gain)</option>
+                    <option value="bulk">Bulk (Moderate Gain)</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Time Period (weeks)</label>
+                <input type="number" class="form-control" id="pred-weeks" placeholder="12" value="12">
+            </div>
+        </div>
+    </div>
+
+    <!-- Macro Targets -->
+    <div class="mb-4">
+        <p class="bm-section-label">Macro Targets</p>
         <div class="row">
-            <!-- Current Stats -->
-            <div class="col-md-6 mb-3">
-                <h6 class="mb-3">Current Stats</h6>
-                <div class="mb-3">
-                    <label class="form-label">Current Weight (lbs)</label>
-                    <input type="number" step="0.1" class="form-control" id="pred-current-weight" placeholder="180">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Height (inches)</label>
-                    <input type="number" step="0.1" class="form-control" id="pred-height" placeholder="70">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Age</label>
-                    <input type="number" class="form-control" id="pred-age" placeholder="25">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Sex</label>
-                    <select class="form-select" id="pred-sex">
-                        <option value="male">Male</option>
-                        <option value="female">Female</option>
-                    </select>
-                </div>
+            <div class="col-md-4 mb-2">
+                <label class="form-label">Protein (g/lb bodyweight)</label>
+                <input type="number" step="0.1" class="form-control" id="pred-protein-ratio" value="1.0" placeholder="1.0">
             </div>
+            <div class="col-md-4 mb-2">
+                <label class="form-label">Fat (% of calories)</label>
+                <input type="number" step="1" class="form-control" id="pred-fat-percent" value="25" placeholder="25">
+            </div>
+            <div class="col-md-4 mb-2">
+                <label class="form-label">Carbs</label>
+                <input type="text" class="form-control" value="Auto-calculated" disabled>
+            </div>
+        </div>
+    </div>
 
-            <!-- Activity & Goals -->
-            <div class="col-md-6 mb-3">
-                <h6 class="mb-3">Activity & Goals</h6>
-                <div class="mb-3">
-                    <label class="form-label">Activity Level</label>
-                    <select class="form-select" id="pred-activity">
-                        <option value="1.2">Sedentary (little or no exercise)</option>
-                        <option value="1.375">Lightly Active (1-3 days/week)</option>
-                        <option value="1.55" selected>Moderately Active (3-5 days/week)</option>
-                        <option value="1.725">Very Active (6-7 days/week)</option>
-                        <option value="1.9">Extremely Active (athlete, 2x/day)</option>
-                    </select>
+    <button class="bm-btn bm-btn--primary" onclick="calculatePrediction()">Calculate Prediction</button>
+
+    <!-- ── Prediction results (revealed on calculate) ────────── -->
+    <div id="prediction-results" class="bm-results" style="display:none;">
+        <p class="bm-results__title">Prediction Results</p>
+
+        <!-- Hero stats: calorie target + target weight -->
+        <div class="bm-results__stats">
+            <div class="bm-stat">
+                <div class="bm-stat__number">
+                    <span id="result-calories">0</span><span class="bm-stat__unit"> cal</span>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">Training Experience</label>
-                    <select class="form-select" id="pred-training-level">
-                        <option value="beginner">Beginner (&lt;1 year)</option>
-                        <option value="intermediate" selected>Intermediate (1-3 years)</option>
-                        <option value="advanced">Advanced (3+ years)</option>
-                    </select>
+                <div class="bm-stat__label">daily target</div>
+                <div class="bm-stat__sub" id="result-tdee">TDEE: 0</div>
+            </div>
+            <div class="bm-stat">
+                <div class="bm-stat__number">
+                    <span id="result-target-weight">0</span><span class="bm-stat__unit"> lbs</span>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">Goal</label>
-                    <select class="form-select" id="pred-goal">
-                        <option value="cut">Cut (Lose Fat)</option>
-                        <option value="maintain">Maintain Weight</option>
-                        <option value="lean-bulk">Lean Bulk (Slow Gain)</option>
-                        <option value="bulk">Bulk (Moderate Gain)</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Time Period (weeks)</label>
-                    <input type="number" class="form-control" id="pred-weeks" placeholder="12" value="12">
-                </div>
+                <div class="bm-stat__label">target · <span id="result-timeframe">0</span> weeks</div>
+                <div class="bm-stat__sub" id="result-weight-change">+0 lbs total</div>
+                <div class="bm-stat__sub" id="result-weekly-change">0 lbs/week</div>
             </div>
         </div>
 
-        <div class="row mb-3">
-            <div class="col-12">
-                <h6 class="mb-3">Macro Targets</h6>
-                <div class="row">
-                    <div class="col-md-4 mb-2">
-                        <label class="form-label">Protein (g/lb bodyweight)</label>
-                        <input type="number" step="0.1" class="form-control" id="pred-protein-ratio" value="1.0" placeholder="1.0">
-                    </div>
-                    <div class="col-md-4 mb-2">
-                        <label class="form-label">Fat (% of calories)</label>
-                        <input type="number" step="1" class="form-control" id="pred-fat-percent" value="25" placeholder="25">
-                    </div>
-                    <div class="col-md-4 mb-2">
-                        <label class="form-label small text-muted">Carbs will auto-fill remainder</label>
-                        <input type="text" class="form-control" value="Auto-calculated" disabled>
-                    </div>
-                </div>
+        <!-- Daily macro strip -->
+        <div class="bm-results__macros">
+            <div class="bm-macro">
+                <div class="bm-macro__number" id="result-protein">0g</div>
+                <div class="bm-macro__label">protein</div>
+            </div>
+            <div class="bm-macro">
+                <div class="bm-macro__number" id="result-carbs">0g</div>
+                <div class="bm-macro__label">carbs</div>
+            </div>
+            <div class="bm-macro">
+                <div class="bm-macro__number" id="result-fats">0g</div>
+                <div class="bm-macro__label">fats</div>
             </div>
         </div>
 
-        <button class="btn btn-primary w-100" onclick="calculatePrediction()">
-            <i class="bi bi-calculator"></i> Calculate Prediction
-        </button>
-
-        <!-- Results Section -->
-        <div id="prediction-results" style="display: none;" class="mt-4">
-            <hr>
-            <h6 class="mb-3">Prediction Results</h6>
-
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="result-card">
-                        <h6><i class="bi bi-fire"></i> Daily Calorie Target</h6>
-                        <h3 class="mb-0" id="result-calories">0</h3>
-                        <small class="text-muted" id="result-tdee">TDEE: 0</small>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="result-card">
-                        <h6><i class="bi bi-graph-up"></i> Expected Weight Change</h6>
-                        <h3 class="mb-0" id="result-weight-change">0 lbs</h3>
-                        <small class="text-muted" id="result-weekly-change">0 lbs/week</small>
-                    </div>
-                </div>
+        <!-- Body composition estimate -->
+        <div class="bm-composition">
+            <div class="bm-comp-row">
+                <span class="bm-comp-row__label">Muscle gain/loss</span>
+                <strong class="bm-comp-row__value" id="result-muscle">0 lbs</strong>
             </div>
-
-            <div class="row mt-3">
-                <div class="col-12">
-                    <div class="result-card">
-                        <h6><i class="bi bi-pie-chart"></i> Daily Macro Targets</h6>
-                        <div class="row text-center">
-                            <div class="col-4">
-                                <h4 class="text-danger mb-0" id="result-protein">0g</h4>
-                                <small class="text-muted">Protein</small>
-                            </div>
-                            <div class="col-4">
-                                <h4 class="text-warning mb-0" id="result-carbs">0g</h4>
-                                <small class="text-muted">Carbs</small>
-                            </div>
-                            <div class="col-4">
-                                <h4 class="text-info mb-0" id="result-fats">0g</h4>
-                                <small class="text-muted">Fats</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <div class="bm-comp-row">
+                <span class="bm-comp-row__label">Fat gain/loss</span>
+                <strong class="bm-comp-row__value" id="result-fat">0 lbs</strong>
             </div>
-
-            <div class="row mt-3">
-                <div class="col-md-6">
-                    <div class="result-card">
-                        <h6><i class="bi bi-bullseye"></i> Body Composition Estimate</h6>
-                        <div id="result-composition">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span>Muscle Gain/Loss:</span>
-                                <strong id="result-muscle">0 lbs</strong>
-                            </div>
-                            <div class="d-flex justify-content-between">
-                                <span>Fat Gain/Loss:</span>
-                                <strong id="result-fat">0 lbs</strong>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="result-card">
-                        <h6><i class="bi bi-calendar-check"></i> Target Weight</h6>
-                        <h3 class="mb-0" id="result-target-weight">0 lbs</h3>
-                        <small class="text-muted">After <span id="result-timeframe">0</span> weeks</small>
-                    </div>
-                </div>
-            </div>
-
-            <div class="alert alert-info mt-3" role="alert">
-                <i class="bi bi-info-circle"></i> <strong>Note:</strong> These estimates are based on scientific formulas and averages. Individual results may vary based on genetics, adherence, sleep, stress, and other factors. Adjust based on your weekly progress.
-            </div>
-
-            <button class="btn btn-success w-100 mt-3" onclick="saveToNutritionGoals()">
-                <i class="bi bi-check-circle"></i> Save to Nutrition Goals
-            </button>
         </div>
+
+        <p class="bm-note">Estimates based on the Mifflin-St Jeor equation and population averages. Adjust based on weekly progress — individual results vary with genetics, sleep, and adherence.</p>
+
+        <button class="bm-btn bm-btn--secondary" onclick="saveToNutritionGoals()">Save to Nutrition Goals</button>
     </div>
 </div>
 
-<div class="card mb-3">
-    <div class="card-header">
-        <strong>Weight Trend</strong>
-    </div>
-    <div class="card-body">
-        <canvas id="weight-trend-chart"></canvas>
+<!-- ── Weight Trend Chart ─────────────────────────────────────── -->
+<div class="bm-card">
+    <p class="bm-card__title">Weight Trend</p>
+    <div class="bm-chart-wrap">
+        <canvas id="weight-trend-chart" role="img" aria-label="Weight trend over time"></canvas>
     </div>
 </div>
 
-<div class="card mb-3">
-    <div class="card-header">
-        <strong>Metrics History</strong>
-    </div>
-    <div class="card-body" id="metrics-history">
-        <p class="text-center text-muted">Loading...</p>
+<!-- ── Metrics History ────────────────────────────────────────── -->
+<div class="bm-card">
+    <p class="bm-card__title">History</p>
+    <div id="metrics-history">
+        <p style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);">Loading…</p>
     </div>
 </div>
 {% endblock %}
@@ -295,296 +453,276 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-    let weightTrendChart;
-    let calculatedNutritionGoals = null; // Store calculated goals
+// ── State ─────────────────────────────────────────────────────────────────────
+let weightTrendChart;
+let calculatedNutritionGoals = null;
 
-    document.getElementById('metric-date').value = new Date().toISOString().split('T')[0];
+// ── Boot ──────────────────────────────────────────────────────────────────────
+document.getElementById('metric-date').value = new Date().toISOString().split('T')[0];
+loadMetrics();
 
-    function saveMetrics() {
-        const data = {
-            date: document.getElementById('metric-date').value,
-            weight: document.getElementById('weight').value,
-            height: document.getElementById('height').value
-        };
+// ── Save metrics ──────────────────────────────────────────────────────────────
+function saveMetrics() {
+    const data = {
+        date:   document.getElementById('metric-date').value,
+        weight: document.getElementById('weight').value,
+        height: document.getElementById('height').value
+    };
 
-        if (!data.weight && !data.height) {
-            showWarning('Please enter at least one metric');
-            return;
+    if (!data.weight && !data.height) {
+        showWarning('Please enter at least one metric');
+        return;
+    }
+
+    fetch('/body_metrics', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(data)
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            showSuccess('Metrics saved successfully!');
+            document.getElementById('weight').value = '';
+            document.getElementById('height').value = '';
+            loadMetrics();
         }
+    });
+}
 
-        fetch('/body_metrics', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        })
-        .then(response => response.json())
-        .then(result => {
-            if (result.success) {
-                showSuccess('Metrics saved successfully!');
-                document.getElementById('weight').value = '';
-                document.getElementById('height').value = '';
-                loadMetrics();
+// ── Load & render history + chart ─────────────────────────────────────────────
+function loadMetrics() {
+    fetch('/api/body_metrics')
+        .then(r => r.json())
+        .then(metrics => {
+            const historyDiv = document.getElementById('metrics-history');
+
+            if (metrics.length === 0) {
+                historyDiv.innerHTML = '<p style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);">No metrics logged yet.</p>';
+                return;
             }
+
+            historyDiv.innerHTML = metrics.map(m => `
+                <div class="bm-history-item">
+                    <span class="bm-history-item__date">${new Date(m.date).toLocaleDateString()}</span>
+                    <span class="bm-history-item__values">
+                        ${m.weight ? `${m.weight} lbs` : ''}${m.weight && m.height ? ' · ' : ''}${m.height ? `${m.height} in` : ''}
+                    </span>
+                </div>
+            `).join('');
+
+            const labels  = metrics.reverse().map(m => new Date(m.date).toLocaleDateString());
+            const weights = metrics.map(m => m.weight);
+            updateWeightTrendChart(labels, weights);
         });
-    }
+}
 
-    function loadMetrics() {
-        fetch('/api/body_metrics')
-            .then(response => response.json())
-            .then(metrics => {
-                const historyDiv = document.getElementById('metrics-history');
+// ── Weight trend chart ────────────────────────────────────────────────────────
+function updateWeightTrendChart(labels, data) {
+    const ctx = document.getElementById('weight-trend-chart').getContext('2d');
 
-                if (metrics.length === 0) {
-                    historyDiv.innerHTML = '<p class="text-center text-muted">No metrics logged yet.</p>';
-                    return;
-                }
+    if (weightTrendChart) { weightTrendChart.destroy(); }
 
-                historyDiv.innerHTML = metrics.map(m => `
-                    <div class="mb-2 pb-2 border-bottom">
-                        <div class="d-flex justify-content-between">
-                            <strong>${new Date(m.date).toLocaleDateString()}</strong>
-                        </div>
-                        <small class="text-muted">
-                            ${m.weight ? `Weight: ${m.weight} lbs` : ''}
-                            ${m.weight && m.height ? ' • ' : ''}
-                            ${m.height ? `Height: ${m.height} in` : ''}
-                        </small>
-                    </div>
-                `).join('');
+    const axisColor = '#797876';
+    const gridColor = 'rgba(205,204,202,0.06)';
 
-                // Update chart
-                const labels = metrics.reverse().map(m => new Date(m.date).toLocaleDateString());
-                const weights = metrics.map(m => m.weight);
-
-                updateWeightTrendChart(labels, weights);
-            });
-    }
-
-    function updateWeightTrendChart(labels, data) {
-        const ctx = document.getElementById('weight-trend-chart').getContext('2d');
-
-        if (weightTrendChart) {
-            weightTrendChart.destroy();
-        }
-
-        weightTrendChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Weight (lbs)',
-                    data: data,
-                    borderColor: '#dc3545',
-                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
-                    tension: 0.3,
-                    fill: true
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                scales: {
-                    y: {
-                        beginAtZero: false
+    weightTrendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                data:                 data,
+                borderColor:          '#4f98a3',
+                backgroundColor:      'rgba(79,152,163,0.10)',
+                borderWidth:          2,
+                pointRadius:          data.filter(d => d !== null).length === 1 ? 5 : 3,
+                pointHoverRadius:     6,
+                pointBackgroundColor: '#4f98a3',
+                tension:              0.3,
+                fill:                 true,
+            }]
+        },
+        options: {
+            responsive:          true,
+            maintainAspectRatio: false,
+            animation:           { duration: 200 },
+            plugins: {
+                legend:  { display: false },
+                tooltip: {
+                    backgroundColor: '#1c1b19',
+                    borderColor:     'rgba(205,204,202,0.10)',
+                    borderWidth:     1,
+                    titleColor:      '#cdccca',
+                    bodyColor:       '#797876',
+                    callbacks: {
+                        label: c => ` ${c.parsed.y} lbs`
                     }
                 }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        color:         axisColor,
+                        maxTicksLimit: 5,
+                        font:          { size: 10, family: 'Satoshi, system-ui, sans-serif' }
+                    },
+                    grid:   { color: gridColor },
+                    border: { color: gridColor }
+                },
+                y: {
+                    beginAtZero: false,
+                    ticks: {
+                        color: axisColor,
+                        font:  { size: 10, family: 'Satoshi, system-ui, sans-serif' }
+                    },
+                    grid:   { color: gridColor },
+                    border: { color: gridColor }
+                }
             }
-        });
+        }
+    });
+}
+
+// ── Goal predictor calculator ─────────────────────────────────────────────────
+function calculatePrediction() {
+    const weight        = parseFloat(document.getElementById('pred-current-weight').value);
+    const height        = parseFloat(document.getElementById('pred-height').value);
+    const age           = parseFloat(document.getElementById('pred-age').value);
+    const sex           = document.getElementById('pred-sex').value;
+    const activityLevel = parseFloat(document.getElementById('pred-activity').value);
+    const trainingLevel = document.getElementById('pred-training-level').value;
+    const goal          = document.getElementById('pred-goal').value;
+    const weeks         = parseFloat(document.getElementById('pred-weeks').value);
+    const proteinRatio  = parseFloat(document.getElementById('pred-protein-ratio').value);
+    const fatPercent    = parseFloat(document.getElementById('pred-fat-percent').value);
+
+    if (!weight || !height || !age || !weeks) {
+        showWarning('Please fill in all required fields');
+        return;
     }
 
-    loadMetrics();
+    // Unit conversion
+    const weightKg = weight * 0.453592;
+    const heightCm = height * 2.54;
 
-    // Weight Goal Predictor Calculator
-    function calculatePrediction() {
-        // Get input values
-        const weight = parseFloat(document.getElementById('pred-current-weight').value);
-        const height = parseFloat(document.getElementById('pred-height').value);
-        const age = parseFloat(document.getElementById('pred-age').value);
-        const sex = document.getElementById('pred-sex').value;
-        const activityLevel = parseFloat(document.getElementById('pred-activity').value);
-        const trainingLevel = document.getElementById('pred-training-level').value;
-        const goal = document.getElementById('pred-goal').value;
-        const weeks = parseFloat(document.getElementById('pred-weeks').value);
-        const proteinRatio = parseFloat(document.getElementById('pred-protein-ratio').value);
-        const fatPercent = parseFloat(document.getElementById('pred-fat-percent').value);
+    // Mifflin-St Jeor BMR
+    let bmr;
+    if (sex === 'male') {
+        bmr = 10 * weightKg + 6.25 * heightCm - 5 * age + 5;
+    } else {
+        bmr = 10 * weightKg + 6.25 * heightCm - 5 * age - 161;
+    }
 
-        // Validation
-        if (!weight || !height || !age || !weeks) {
-            showWarning('Please fill in all required fields');
-            return;
+    const tdee = Math.round(bmr * activityLevel);
+
+    // Goal-based calorie adjustment
+    let calorieAdjustment, weeklyWeightChange;
+    switch (goal) {
+        case 'cut':       calorieAdjustment = -600; weeklyWeightChange = -1.2; break;
+        case 'maintain':  calorieAdjustment =    0; weeklyWeightChange =  0;   break;
+        case 'lean-bulk': calorieAdjustment =  250; weeklyWeightChange =  0.5; break;
+        case 'bulk':      calorieAdjustment =  500; weeklyWeightChange =  1.0; break;
+    }
+
+    const calorieTarget     = Math.round(tdee + calorieAdjustment);
+    const totalWeightChange = (weeklyWeightChange * weeks).toFixed(1);
+    const targetWeight      = (weight + parseFloat(totalWeightChange)).toFixed(1);
+
+    // Macros
+    const proteinGrams    = Math.round(weight * proteinRatio);
+    const proteinCalories = proteinGrams * 4;
+    const fatCalories     = Math.round(calorieTarget * (fatPercent / 100));
+    const fatGrams        = Math.round(fatCalories / 9);
+    const carbCalories    = calorieTarget - proteinCalories - fatCalories;
+    const carbGrams       = Math.round(carbCalories / 4);
+
+    // Body composition estimate
+    let muscleChange, fatChange;
+    if (goal === 'maintain') {
+        muscleChange = 0;
+        fatChange    = 0;
+    } else if (goal === 'cut') {
+        const totalFatLoss  = parseFloat(totalWeightChange) * 0.75;
+        const muscleLoss    = parseFloat(totalWeightChange) * 0.25;
+        const proteinFactor = Math.min(proteinRatio / 1.0, 1.2);
+        fatChange    = totalFatLoss;
+        muscleChange = muscleLoss * (1 / proteinFactor);
+    } else {
+        let muscleGainPotential;
+        switch (trainingLevel) {
+            case 'beginner':     muscleGainPotential = 0.04; break;
+            case 'intermediate': muscleGainPotential = 0.02; break;
+            case 'advanced':     muscleGainPotential = 0.01; break;
         }
+        const monthlyMuscleGain = weight * muscleGainPotential;
+        const weeklyMuscleGain  = monthlyMuscleGain / 4.33;
+        const maxMuscleGain     = weeklyMuscleGain * weeks;
 
-        // Convert units (lbs to kg, inches to cm)
-        const weightKg = weight * 0.453592;
-        const heightCm = height * 2.54;
+        let muscleRatio    = goal === 'lean-bulk' ? 0.65 : 0.50;
+        const proteinBonus = Math.min((proteinRatio - 0.7) / 0.5, 0.2);
+        muscleRatio        = Math.min(muscleRatio + proteinBonus, 0.75);
 
-        // Calculate BMR using Mifflin-St Jeor Equation
-        let bmr;
-        if (sex === 'male') {
-            bmr = 10 * weightKg + 6.25 * heightCm - 5 * age + 5;
+        muscleChange = Math.min(parseFloat(totalWeightChange) * muscleRatio, maxMuscleGain);
+        fatChange    = parseFloat(totalWeightChange) - muscleChange;
+    }
+
+    // ── Populate results ──────────────────────────────────────
+    document.getElementById('result-calories').textContent      = calorieTarget;
+    document.getElementById('result-tdee').textContent          = `TDEE: ${tdee} cal`;
+    document.getElementById('result-target-weight').textContent = targetWeight;
+    document.getElementById('result-timeframe').textContent     = weeks;
+    document.getElementById('result-weight-change').textContent =
+        `${parseFloat(totalWeightChange) >= 0 ? '+' : ''}${totalWeightChange} lbs total`;
+    document.getElementById('result-weekly-change').textContent =
+        `${weeklyWeightChange >= 0 ? '+' : ''}${weeklyWeightChange.toFixed(1)} lbs/week`;
+
+    document.getElementById('result-protein').textContent = `${proteinGrams}g`;
+    document.getElementById('result-carbs').textContent   = `${carbGrams}g`;
+    document.getElementById('result-fats').textContent    = `${fatGrams}g`;
+
+    const muscleEl = document.getElementById('result-muscle');
+    muscleEl.textContent = `${muscleChange >= 0 ? '+' : ''}${muscleChange.toFixed(1)} lbs`;
+    muscleEl.className   = 'bm-comp-row__value ' + (muscleChange >= 0 ? 'delta--positive' : 'delta--negative');
+
+    const fatEl = document.getElementById('result-fat');
+    fatEl.textContent = `${fatChange >= 0 ? '+' : ''}${fatChange.toFixed(1)} lbs`;
+    fatEl.className   = 'bm-comp-row__value ' + (fatChange <= 0 ? 'delta--positive' : 'delta--negative');
+
+    calculatedNutritionGoals = {
+        calories_goal: calorieTarget,
+        protein_goal:  proteinGrams,
+        carbs_goal:    carbGrams,
+        fats_goal:     fatGrams
+    };
+
+    const resultsEl = document.getElementById('prediction-results');
+    resultsEl.style.display = 'block';
+    resultsEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ── Save to nutrition goals ───────────────────────────────────────────────────
+function saveToNutritionGoals() {
+    if (!calculatedNutritionGoals) {
+        showWarning('Please calculate a prediction first');
+        return;
+    }
+
+    fetch('/api/nutrition/goals', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(calculatedNutritionGoals)
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            showSuccess('Nutrition goals saved successfully! Your nutrition page has been updated.');
         } else {
-            bmr = 10 * weightKg + 6.25 * heightCm - 5 * age - 161;
+            showError('Failed to save nutrition goals');
         }
-
-        // Calculate TDEE
-        const tdee = Math.round(bmr * activityLevel);
-
-        // Determine calorie target based on goal
-        let calorieTarget, weeklyWeightChange, calorieAdjustment;
-
-        switch(goal) {
-            case 'cut':
-                // 500-750 calorie deficit for 1-1.5 lbs/week loss
-                calorieAdjustment = -600;
-                weeklyWeightChange = -1.2;
-                break;
-            case 'maintain':
-                calorieAdjustment = 0;
-                weeklyWeightChange = 0;
-                break;
-            case 'lean-bulk':
-                // Small surplus for ~0.5 lbs/week gain
-                calorieAdjustment = 250;
-                weeklyWeightChange = 0.5;
-                break;
-            case 'bulk':
-                // Moderate surplus for ~1 lb/week gain
-                calorieAdjustment = 500;
-                weeklyWeightChange = 1.0;
-                break;
-        }
-
-        calorieTarget = Math.round(tdee + calorieAdjustment);
-
-        // Calculate total weight change
-        const totalWeightChange = (weeklyWeightChange * weeks).toFixed(1);
-        const targetWeight = (weight + parseFloat(totalWeightChange)).toFixed(1);
-
-        // Calculate macros
-        const proteinGrams = Math.round(weight * proteinRatio);
-        const proteinCalories = proteinGrams * 4;
-
-        const fatCalories = Math.round(calorieTarget * (fatPercent / 100));
-        const fatGrams = Math.round(fatCalories / 9);
-
-        const carbCalories = calorieTarget - proteinCalories - fatCalories;
-        const carbGrams = Math.round(carbCalories / 4);
-
-        // Estimate body composition changes
-        let muscleChange, fatChange;
-
-        if (goal === 'maintain') {
-            muscleChange = 0;
-            fatChange = 0;
-        } else if (goal === 'cut') {
-            // Cutting - mostly fat loss with some muscle preservation/loss
-            const totalFatLoss = parseFloat(totalWeightChange) * 0.75; // 75% fat
-            const muscleLoss = parseFloat(totalWeightChange) * 0.25; // 25% muscle (high protein reduces this)
-
-            // Better protein = better muscle retention
-            const proteinFactor = Math.min(proteinRatio / 1.0, 1.2);
-            fatChange = totalFatLoss;
-            muscleChange = muscleLoss * (1 / proteinFactor); // Higher protein = less muscle loss
-
-        } else {
-            // Bulking - muscle and fat gain based on training level and surplus size
-            let muscleGainPotential;
-
-            switch(trainingLevel) {
-                case 'beginner':
-                    muscleGainPotential = 0.04; // ~4% bodyweight gain per month can be muscle
-                    break;
-                case 'intermediate':
-                    muscleGainPotential = 0.02; // ~2% per month
-                    break;
-                case 'advanced':
-                    muscleGainPotential = 0.01; // ~1% per month
-                    break;
-            }
-
-            const monthlyMuscleGain = weight * muscleGainPotential;
-            const weeklyMuscleGain = monthlyMuscleGain / 4.33;
-
-            // Muscle gain over time period
-            const maxMuscleGain = weeklyMuscleGain * weeks;
-
-            // Actual muscle vs fat depends on surplus size
-            let muscleRatio;
-            if (goal === 'lean-bulk') {
-                muscleRatio = 0.65; // 65% of weight gain is muscle with slow bulk
-            } else {
-                muscleRatio = 0.50; // 50% of weight gain is muscle with moderate bulk
-            }
-
-            // Adjust muscle gain based on protein intake
-            const proteinBonus = Math.min((proteinRatio - 0.7) / 0.5, 0.2); // Up to 20% bonus for high protein
-            muscleRatio = Math.min(muscleRatio + proteinBonus, 0.75); // Cap at 75%
-
-            muscleChange = Math.min(parseFloat(totalWeightChange) * muscleRatio, maxMuscleGain);
-            fatChange = parseFloat(totalWeightChange) - muscleChange;
-        }
-
-        // Display results
-        document.getElementById('result-calories').textContent = calorieTarget;
-        document.getElementById('result-tdee').textContent = `TDEE: ${tdee} cal`;
-        document.getElementById('result-weight-change').textContent = `${totalWeightChange > 0 ? '+' : ''}${totalWeightChange} lbs`;
-        document.getElementById('result-weekly-change').textContent = `${weeklyWeightChange > 0 ? '+' : ''}${weeklyWeightChange.toFixed(1)} lbs/week`;
-
-        document.getElementById('result-protein').textContent = `${proteinGrams}g`;
-        document.getElementById('result-carbs').textContent = `${carbGrams}g`;
-        document.getElementById('result-fats').textContent = `${fatGrams}g`;
-
-        const muscleChangeText = muscleChange > 0 ? `+${muscleChange.toFixed(1)} lbs` : `${muscleChange.toFixed(1)} lbs`;
-        const fatChangeText = fatChange > 0 ? `+${fatChange.toFixed(1)} lbs` : `${fatChange.toFixed(1)} lbs`;
-
-        document.getElementById('result-muscle').textContent = muscleChangeText;
-        document.getElementById('result-muscle').style.color = muscleChange >= 0 ? '#28a745' : '#dc3545';
-
-        document.getElementById('result-fat').textContent = fatChangeText;
-        document.getElementById('result-fat').style.color = fatChange <= 0 ? '#28a745' : '#dc3545';
-
-        document.getElementById('result-target-weight').textContent = `${targetWeight} lbs`;
-        document.getElementById('result-timeframe').textContent = weeks;
-
-        // Store calculated goals for saving to nutrition
-        calculatedNutritionGoals = {
-            calories_goal: calorieTarget,
-            protein_goal: proteinGrams,
-            carbs_goal: carbGrams,
-            fats_goal: fatGrams
-        };
-
-        // Show results
-        document.getElementById('prediction-results').style.display = 'block';
-
-        // Scroll to results
-        document.getElementById('prediction-results').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-
-    // Save calculated nutrition goals to the nutrition page
-    function saveToNutritionGoals() {
-        if (!calculatedNutritionGoals) {
-            showWarning('Please calculate a prediction first');
-            return;
-        }
-
-        fetch('/api/nutrition/goals', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(calculatedNutritionGoals)
-        })
-        .then(response => response.json())
-        .then(result => {
-            if (result.success) {
-                showSuccess('Nutrition goals saved successfully! Your nutrition page has been updated.');
-            } else {
-                showError('Failed to save nutrition goals');
-            }
-        })
-        .catch(error => {
-            console.error('Error saving nutrition goals:', error);
-            showError('Error saving nutrition goals');
-        });
-    }
+    })
+    .catch(() => {
+        showError('Error saving nutrition goals');
+    });
+}
 </script>
 {% endblock %}

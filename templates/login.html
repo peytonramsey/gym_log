@@ -1,163 +1,271 @@
 {% extends "base.html" %}
 
-{% block title %}Login - GymLog{% endblock %}
+{% block title %}Login — FitGlyph{% endblock %}
 
 {% block extra_css %}
 <style>
-    .auth-container {
+    .auth-wrapper {
+        min-height: calc(100vh - 120px);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 16px;
+    }
+
+    .auth-wordmark {
+        font-family: 'Cabinet Grotesk', sans-serif;
+        font-size: 24px;
+        font-weight: 700;
+        color: #cdccca;
+        letter-spacing: -0.02em;
+        margin-bottom: 20px;
+        width: 100%;
         max-width: 400px;
-        margin: 50px auto;
     }
 
     .auth-card {
-        background: rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 15px;
-        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-        padding: 30px;
+        background: #161513;
+        border: 1px solid oklch(from #cdccca l c h / 0.10);
+        border-radius: 10px;
+        box-shadow: 0 1px 2px oklch(0 0 0 / 0.20), 0 4px 16px oklch(0 0 0 / 0.14);
+        padding: 32px;
+        width: 100%;
+        max-width: 400px;
     }
 
-    body.dark-mode .auth-card {
-        background: rgba(45, 45, 45, 0.3);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+    .fg-alert {
+        background: rgba(187, 101, 59, 0.12);
+        border: 1px solid rgba(187, 101, 59, 0.30);
+        border-radius: 6px;
+        color: #bb653b;
+        font-family: 'Satoshi', sans-serif;
+        font-size: 14px;
+        padding: 10px 12px;
+        margin-bottom: 20px;
     }
 
-    .alert {
-        padding: 10px;
-        margin-bottom: 15px;
-        border-radius: 8px;
+    .fg-field {
+        margin-bottom: 18px;
     }
 
-    .alert-danger {
-        background: rgba(220, 53, 69, 0.2);
-        border: 1px solid rgba(220, 53, 69, 0.5);
-        color: #ff6b6b;
+    .fg-label {
+        display: block;
+        font-family: 'Satoshi', sans-serif;
+        font-size: 11px;
+        font-weight: 500;
+        color: #797876;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 6px;
     }
 
-    body.dark-mode .alert-danger {
-        background: rgba(220, 53, 69, 0.3);
-        color: #ff8787;
+    .fg-input {
+        display: block;
+        width: 100%;
+        min-height: 44px;
+        background: #0f0e0d;
+        border: 1px solid oklch(from #cdccca l c h / 0.10);
+        border-radius: 6px;
+        color: #cdccca;
+        font-family: 'Satoshi', sans-serif;
+        font-size: 14px;
+        padding: 10px 12px;
+        box-sizing: border-box;
+        transition: border-color 0.15s ease;
     }
 
-    body.dark-mode .form-check-label {
-        color: #e0e0e0;
+    .fg-input:focus {
+        outline: none;
+        border-color: #4f98a3;
     }
 
-    body.dark-mode .form-check-input {
-        background-color: #1a1a1a;
-        border-color: #404040;
+    .fg-input::placeholder {
+        color: #5a5957;
     }
 
-    body.dark-mode .form-check-input:checked {
-        background-color: #0d6efd;
-        border-color: #0d6efd;
+    .fg-checkbox-wrap {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 44px;
+        margin-bottom: 24px;
+    }
+
+    .fg-checkbox {
+        appearance: none;
+        -webkit-appearance: none;
+        width: 16px;
+        height: 16px;
+        min-width: 16px;
+        border: 1px solid rgba(205, 204, 202, 0.20);
+        border-radius: 4px;
+        background: #0f0e0d;
+        cursor: pointer;
+        position: relative;
+        transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .fg-checkbox:checked {
+        background: #4f98a3;
+        border-color: #4f98a3;
+    }
+
+    .fg-checkbox:checked::after {
+        content: '';
+        position: absolute;
+        top: 2px;
+        left: 5px;
+        width: 4px;
+        height: 7px;
+        border: 1.5px solid #0f0e0d;
+        border-top: none;
+        border-left: none;
+        transform: rotate(45deg);
+    }
+
+    .fg-checkbox-label {
+        font-family: 'Satoshi', sans-serif;
+        font-size: 13px;
+        color: #797876;
+        cursor: pointer;
+    }
+
+    .btn-fg-accent {
+        display: block;
+        width: 100%;
+        min-height: 44px;
+        background: #4f98a3;
+        border: none;
+        border-radius: 6px;
+        color: #0f0e0d;
+        font-family: 'Satoshi', sans-serif;
+        font-size: 14px;
+        font-weight: 600;
+        padding: 11px 16px;
+        cursor: pointer;
+        text-align: center;
+        transition: background-color 0.15s ease;
+    }
+
+    .btn-fg-accent:hover {
+        background: #5aa8b4;
     }
 
     .demo-divider {
         display: flex;
         align-items: center;
-        text-align: center;
-        margin: 20px 0;
-        color: #6c757d;
+        gap: 12px;
+        margin: 24px 0 20px;
     }
 
     .demo-divider::before,
     .demo-divider::after {
         content: '';
         flex: 1;
-        border-bottom: 1px solid rgba(128, 128, 128, 0.3);
+        border-bottom: 1px solid rgba(205, 204, 202, 0.08);
     }
 
     .demo-divider span {
-        padding: 0 10px;
-        font-size: 0.85rem;
+        font-family: 'Satoshi', sans-serif;
+        font-size: 11px;
+        color: #5a5957;
+        letter-spacing: 0.04em;
     }
 
-    body.dark-mode .demo-divider {
-        color: #aaa;
-    }
-
-    body.dark-mode .demo-divider::before,
-    body.dark-mode .demo-divider::after {
-        border-bottom-color: rgba(255, 255, 255, 0.2);
-    }
-
-    .btn-demo {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border: none;
-        color: white;
-        transition: all 0.3s ease;
-    }
-
-    .btn-demo:hover {
-        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-        color: white;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-    }
-
-    .demo-info {
-        font-size: 0.8rem;
-        color: #6c757d;
+    .btn-fg-ghost {
+        display: block;
+        width: 100%;
+        min-height: 44px;
+        background: transparent;
+        border: 1px solid rgba(205, 204, 202, 0.10);
+        border-radius: 6px;
+        color: #797876;
+        font-family: 'Satoshi', sans-serif;
+        font-size: 14px;
+        font-weight: 500;
+        padding: 11px 16px;
+        cursor: pointer;
         text-align: center;
-        margin-top: 8px;
+        text-decoration: none;
+        box-sizing: border-box;
+        transition: border-color 0.15s ease, color 0.15s ease;
     }
 
-    body.dark-mode .demo-info {
-        color: #aaa;
+    .btn-fg-ghost:hover {
+        border-color: rgba(205, 204, 202, 0.22);
+        color: #cdccca;
+    }
+
+    .demo-hint {
+        font-family: 'Satoshi', sans-serif;
+        font-size: 12px;
+        color: #5a5957;
+        margin-top: 8px;
+        margin-bottom: 0;
+    }
+
+    .auth-footer {
+        font-family: 'Satoshi', sans-serif;
+        font-size: 13px;
+        color: #5a5957;
+        margin-top: 24px;
+        margin-bottom: 0;
+    }
+
+    .auth-footer a {
+        color: #797876;
+        text-decoration: none;
+        border-bottom: 1px solid rgba(205, 204, 202, 0.15);
+        transition: color 0.15s ease;
+    }
+
+    .auth-footer a:hover {
+        color: #cdccca;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .fg-input, .fg-checkbox, .btn-fg-accent, .btn-fg-ghost, .auth-footer a {
+            transition: none;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="auth-container">
-    <div class="auth-card">
-        <h3 class="text-center mb-4">Welcome to FitGlyph</h3>
+<div class="auth-wrapper">
+    <div class="auth-wordmark">FitGlyph</div>
 
+    <div class="auth-card">
         {% if error %}
-        <div class="alert alert-danger">
-            {{ error }}
-        </div>
+        <div class="fg-alert" role="alert">{{ error }}</div>
         {% endif %}
 
         <form method="POST" action="/login">
-            <div class="mb-3">
-                <label for="username" class="form-label">Username</label>
-                <input type="text" class="form-control" id="username" name="username" required>
+            <div class="fg-field">
+                <label class="fg-label" for="username">Username</label>
+                <input type="text" class="fg-input" id="username" name="username" required>
             </div>
 
-            <div class="mb-3">
-                <label for="password" class="form-label">Password</label>
-                <input type="password" class="form-control" id="password" name="password" required>
+            <div class="fg-field">
+                <label class="fg-label" for="password">Password</label>
+                <input type="password" class="fg-input" id="password" name="password" required>
             </div>
 
-            <div class="mb-3 form-check">
-                <input type="checkbox" class="form-check-input" id="remember_me" name="remember_me" checked>
-                <label class="form-check-label" for="remember_me">
-                    Remember me for 30 days
-                </label>
+            <div class="fg-checkbox-wrap">
+                <input type="checkbox" class="fg-checkbox" id="remember_me" name="remember_me" checked>
+                <label class="fg-checkbox-label" for="remember_me">Remember me for 30 days</label>
             </div>
 
-            <button type="submit" class="btn btn-primary w-100 mb-3">Login</button>
+            <button type="submit" class="btn-fg-accent">Login</button>
         </form>
 
-        <div class="demo-divider">
-            <span>OR</span>
-        </div>
+        <div class="demo-divider"><span>or</span></div>
 
-        <a href="/demo" class="btn btn-demo w-100 mb-2">
-            <i class="bi bi-eye"></i> Try Demo
-        </a>
-        <p class="demo-info">
-            <i class="bi bi-info-circle"></i> Explore the app without creating an account
-        </p>
+        <a href="/demo" class="btn-fg-ghost">Try Demo</a>
+        <p class="demo-hint">Explore the app without creating an account</p>
 
-        <div class="text-center mt-3">
-            <p class="mb-0">Don't have an account? <a href="/register">Sign up</a></p>
-        </div>
+        <p class="auth-footer">Don't have an account? <a href="/register">Sign up</a></p>
     </div>
 </div>
 {% endblock %}

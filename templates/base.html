@@ -4,267 +4,294 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}FitGlyph{% endblock %}</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://api.fontshare.com">
+    <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@400,500,700&f[]=satoshi@400,500,700&display=swap">
+
+    <!-- Bootstrap (retained until all screens rebuilt) -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
     <link rel="stylesheet" href="{{ url_for('static', filename='onboarding-tour.css') }}">
+
     <style>
+        /* ─── Design Tokens ──────────────────────────────────── */
+        :root {
+            --bg-base:      #0f0e0d;
+            --bg-raised:    #161513;
+            --bg-elevated:  #1c1b19;
+            --border:       oklch(from #cdccca l c h / 0.10);
+            --text:         #cdccca;
+            --text-muted:   #797876;
+            --text-faint:   #5a5957;
+            --accent:       #4f98a3;
+            --success:      #6daa45;
+            --warning:      #bb653b;
+            --font-display: 'Cabinet Grotesk', system-ui, sans-serif;
+            --font-body:    'Satoshi', system-ui, sans-serif;
+            --shadow-card:  0 1px 2px oklch(0 0 0 / 0.20), 0 4px 16px oklch(0 0 0 / 0.14);
+            --shadow-hover: 0 2px 4px oklch(0 0 0 / 0.28), 0 12px 32px oklch(0 0 0 / 0.18);
+            --radius-card:  10px;
+            --radius-input: 6px;
+            --radius-btn:   6px;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; }
+
         body {
+            background-color: var(--bg-base);
+            color: var(--text);
+            font-family: var(--font-body);
+            font-size: 16px;
+            line-height: 1.5;
+            margin: 0;
             padding-bottom: 70px;
         }
-        body.no-bottom-nav {
-            padding-bottom: 0;
+
+        body.no-bottom-nav { padding-bottom: 0; }
+
+        /* ─── Top Header ─────────────────────────────────────── */
+        .site-header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            height: 52px;
+            background: var(--bg-base);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            gap: 12px;
         }
+
+        .site-header__brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .site-header__logo {
+            height: 30px;
+            width: auto;
+            display: block;
+        }
+
+        .site-header__version {
+            font-family: var(--font-body);
+            font-size: 11px;
+            color: var(--text-faint);
+            letter-spacing: 0.03em;
+            flex-shrink: 0;
+        }
+
+        .site-header__actions {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+
+        .site-header__username {
+            font-family: var(--font-body);
+            font-size: 13px;
+            color: var(--text-muted);
+            padding: 0 8px;
+        }
+
+        .site-header__link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 18px;
+            border-radius: var(--radius-btn);
+            transition: color 0.15s;
+        }
+
+        .site-header__link:hover { color: var(--text); }
+
+        /* ─── Bottom Nav ─────────────────────────────────────── */
         .bottom-nav {
             position: fixed;
             bottom: 0;
-            width: 100%;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border-top: 1px solid #dee2e6;
-            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
-            z-index: 1000;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: var(--bg-base);
+            border-top: 1px solid var(--border);
+            display: flex;
+            z-index: 100;
         }
-        .bottom-nav .nav-link {
-            color: #6c757d;
+
+        .bottom-nav__item {
+            flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 12px 0;
-            font-size: 0.7rem;
-            font-weight: 500;
+            justify-content: center;
+            gap: 3px;
+            color: var(--text-faint);
             text-decoration: none;
-            transition: all 0.2s ease;
-            position: relative;
-        }
-        .bottom-nav .nav-link i {
-            font-size: 1.5rem;
-            margin-bottom: 4px;
-            transition: transform 0.2s ease;
-        }
-        .bottom-nav .nav-link:hover i {
-            transform: translateY(-2px);
-        }
-        .bottom-nav .nav-link.active {
-            color: #0d6efd;
-        }
-        .bottom-nav .nav-link.active::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 40px;
-            height: 3px;
-            background: #0d6efd;
-            border-radius: 0 0 3px 3px;
-        }
-        /* Dark mode */
-        body.dark-mode {
-            background-color: #1a1a1a;
-            color: #ffffff;
+            font-family: var(--font-body);
+            font-size: 11px;
+            min-height: 44px;
+            transition: color 0.15s;
         }
 
-        body.dark-mode .card {
-            background-color: #2d2d2d;
-            border-color: #404040;
-            color: #ffffff;
+        .bottom-nav__item:hover { color: var(--text-muted); }
+
+        .bottom-nav__item.active { color: var(--accent); }
+
+        .bottom-nav__item i {
+            font-size: 22px;
+            line-height: 1;
         }
 
-        body.dark-mode .navbar {
-            background: rgba(45, 45, 45, 0.95);
-        }
-
-        body.dark-mode .bottom-nav {
-            background: rgba(45, 45, 45, 0.95);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border-top-color: #404040;
-            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
-        }
-
-        body.dark-mode .bottom-nav .nav-link {
-            color: #a0a0a0;
-        }
-
-        body.dark-mode .bottom-nav .nav-link.active {
-            color: #4a9eff;
-        }
-
-        body.dark-mode .bottom-nav .nav-link.active::before {
-            background: #4a9eff;
-        }
-
-        body.dark-mode .card {
-            box-shadow: 0 4px 6px rgba(0,0,0,0.5);
-        }
-
-        /* Dark mode toggle button */
-        .theme-toggle {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 1.5rem;
-            cursor: pointer;
-            padding: 0;
-            margin: 0;
-            transition: transform 0.3s;
-        }
-
-        .theme-toggle:hover {
-            transform: rotate(20deg);
-        }
-
-        /* Logo container styling */
-        .logo-container {
-            padding: 8px 16px;
-        }
-
-        /* Toast Notifications */
+        /* ─── Toast Notifications ────────────────────────────── */
         .toast-container {
             position: fixed;
-            top: 70px;
-            right: 20px;
+            top: 64px;
+            right: 16px;
             z-index: 9999;
-        }
-
-        .custom-toast {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 12px;
-            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-            min-width: 300px;
-            margin-bottom: 10px;
-        }
-
-        body.dark-mode .custom-toast {
-            background: rgba(45, 45, 45, 0.95);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: #ffffff;
-        }
-
-        .custom-toast.toast-success {
-            border-left: 4px solid #198754;
-        }
-
-        .custom-toast.toast-error {
-            border-left: 4px solid #dc3545;
-        }
-
-        .custom-toast.toast-warning {
-            border-left: 4px solid #ffc107;
-        }
-
-        .custom-toast.toast-info {
-            border-left: 4px solid #0d6efd;
-        }
-
-        .toast-icon {
-            font-size: 1.5rem;
-            margin-right: 10px;
-        }
-
-        .toast-success .toast-icon {
-            color: #198754;
-        }
-
-        .toast-error .toast-icon {
-            color: #dc3545;
-        }
-
-        .toast-warning .toast-icon {
-            color: #ffc107;
-        }
-
-        .toast-info .toast-icon {
-            color: #0d6efd;
-        }
-
-        .custom-toast .toast-body {
             display: flex;
-            align-items: center;
-            padding: 15px;
+            flex-direction: column;
+            gap: 8px;
+            pointer-events: none;
         }
 
-        body.dark-mode .toast-header {
-            background-color: rgba(60, 60, 60, 0.5);
-            color: #ffffff;
-            border-bottom-color: #404040;
+        .fg-toast {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 12px 14px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-card);
+            box-shadow: var(--shadow-card);
+            min-width: 280px;
+            max-width: 360px;
+            pointer-events: all;
+            font-family: var(--font-body);
+            font-size: 14px;
+            color: var(--text);
+            opacity: 0;
+            transform: translateX(12px);
+            transition: opacity 0.2s, transform 0.2s;
         }
 
-        body.dark-mode .btn-close {
-            filter: invert(1);
+        .fg-toast.is-visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .fg-toast.is-hiding {
+            opacity: 0;
+            transform: translateX(12px);
+        }
+
+        .fg-toast__icon {
+            font-size: 16px;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .fg-toast--success .fg-toast__icon { color: var(--success); }
+        .fg-toast--warning .fg-toast__icon { color: var(--warning); }
+        .fg-toast--info    .fg-toast__icon { color: var(--accent);  }
+
+        .fg-toast__body {
+            flex: 1;
+            line-height: 1.4;
+        }
+
+        .fg-toast__close {
+            background: none;
+            border: none;
+            color: var(--text-faint);
+            cursor: pointer;
+            font-size: 14px;
+            padding: 0;
+            line-height: 1;
+            flex-shrink: 0;
+            align-self: flex-start;
+            transition: color 0.15s;
+        }
+
+        .fg-toast__close:hover { color: var(--text); }
+
+        /* ─── Reduced Motion ─────────────────────────────────── */
+        @media (prefers-reduced-motion: reduce) {
+            .fg-toast,
+            .bottom-nav__item,
+            .site-header__link { transition: none; }
         }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body {% if not current_user.is_authenticated %}class="no-bottom-nav"{% endif %}>
-    <nav class="navbar navbar-dark bg-dark">
-        <div class="container-fluid">
-            <div class="logo-container d-flex align-items-center gap-2">
-                <img src="{{ url_for('static', filename='transparent-logo-fitglyph.svg') }}" alt="FitGlyph Logo" class="navbar-brand mb-0" style="height: 35px; object-fit: contain;">
-                <span class="badge bg-secondary" style="font-size: 0.65rem; opacity: 0.7;">v{{ app_version }}</span>
-            </div>
-            <div class="d-flex gap-3 align-items-center">
-                {% if current_user.is_authenticated %}
-                <span class="text-light" style="font-size: 0.9rem;">{{ current_user.username }}</span>
-                <a href="/logout" class="theme-toggle" title="Logout" style="text-decoration: none;">
-                    <i class="bi bi-box-arrow-right"></i>
-                </a>
-                {% endif %}
-                <a href="/settings" class="theme-toggle" title="Settings" style="text-decoration: none;">
-                    <i class="bi bi-gear"></i>
-                </a>
-                <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">
-                    <i class="bi bi-moon-stars-fill" id="theme-icon"></i>
-                </button>
-            </div>
+
+    <header class="site-header">
+        <div class="site-header__brand">
+            <img src="{{ url_for('static', filename='transparent-logo-fitglyph.svg') }}"
+                 alt="FitGlyph"
+                 width="90" height="30"
+                 loading="lazy"
+                 class="site-header__logo">
+            <span class="site-header__version">v{{ app_version }}</span>
         </div>
-    </nav>
+        <div class="site-header__actions">
+            {% if current_user.is_authenticated %}
+            <span class="site-header__username">{{ current_user.username }}</span>
+            <a href="/logout" class="site-header__link" title="Log out" aria-label="Log out">
+                <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+            </a>
+            {% endif %}
+            <a href="/settings" class="site-header__link" title="Settings" aria-label="Settings">
+                <i class="bi bi-gear" aria-hidden="true"></i>
+            </a>
+        </div>
+    </header>
 
     <!-- Toast Container -->
-    <div class="toast-container" id="toast-container"></div>
+    <div class="toast-container" id="toast-container" aria-live="polite" aria-atomic="false"></div>
 
     <div class="container mt-3">
         {% block content %}{% endblock %}
     </div>
 
     {% if current_user.is_authenticated %}
-    <nav class="bottom-nav">
-        <div class="row g-0">
-            <div class="col">
-                <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}">
-                    <i class="bi bi-house-door"></i>
-                    <span>Home</span>
-                </a>
-            </div>
-            <div class="col">
-                <a href="/log" class="nav-link {% if request.path == '/log' %}active{% endif %}">
-                    <i class="bi bi-plus-circle"></i>
-                    <span>Log</span>
-                </a>
-            </div>
-            <div class="col">
-                <a href="/nutrition" class="nav-link {% if request.path == '/nutrition' %}active{% endif %}">
-                    <i class="bi bi-egg-fried"></i>
-                    <span>Nutrition</span>
-                </a>
-            </div>
-            <div class="col">
-                <a href="/history" class="nav-link {% if request.path == '/history' %}active{% endif %}">
-                    <i class="bi bi-clock-history"></i>
-                    <span>History</span>
-                </a>
-            </div>
-            <div class="col">
-                <a href="/progress" class="nav-link {% if request.path == '/progress' %}active{% endif %}">
-                    <i class="bi bi-graph-up"></i>
-                    <span>Progress</span>
-                </a>
-            </div>
-        </div>
+    <nav class="bottom-nav" aria-label="Primary navigation">
+        <a href="/" class="bottom-nav__item {% if request.path == '/' %}active{% endif %}"
+           {% if request.path == '/' %}aria-current="page"{% endif %}>
+            <i class="bi bi-house-door" aria-hidden="true"></i>
+            <span>Home</span>
+        </a>
+        <a href="/log" class="bottom-nav__item {% if request.path == '/log' %}active{% endif %}"
+           {% if request.path == '/log' %}aria-current="page"{% endif %}>
+            <i class="bi bi-plus-circle" aria-hidden="true"></i>
+            <span>Log</span>
+        </a>
+        <a href="/nutrition" class="bottom-nav__item {% if request.path == '/nutrition' %}active{% endif %}"
+           {% if request.path == '/nutrition' %}aria-current="page"{% endif %}>
+            <i class="bi bi-egg-fried" aria-hidden="true"></i>
+            <span>Nutrition</span>
+        </a>
+        <a href="/history" class="bottom-nav__item {% if request.path == '/history' %}active{% endif %}"
+           {% if request.path == '/history' %}aria-current="page"{% endif %}>
+            <i class="bi bi-clock-history" aria-hidden="true"></i>
+            <span>History</span>
+        </a>
+        <a href="/progress" class="bottom-nav__item {% if request.path == '/progress' %}active{% endif %}"
+           {% if request.path == '/progress' %}aria-current="page"{% endif %}>
+            <i class="bi bi-graph-up" aria-hidden="true"></i>
+            <span>Progress</span>
+        </a>
     </nav>
     {% endif %}
 
@@ -272,199 +299,114 @@
     <script src="{{ url_for('static', filename='onboarding-tour.js') }}"></script>
 
     <script>
-        // Dark mode toggle functionality
-        function toggleTheme() {
-            const body = document.body;
-            const themeIcon = document.getElementById('theme-icon');
+        // ─── Timezone (in-memory; no localStorage) ────────────
+        let _timezoneOffset = 0;
 
-            body.classList.toggle('dark-mode');
-
-            // Update icon
-            if (body.classList.contains('dark-mode')) {
-                themeIcon.className = 'bi bi-sun-fill';
-                localStorage.setItem('theme', 'dark');
-            } else {
-                themeIcon.className = 'bi bi-moon-stars-fill';
-                localStorage.setItem('theme', 'light');
-            }
-        }
-
-        // Load saved theme on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            const savedTheme = localStorage.getItem('theme');
-            const themeIcon = document.getElementById('theme-icon');
-
-            if (savedTheme === 'dark') {
-                document.body.classList.add('dark-mode');
-                themeIcon.className = 'bi bi-sun-fill';
-            }
-
-            // Load timezone from server if user is authenticated
-            {% if current_user.is_authenticated %}
-            fetch('/api/user/timezone')
-                .then(r => r.json())
-                .then(data => {
-                    const offset = data.timezone_offset || 0;
-                    // Store in localStorage for frontend use
-                    localStorage.setItem('timezoneOffset', offset);
-                })
-                .catch(err => {
-                    console.error('Failed to load timezone:', err);
-                    // Default to UTC if error
-                    if (!localStorage.getItem('timezoneOffset')) {
-                        localStorage.setItem('timezoneOffset', '0');
-                    }
-                });
-            {% endif %}
-        });
-
-        // Toast Notification System
-        function showToast(message, type = 'info', duration = 3000) {
-            const container = document.getElementById('toast-container');
-
-            // Create toast element
-            const toastId = 'toast-' + Date.now();
-            const toastEl = document.createElement('div');
-            toastEl.id = toastId;
-            toastEl.className = `toast custom-toast toast-${type}`;
-            toastEl.setAttribute('role', 'alert');
-            toastEl.setAttribute('aria-live', 'assertive');
-            toastEl.setAttribute('aria-atomic', 'true');
-
-            // Icon mapping
-            const icons = {
-                success: 'bi-check-circle-fill',
-                error: 'bi-x-circle-fill',
-                warning: 'bi-exclamation-triangle-fill',
-                info: 'bi-info-circle-fill'
-            };
-
-            const icon = icons[type] || icons.info;
-
-            toastEl.innerHTML = `
-                <div class="toast-body">
-                    <i class="bi ${icon} toast-icon"></i>
-                    <span class="flex-grow-1">${message}</span>
-                    <button type="button" class="btn-close ms-2" data-bs-dismiss="toast" aria-label="Close"></button>
-                </div>
-            `;
-
-            container.appendChild(toastEl);
-
-            // Initialize and show toast
-            const toast = new bootstrap.Toast(toastEl, {
-                autohide: true,
-                delay: duration
-            });
-
-            toast.show();
-
-            // Remove from DOM after hidden
-            toastEl.addEventListener('hidden.bs.toast', function() {
-                toastEl.remove();
-            });
-        }
-
-        // Convenience functions
-        function showSuccess(message, duration) {
-            showToast(message, 'success', duration);
-        }
-
-        function showError(message, duration) {
-            showToast(message, 'error', duration);
-        }
-
-        function showWarning(message, duration) {
-            showToast(message, 'warning', duration);
-        }
-
-        function showInfo(message, duration) {
-            showToast(message, 'info', duration);
-        }
-
-        // Timezone utility functions
         function getTimezoneOffset() {
-            // Get timezone offset from localStorage (set by settings page)
-            const offset = parseInt(localStorage.getItem('timezoneOffset') || '0');
-            return offset;
+            return _timezoneOffset;
         }
+
+        {% if current_user.is_authenticated %}
+        fetch('/api/user/timezone')
+            .then(r => r.json())
+            .then(data => { _timezoneOffset = data.timezone_offset || 0; })
+            .catch(() => { _timezoneOffset = 0; });
+        {% endif %}
 
         function applyTimezoneOffset(utcDateString) {
-            // Parse the UTC date string and apply timezone offset
-            // The date comes from server as ISO format with 'Z' (UTC marker)
             const date = new Date(utcDateString);
-            const offsetHours = getTimezoneOffset();
-
-            // Add offset hours to the UTC time to get user's local time
-            date.setUTCHours(date.getUTCHours() + offsetHours);
-
+            date.setUTCHours(date.getUTCHours() + _timezoneOffset);
             return date;
         }
 
         function formatDateWithTimezone(utcDateString, includeTime = true) {
-            // Format a UTC date string with timezone offset applied
             const date = applyTimezoneOffset(utcDateString);
-
             if (includeTime) {
-                // Use UTC methods since we've already applied the offset
                 return date.toLocaleString('en-US', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                    hour: 'numeric',
-                    minute: '2-digit',
-                    hour12: true,
-                    timeZone: 'UTC'  // Display as UTC since we've already applied offset
-                });
-            } else {
-                return date.toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                    timeZone: 'UTC'  // Display as UTC since we've already applied offset
+                    year: 'numeric', month: 'short', day: 'numeric',
+                    hour: 'numeric', minute: '2-digit', hour12: true,
+                    timeZone: 'UTC'
                 });
             }
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric', month: 'short', day: 'numeric',
+                timeZone: 'UTC'
+            });
         }
 
         function dateToLocalInputValue(utcDateString) {
-            // Convert UTC date string to format for datetime-local input
-            const date = applyTimezoneOffset(utcDateString);
-
-            // Format: YYYY-MM-DDTHH:MM using UTC methods since we've already applied offset
-            const year = date.getUTCFullYear();
+            const date  = applyTimezoneOffset(utcDateString);
+            const year  = date.getUTCFullYear();
             const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-            const day = String(date.getUTCDate()).padStart(2, '0');
+            const day   = String(date.getUTCDate()).padStart(2, '0');
             const hours = String(date.getUTCHours()).padStart(2, '0');
-            const minutes = String(date.getUTCMinutes()).padStart(2, '0');
-
-            return `${year}-${month}-${day}T${hours}:${minutes}`;
+            const mins  = String(date.getUTCMinutes()).padStart(2, '0');
+            return `${year}-${month}-${day}T${hours}:${mins}`;
         }
 
         function localInputValueToUTC(localDateTimeValue) {
-        // Convert datetime-local input value to UTC for server
-        // The datetime-local input represents time in the USER'S SELECTED timezone
-        
-        // Parse the datetime-local value (format: YYYY-MM-DDTHH:MM)
-        const parts = localDateTimeValue.split('T');
-        const dateParts = parts[0].split('-');
-        const timeParts = parts[1].split(':');
-        
-        // Create a Date object in UTC with the input values
-        const date = new Date(Date.UTC(
-            parseInt(dateParts[0]),
-            parseInt(dateParts[1]) - 1,  // Month is 0-indexed
-            parseInt(dateParts[2]),
-            parseInt(timeParts[0]),
-            parseInt(timeParts[1])
-        ));
-        
-        // Subtract the user's timezone offset to convert to actual UTC
-        const offsetHours = getTimezoneOffset();
-        date.setUTCHours(date.getUTCHours() - offsetHours);
-        
-        return date.toISOString();
-    }
+            const [datePart, timePart] = localDateTimeValue.split('T');
+            const [y, mo, d] = datePart.split('-');
+            const [h, mi]    = timePart.split(':');
+            const date = new Date(Date.UTC(+y, +mo - 1, +d, +h, +mi));
+            date.setUTCHours(date.getUTCHours() - _timezoneOffset);
+            return date.toISOString();
+        }
 
+        // ─── Toast Notification System ────────────────────────
+        const _toastIconMap = {
+            success: 'bi-check-circle-fill',
+            warning: 'bi-exclamation-triangle-fill',
+            error:   'bi-exclamation-triangle-fill',
+            info:    'bi-info-circle-fill'
+        };
+
+        const _toastTypeMap = {
+            success: 'success',
+            warning: 'warning',
+            error:   'warning',   // error renders as warning
+            info:    'info'
+        };
+
+        function showToast(message, type = 'info', duration = 3000) {
+            const container   = document.getElementById('toast-container');
+            const cssType     = _toastTypeMap[type]  || 'info';
+            const icon        = _toastIconMap[type]   || _toastIconMap.info;
+
+            const el = document.createElement('div');
+            el.className = `fg-toast fg-toast--${cssType}`;
+            el.setAttribute('role', 'alert');
+            el.innerHTML = `
+                <i class="bi ${icon} fg-toast__icon" aria-hidden="true"></i>
+                <span class="fg-toast__body">${message}</span>
+                <button class="fg-toast__close" aria-label="Dismiss">
+                    <i class="bi bi-x" aria-hidden="true"></i>
+                </button>
+            `;
+
+            el.querySelector('.fg-toast__close').addEventListener('click', () => {
+                clearTimeout(timer);
+                _dismissToast(el);
+            });
+
+            container.appendChild(el);
+
+            // Animate in (double rAF to ensure paint before class add)
+            requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('is-visible')));
+
+            const timer = setTimeout(() => _dismissToast(el), duration);
+        }
+
+        function _dismissToast(el) {
+            el.classList.add('is-hiding');
+            el.addEventListener('transitionend', () => el.remove(), { once: true });
+        }
+
+        // Convenience aliases — same call signatures as before
+        function showSuccess(message, duration) { showToast(message, 'success', duration); }
+        function showError(message, duration)   { showToast(message, 'error',   duration); }
+        function showWarning(message, duration) { showToast(message, 'warning', duration); }
+        function showInfo(message, duration)    { showToast(message, 'info',    duration); }
     </script>
 
     {% block extra_js %}{% endblock %}
