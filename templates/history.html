@@ -192,6 +192,26 @@
         margin: auto 0;
     }
 
+    .cal-cell__label {
+        font-family: var(--font-body);
+        font-size: 9px;
+        font-weight: 700;
+        color: var(--text);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        line-height: 1;
+        margin-top: auto;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        opacity: 0.85;
+    }
+
+    @media (max-width: 480px) {
+        .cal-cell__label { font-size: 8px; }
+    }
+
     /* Compare selection — same hue, two weights */
     .cal-cell.compare-selected-1 {
         outline: 2px solid var(--accent);
@@ -815,6 +835,16 @@
                     else                          opacity = 0.75;
 
                     cell.style.backgroundColor = `rgba(79, 152, 163, ${opacity})`;
+
+                    // Template name label — first word only so it always fits
+                    const templateName = workouts.find(w => !w.is_rest_day)?.template_name;
+                    if (templateName) {
+                        const label = document.createElement('span');
+                        label.className = 'cal-cell__label';
+                        label.textContent = templateName.split(' ')[0];
+                        label.title = templateName; // full name on hover
+                        cell.appendChild(label);
+                    }
                 }
             }
 
