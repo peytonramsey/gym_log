@@ -13,7 +13,8 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    timezone_offset = db.Column(db.Integer, default=0)  # Hours offset from UTC (e.g., -5 for EST)
+    timezone_offset = db.Column(db.Integer, default=0)  # Hours offset from UTC — kept in sync by API
+    timezone = db.Column(db.String(64), default='UTC')  # IANA timezone name (e.g., "America/New_York")
     weekly_goal = db.Column(db.Integer, default=3)  # Manual weekly workout goal
 
     # Relationships
@@ -84,16 +85,18 @@ class Exercise(db.Model):
     reps = db.Column(db.Integer, nullable=False)
     weight = db.Column(db.Float, nullable=True)  # Nullable for bodyweight exercises
     rest_time = db.Column(db.Integer, nullable=True)  # rest time in seconds
-    equipment_type = db.Column(db.String(50), nullable=True)  # barbell, free_weight, cable, machine
+    equipment_type = db.Column(db.String(50), nullable=True)  # barbell, free_weight, cable, machine, bodyweight
     set_data = db.Column(db.Text, nullable=True)  # JSON array of individual sets: [{"set_number": 1, "reps": 10, "weight": 135}, ...]
     is_superset = db.Column(db.Boolean, default=False)  # Whether this is a superset exercise
     superset_exercise_name = db.Column(db.String(100), nullable=True)  # Name of the second exercise in superset
+    original_name = db.Column(db.String(100), nullable=True)  # Pre-normalization name (audit trail)
 
     def to_dict(self):
         import json
         return {
             'id': self.id,
             'name': self.name,
+            'original_name': self.original_name,
             'sets': self.sets,
             'reps': self.reps,
             'weight': self.weight,
@@ -261,15 +264,17 @@ class TemplateExercise(db.Model):
     reps = db.Column(db.Integer, nullable=False)
     weight = db.Column(db.Float, default=0)  # Default weight (optional)
     rest_time = db.Column(db.Integer, nullable=True)  # rest time in seconds
-    equipment_type = db.Column(db.String(50), nullable=True)  # barbell, free_weight, cable, machine
+    equipment_type = db.Column(db.String(50), nullable=True)  # barbell, free_weight, cable, machine, bodyweight
     order = db.Column(db.Integer, default=0)  # order of exercise in the workout
     is_superset = db.Column(db.Boolean, default=False)  # Whether this is a superset exercise
     superset_exercise_name = db.Column(db.String(100), nullable=True)  # Name of the second exercise in superset
+    original_name = db.Column(db.String(100), nullable=True)  # Pre-normalization name (audit trail)
 
     def to_dict(self):
         return {
             'id': self.id,
             'name': self.name,
+            'original_name': self.original_name,
             'sets': self.sets,
             'reps': self.reps,
             'weight': self.weight,

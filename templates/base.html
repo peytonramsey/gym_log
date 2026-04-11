@@ -299,18 +299,36 @@
     <script src="{{ url_for('static', filename='onboarding-tour.js') }}"></script>
 
     <script>
-        // ─── Timezone (in-memory; no localStorage) ────────────
-        let _timezoneOffset = 0;
+        // ─── Timezone — injected at render, no async race ─────
+        // _tz  : IANA name, e.g. "America/New_York"
+        // _timezoneOffset : integer hours offset (kept for legacy call sites)
+        {% if current_user.is_authenticated %}
+        const _tz             = {{ (current_user.timezone or 'UTC') | tojson }};
+        let   _timezoneOffset = {{ current_user.timezone_offset or 0 }};
+        {% else %}
+        const _tz             = 'UTC';
+        let   _timezoneOffset = 0;
+        {% endif %}
 
         function getTimezoneOffset() {
             return _timezoneOffset;
         }
 
+        // ── Silent browser auto-detect (fires once if TZ never set) ───
         {% if current_user.is_authenticated %}
-        fetch('/api/user/timezone')
-            .then(r => r.json())
-            .then(data => { _timezoneOffset = data.timezone_offset || 0; })
-            .catch(() => { _timezoneOffset = 0; });
+        if (_tz === 'UTC') {
+            try {
+                const _browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                if (_browserTz && _browserTz !== 'UTC') {
+                    fetch('/api/user/timezone', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ timezone: _browserTz })
+                    });
+                    // No reload — _tz is baked in; updated value loads next request
+                }
+            } catch (_e) { /* Intl API unavailable — ignore */ }
+        }
         {% endif %}
 
         function applyTimezoneOffset(utcDateString) {
@@ -320,18 +338,14 @@
         }
 
         function formatDateWithTimezone(utcDateString, includeTime = true) {
-            const date = applyTimezoneOffset(utcDateString);
-            if (includeTime) {
-                return date.toLocaleString('en-US', {
-                    year: 'numeric', month: 'short', day: 'numeric',
+            // Use the IANA timezone name directly — handles DST automatically
+            const opts = includeTime
+                ? { year: 'numeric', month: 'short', day: 'numeric',
                     hour: 'numeric', minute: '2-digit', hour12: true,
-                    timeZone: 'UTC'
-                });
-            }
-            return date.toLocaleDateString('en-US', {
-                year: 'numeric', month: 'short', day: 'numeric',
-                timeZone: 'UTC'
-            });
+                    timeZone: _tz }
+                : { year: 'numeric', month: 'short', day: 'numeric',
+                    timeZone: _tz };
+            return new Date(utcDateString).toLocaleString('en-US', opts);
         }
 
         function dateToLocalInputValue(utcDateString) {

@@ -1003,6 +1003,7 @@ def log_workout():
             exercise = Exercise(
                 workout_id=workout.id,
                 name=normalized_name,
+                original_name=ex['name'],
                 sets=int(ex['sets']),
                 reps=int(ex['reps']),
                 weight=weight_value,
@@ -1082,6 +1083,7 @@ def update_workout(workout_id):
             exercise = Exercise(
                 workout_id=workout.id,
                 name=normalized_name,
+                original_name=ex['name'],
                 sets=int(ex['sets']),
                 reps=int(ex['reps']),
                 weight=weight_value,
@@ -1151,17 +1153,23 @@ def save_draft_workout():
         else:
             weight_value = None
 
+        # Normalize at save time so drafts are stored clean
+        equipment_type = ex.get('equipment_type') or None
+        normalized_name = normalize_exercise_name(ex['name'], equipment_type)
+        normalized_superset_name = normalize_exercise_name(ex.get('superset_exercise_name')) if ex.get('superset_exercise_name') else None
+
         exercise = Exercise(
             workout_id=draft.id,
-            name=ex['name'],
+            name=normalized_name,
+            original_name=ex['name'],
             sets=int(ex.get('sets', 1)),
             reps=int(ex.get('reps', 0)),
             weight=weight_value,
             rest_time=int(ex.get('rest_time', 0)),
-            equipment_type=ex.get('equipment_type') or None,
+            equipment_type=equipment_type,
             set_data=json.dumps(ex.get('set_data')) if ex.get('set_data') else None,
             is_superset=bool(ex.get('is_superset', False)),
-            superset_exercise_name=ex.get('superset_exercise_name')
+            superset_exercise_name=normalized_superset_name
         )
         db.session.add(exercise)
 
@@ -1204,6 +1212,7 @@ def complete_draft_workout():
             exercise = Exercise(
                 workout_id=draft.id,
                 name=normalized_name,
+                original_name=ex['name'],
                 sets=int(ex.get('sets', 1)),
                 reps=int(ex.get('reps', 0)),
                 weight=weight_value,
@@ -1265,12 +1274,37 @@ def get_exercise_progress(exercise_name):
 
     return jsonify(data)
 
-@app.route('/api/progress/template/<int:template_id>')
+@app.route('/api/progress/workout_titles')
 @login_required
-def get_template_progress(template_id):
-    template = WorkoutTemplate.query.filter_by(
-        id=template_id, user_id=current_user.id
-    ).first_or_404()
+def get_progress_workout_titles():
+    """Return distinct workout titles (template names) from the user's completed workouts."""
+    rows = (
+        db.session.query(WorkoutTemplate.name)
+        .join(Workout, Workout.template_id == WorkoutTemplate.id)
+        .filter(
+            Workout.user_id == current_user.id,
+            Workout.is_draft == False,
+            Workout.is_rest_day == False,
+        )
+        .distinct()
+        .order_by(WorkoutTemplate.name.asc())
+        .all()
+    )
+    titles = [r[0] for r in rows]
+    return jsonify(titles)
+
+
+@app.route('/api/progress/by_title')
+@login_required
+def get_progress_by_title():
+    """Return per-exercise progress from completed workouts matching a title.
+
+    Only workouts with MORE THAN 2 exercises in the date range are included
+    (quality gate — filters out partial / abandoned sessions).
+    """
+    title = request.args.get('title', '').strip()
+    if not title:
+        return jsonify({'error': 'title is required'}), 400
 
     period = request.args.get('period', 'all').lower()
     now_utc = datetime.utcnow()
@@ -1283,30 +1317,61 @@ def get_template_progress(template_id):
     cutoff = (now_utc - period_map[period]) if period in period_map else None
     offset_hours = current_user.timezone_offset or 0
 
-    exercises_data = []
-    for tex in sorted(template.template_exercises, key=lambda e: e.order):
-        q = (
-            Exercise.query.join(Workout).filter(
-                Workout.user_id == current_user.id,
-                Workout.is_draft == False,
-                Exercise.name == tex.name,
-            )
+    # ------------------------------------------------------------------
+    # 1. Find qualifying workouts: title match + date range + >2 exercises
+    # ------------------------------------------------------------------
+    workout_q = (
+        Workout.query
+        .join(WorkoutTemplate, Workout.template_id == WorkoutTemplate.id)
+        .filter(
+            Workout.user_id == current_user.id,
+            Workout.is_draft == False,
+            Workout.is_rest_day == False,
+            WorkoutTemplate.name == title,
         )
-        if tex.equipment_type is None:
-            q = q.filter(Exercise.equipment_type.is_(None))
-        else:
-            q = q.filter(Exercise.equipment_type == tex.equipment_type)
-        if cutoff:
-            q = q.filter(Workout.date >= cutoff)
+    )
+    if cutoff:
+        workout_q = workout_q.filter(Workout.date >= cutoff)
 
-        history = q.order_by(Workout.date.asc()).all()
+    qualifying_workout_ids = [
+        w.id for w in workout_q.all()
+        if len(w.exercises) > 2
+    ]
 
+    if not qualifying_workout_ids:
+        return jsonify({'title': title, 'period': period, 'exercises': []})
+
+    # ------------------------------------------------------------------
+    # 2. Collect all exercises from those workouts, grouped by name
+    # ------------------------------------------------------------------
+    all_exercises = (
+        Exercise.query
+        .join(Workout)
+        .filter(Exercise.workout_id.in_(qualifying_workout_ids))
+        .order_by(Workout.date.asc(), Exercise.id.asc())
+        .all()
+    )
+
+    # Group by (name, equipment_type) preserving first-seen order
+    from collections import OrderedDict
+    groups = OrderedDict()
+    for ex in all_exercises:
+        key = (ex.name, ex.equipment_type)
+        if key not in groups:
+            groups[key] = []
+        groups[key].append(ex)
+
+    # ------------------------------------------------------------------
+    # 3. Build per-exercise response
+    # ------------------------------------------------------------------
+    exercises_data = []
+    for (ex_name, equip_type), instances in groups.items():
         data_points = [{
             'date':   (ex.workout.date + timedelta(hours=offset_hours)).strftime('%Y-%m-%d'),
             'weight': ex.weight,
             'sets':   ex.sets,
             'reps':   ex.reps,
-        } for ex in history]
+        } for ex in instances]
 
         weighted = [p for p in data_points if p['weight'] is not None]
         delta, delta_label = None, None
@@ -1319,9 +1384,8 @@ def get_template_progress(template_id):
             delta_label = f"{weighted[0]['weight']:.1f} lbs (1 session)"
 
         exercises_data.append({
-            'name':           tex.name,
-            'equipment_type': tex.equipment_type,
-            'order':          tex.order,
+            'name':           ex_name,
+            'equipment_type': equip_type,
             'is_bodyweight':  bool(data_points and all(p['weight'] is None for p in data_points)),
             'data':           data_points,
             'delta':          delta,
@@ -1330,11 +1394,7 @@ def get_template_progress(template_id):
         })
 
     return jsonify({
-        'template': {
-            'id':    template.id,
-            'name':  template.name,
-            'color': template.color or '#198754',
-        },
+        'title':     title,
         'period':    period,
         'exercises': exercises_data,
     })
@@ -1414,9 +1474,10 @@ def add_exercise_bank():
     normalized = normalize_exercise_name(data['name'].strip(), equipment_type)
     muscle_group = data.get('muscle_group', '').strip() or None
 
-    # Check if already exists (global or user's custom)
+    # Check if already exists by (name, equipment_type) composite key
     existing = ExerciseBank.query.filter(
         ExerciseBank.name.ilike(normalized),
+        ExerciseBank.equipment_type == equipment_type,
         (ExerciseBank.user_id.is_(None)) | (ExerciseBank.user_id == current_user.id)
     ).first()
     if existing:
@@ -1449,38 +1510,40 @@ def delete_exercise_bank(exercise_id):
 @login_required
 def preview_exercise_normalization():
     """Preview what normalization would do to existing exercise names"""
-    # Get all distinct exercise names for current user
-    exercise_names = db.session.query(Exercise.name).join(Workout).filter(
+    # Get all distinct (name, equipment_type) pairs for current user
+    exercise_records = db.session.query(Exercise.name, Exercise.equipment_type).join(Workout).filter(
         Workout.user_id == current_user.id
     ).distinct().all()
 
-    # Also get template exercise names
-    template_exercise_names = db.session.query(TemplateExercise.name).join(WorkoutTemplate).filter(
+    # Also get template exercise records
+    template_records = db.session.query(TemplateExercise.name, TemplateExercise.equipment_type).join(WorkoutTemplate).filter(
         WorkoutTemplate.user_id == current_user.id
     ).distinct().all()
 
     # Combine and deduplicate
-    all_names = set([ex[0] for ex in exercise_names] + [ex[0] for ex in template_exercise_names])
+    all_records = list({(n, e) for n, e in list(exercise_records) + list(template_records)})
 
     changes = []
-    for name in all_names:
-        normalized = normalize_exercise_name(name)
+    for name, equipment_type in all_records:
+        normalized = normalize_exercise_name(name, equipment_type)
         if name != normalized:
-            # Count how many workouts use this exercise
+            # Count how many workouts use this (name, equipment_type) pair
             workout_count = db.session.query(Exercise).join(Workout).filter(
                 Workout.user_id == current_user.id,
-                Exercise.name == name
+                Exercise.name == name,
+                Exercise.equipment_type == equipment_type
             ).count()
 
-            # Count how many templates use this exercise
             template_count = db.session.query(TemplateExercise).join(WorkoutTemplate).filter(
                 WorkoutTemplate.user_id == current_user.id,
-                TemplateExercise.name == name
+                TemplateExercise.name == name,
+                TemplateExercise.equipment_type == equipment_type
             ).count()
 
             changes.append({
                 'original': name,
                 'normalized': normalized,
+                'equipment_type': equipment_type,
                 'workout_count': workout_count,
                 'template_count': template_count,
                 'total_count': workout_count + template_count
@@ -1501,16 +1564,19 @@ def execute_exercise_normalization():
     try:
         updated_count = 0
 
-        # Normalize workout exercises
+        # Normalize workout exercises — pass equipment_type for correct stripping
         exercises = db.session.query(Exercise).join(Workout).filter(
             Workout.user_id == current_user.id
         ).all()
 
         for exercise in exercises:
             old_name = exercise.name
-            new_name = normalize_exercise_name(old_name)
+            new_name = normalize_exercise_name(old_name, exercise.equipment_type)
 
             if old_name != new_name:
+                # Preserve the original if not already set
+                if not exercise.original_name:
+                    exercise.original_name = old_name
                 exercise.name = new_name
                 updated_count += 1
 
@@ -1522,16 +1588,18 @@ def execute_exercise_normalization():
                     exercise.superset_exercise_name = new_superset_name
                     updated_count += 1
 
-        # Normalize template exercises
+        # Normalize template exercises — pass equipment_type
         template_exercises = db.session.query(TemplateExercise).join(WorkoutTemplate).filter(
             WorkoutTemplate.user_id == current_user.id
         ).all()
 
         for template_exercise in template_exercises:
             old_name = template_exercise.name
-            new_name = normalize_exercise_name(old_name)
+            new_name = normalize_exercise_name(old_name, template_exercise.equipment_type)
 
             if old_name != new_name:
+                if not template_exercise.original_name:
+                    template_exercise.original_name = old_name
                 template_exercise.name = new_name
                 updated_count += 1
 
@@ -2260,17 +2328,20 @@ def create_template():
 
     # Add exercises to template
     for idx, ex in enumerate(data.get('exercises', [])):
-        # Normalize exercise names for consistency
-        normalized_name = normalize_exercise_name(ex['name'])
+        # Normalize exercise names for consistency — pass equipment_type
+        equipment_type = ex.get('equipment_type') or None
+        normalized_name = normalize_exercise_name(ex['name'], equipment_type)
         normalized_superset_name = normalize_exercise_name(ex.get('superset_exercise_name')) if ex.get('superset_exercise_name') else None
 
         template_exercise = TemplateExercise(
             template_id=template.id,
             name=normalized_name,
+            original_name=ex['name'],
             sets=int(ex['sets']),
             reps=int(ex['reps']),
             weight=float(ex.get('weight', 0)),
             rest_time=int(ex.get('rest_time', 0)),
+            equipment_type=equipment_type,
             order=idx,
             is_superset=bool(ex.get('is_superset', False)),
             superset_exercise_name=normalized_superset_name
@@ -2319,17 +2390,20 @@ def update_template(template_id):
 
     # Add updated exercises
     for idx, ex in enumerate(data.get('exercises', [])):
-        # Normalize exercise names for consistency
-        normalized_name = normalize_exercise_name(ex['name'])
+        # Normalize exercise names for consistency — pass equipment_type
+        equipment_type = ex.get('equipment_type') or None
+        normalized_name = normalize_exercise_name(ex['name'], equipment_type)
         normalized_superset_name = normalize_exercise_name(ex.get('superset_exercise_name')) if ex.get('superset_exercise_name') else None
 
         template_exercise = TemplateExercise(
             template_id=template.id,
             name=normalized_name,
+            original_name=ex['name'],
             sets=int(ex['sets']),
             reps=int(ex['reps']),
             weight=float(ex.get('weight', 0)),
             rest_time=int(ex.get('rest_time', 0)),
+            equipment_type=equipment_type,
             order=idx,
             is_superset=bool(ex.get('is_superset', False)),
             superset_exercise_name=normalized_superset_name
@@ -2402,27 +2476,62 @@ def settings():
 @app.route('/api/user/timezone', methods=['GET'])
 @login_required
 def get_timezone():
-    """Get the current user's timezone offset"""
+    """Get the current user's IANA timezone name and integer offset"""
     return jsonify({
-        'timezone_offset': current_user.timezone_offset
+        'timezone': current_user.timezone or 'UTC',
+        'timezone_offset': current_user.timezone_offset or 0
     })
 
 @app.route('/api/user/timezone', methods=['POST'])
 @login_required
 def update_timezone():
-    """Update the current user's timezone offset"""
-    data = request.get_json()
-    timezone_offset = data.get('timezone_offset', 0)
+    """Update the current user's timezone.
 
-    # Validate timezone offset is within valid range
-    if timezone_offset < -12 or timezone_offset > 12:
+    Accepts an IANA timezone name (e.g. 'America/New_York').
+    Also accepts the legacy integer 'timezone_offset' key for backwards
+    compatibility — in that case only the integer is updated.
+
+    The server derives the current UTC offset from the IANA name and
+    keeps timezone_offset in sync automatically (handles DST).
+    """
+    from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+    from datetime import datetime as _dt
+
+    data = request.get_json()
+
+    # ── IANA name path (preferred) ──────────────────────────────────────
+    iana_name = data.get('timezone')
+    if iana_name:
+        try:
+            tz = ZoneInfo(iana_name)
+        except (ZoneInfoNotFoundError, KeyError):
+            return jsonify({'success': False, 'error': 'Invalid timezone name'}), 400
+
+        # Derive current integer offset (handles DST automatically)
+        now = _dt.now(tz)
+        offset_seconds = now.utcoffset().total_seconds()
+        offset_hours = int(offset_seconds / 3600)
+
+        current_user.timezone = iana_name
+        current_user.timezone_offset = offset_hours
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'timezone': iana_name,
+            'timezone_offset': offset_hours
+        })
+
+    # ── Legacy integer path (kept for backwards compatibility) ──────────
+    timezone_offset = data.get('timezone_offset', 0)
+    if not isinstance(timezone_offset, int) or timezone_offset < -12 or timezone_offset > 14:
         return jsonify({'success': False, 'error': 'Invalid timezone offset'}), 400
 
-    # Update user's timezone offset
     current_user.timezone_offset = timezone_offset
     db.session.commit()
 
     return jsonify({'success': True, 'timezone_offset': timezone_offset})
+
 
 @app.route('/api/user/weekly-goal', methods=['GET', 'POST'])
 @login_required

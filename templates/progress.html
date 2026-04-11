@@ -190,10 +190,10 @@
     </div>
 </div>
 
-<!-- ── No templates empty state ──────────────────────────────── -->
+<!-- ── No workout history empty state ──────────────────────────── -->
 <div class="prog-empty d-none" id="no-templates-msg">
-    <p class="prog-empty__title">No templates yet</p>
-    <p class="prog-empty__sub">Create a workout template on the <a href="/schedule">Schedule</a> page and your progress will appear here.</p>
+    <p class="prog-empty__title">No completed workouts yet</p>
+    <p class="prog-empty__sub">Log a workout on the <a href="/log">Log</a> page and your progress will appear here.</p>
 </div>
 
 <!-- ── Loading ────────────────────────────────────────────────── -->
@@ -221,33 +221,33 @@ const EQUIPMENT_LABELS = {
 };
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', loadTemplates);
+document.addEventListener('DOMContentLoaded', loadWorkoutTitles);
 
-// ── Populate template dropdown ────────────────────────────────────────────────
-function loadTemplates() {
-    fetch('/api/templates')
+// ── Populate title dropdown from completed workout history ────────────────────
+function loadWorkoutTitles() {
+    fetch('/api/progress/workout_titles')
         .then(r => r.json())
-        .then(templates => {
+        .then(titles => {
             const sel = document.getElementById('template-select');
             sel.innerHTML = '';
 
-            if (!templates || templates.length === 0) {
+            if (!titles || titles.length === 0) {
                 document.getElementById('progress-controls').classList.add('d-none');
                 document.getElementById('no-templates-msg').classList.remove('d-none');
                 return;
             }
 
-            templates.forEach(t => {
+            titles.forEach(title => {
                 const opt = document.createElement('option');
-                opt.value = t.id;
-                opt.textContent = t.name;
+                opt.value = title;        // store the title string, not an ID
+                opt.textContent = title;
                 sel.appendChild(opt);
             });
 
             onTemplateChange();
         })
         .catch(() => {
-            showError('Failed to load templates.');
+            showError('Failed to load workout history.');
         });
 }
 
@@ -257,9 +257,9 @@ function onPeriodChange()   { loadProgress(); }
 
 // ── Load & render ─────────────────────────────────────────────────────────────
 function loadProgress() {
-    const templateId = document.getElementById('template-select').value;
-    const period     = document.getElementById('period-select').value;
-    if (!templateId) return;
+    const title  = document.getElementById('template-select').value;
+    const period = document.getElementById('period-select').value;
+    if (!title) return;
 
     const container = document.getElementById('exercise-cards');
     const spinner   = document.getElementById('exercises-loading');
@@ -269,7 +269,7 @@ function loadProgress() {
     container.innerHTML = '';
     spinner.classList.remove('d-none');
 
-    fetch(`/api/progress/template/${templateId}?period=${period}`)
+    fetch(`/api/progress/by_title?title=${encodeURIComponent(title)}&period=${period}`)
         .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
         .then(data => {
             spinner.classList.add('d-none');
@@ -288,7 +288,8 @@ function renderExerciseCards(exercises) {
 
     if (!exercises || exercises.length === 0) {
         container.innerHTML = `<div class="prog-empty">
-            <p class="prog-empty__title">No exercises found in this template.</p>
+            <p class="prog-empty__title">No qualifying sessions in this period.</p>
+            <p class="prog-empty__sub">Only workouts with more than 2 logged exercises are shown. Try a wider date range.</p>
         </div>`;
         return;
     }

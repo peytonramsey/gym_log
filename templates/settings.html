@@ -297,32 +297,50 @@
                 <div class="settings-label">Timezone</div>
                 <div class="settings-description">Adjust time display to your local timezone</div>
             </div>
-            <select class="settings-select" id="timezoneOffset" style="width: 164px;" onchange="saveTimezoneOffset()">
-                <option value="-12">UTC−12:00</option>
-                <option value="-11">UTC−11:00</option>
-                <option value="-10">UTC−10:00 (Hawaii)</option>
-                <option value="-9">UTC−09:00 (Alaska)</option>
-                <option value="-8">UTC−08:00 (Pacific)</option>
-                <option value="-7">UTC−07:00 (Mountain)</option>
-                <option value="-6">UTC−06:00 (Central)</option>
-                <option value="-5">UTC−05:00 (Eastern)</option>
-                <option value="-4">UTC−04:00 (Atlantic)</option>
-                <option value="-3">UTC−03:00</option>
-                <option value="-2">UTC−02:00</option>
-                <option value="-1">UTC−01:00</option>
-                <option value="0">UTC+00:00 (GMT)</option>
-                <option value="1">UTC+01:00</option>
-                <option value="2">UTC+02:00</option>
-                <option value="3">UTC+03:00</option>
-                <option value="4">UTC+04:00</option>
-                <option value="5">UTC+05:00</option>
-                <option value="6">UTC+06:00</option>
-                <option value="7">UTC+07:00</option>
-                <option value="8">UTC+08:00</option>
-                <option value="9">UTC+09:00</option>
-                <option value="10">UTC+10:00</option>
-                <option value="11">UTC+11:00</option>
-                <option value="12">UTC+12:00</option>
+            <select class="settings-select" id="timezoneSelect" style="width: 196px;" onchange="saveTimezone()">
+                <optgroup label="United States">
+                    <option value="Pacific/Honolulu">Hawaii (HT)</option>
+                    <option value="America/Anchorage">Alaska (AKT)</option>
+                    <option value="America/Los_Angeles">Pacific (PT)</option>
+                    <option value="America/Denver">Mountain (MT)</option>
+                    <option value="America/Phoenix">Arizona (no DST)</option>
+                    <option value="America/Chicago">Central (CT)</option>
+                    <option value="America/New_York">Eastern (ET)</option>
+                    <option value="America/Puerto_Rico">Puerto Rico (AT)</option>
+                </optgroup>
+                <optgroup label="Canada">
+                    <option value="America/Vancouver">Vancouver (PT)</option>
+                    <option value="America/Edmonton">Edmonton (MT)</option>
+                    <option value="America/Winnipeg">Winnipeg (CT)</option>
+                    <option value="America/Toronto">Toronto (ET)</option>
+                    <option value="America/Halifax">Halifax (AT)</option>
+                    <option value="America/St_Johns">St. John's (NT)</option>
+                </optgroup>
+                <optgroup label="Europe">
+                    <option value="Europe/London">London (GMT/BST)</option>
+                    <option value="Europe/Paris">Paris / Berlin (CET)</option>
+                    <option value="Europe/Helsinki">Helsinki / Athens (EET)</option>
+                    <option value="Europe/Moscow">Moscow (MSK)</option>
+                </optgroup>
+                <optgroup label="Asia / Pacific">
+                    <option value="Asia/Dubai">Dubai (GST)</option>
+                    <option value="Asia/Karachi">Karachi (PKT)</option>
+                    <option value="Asia/Kolkata">India (IST)</option>
+                    <option value="Asia/Dhaka">Dhaka (BST+6)</option>
+                    <option value="Asia/Bangkok">Bangkok (ICT)</option>
+                    <option value="Asia/Shanghai">China (CST)</option>
+                    <option value="Asia/Tokyo">Tokyo (JST)</option>
+                    <option value="Australia/Sydney">Sydney (AET)</option>
+                    <option value="Pacific/Auckland">Auckland (NZT)</option>
+                </optgroup>
+                <optgroup label="Other">
+                    <option value="UTC">UTC / GMT+0</option>
+                    <option value="America/Sao_Paulo">São Paulo (BRT)</option>
+                    <option value="America/Buenos_Aires">Buenos Aires (ART)</option>
+                    <option value="Africa/Cairo">Cairo (EET)</option>
+                    <option value="Africa/Nairobi">Nairobi (EAT)</option>
+                    <option value="Africa/Johannesburg">Johannesburg (SAST)</option>
+                </optgroup>
             </select>
         </div>
 
@@ -499,20 +517,15 @@
         const savedTheme = localStorage.getItem('theme');
         document.getElementById('darkModeSwitch').checked = (savedTheme === 'dark');
 
-        // Load timezone offset from server
-        fetch('/api/user/timezone')
-            .then(r => r.json())
-            .then(data => {
-                const offset = data.timezone_offset || 0;
-                document.getElementById('timezoneOffset').value = offset;
-                // Store in localStorage for frontend use
-                localStorage.setItem('timezoneOffset', offset);
-            })
-            .catch(err => {
-                console.error('Failed to load timezone:', err);
-                // Default to UTC if error
-                document.getElementById('timezoneOffset').value = 0;
-            });
+        // Pre-select current timezone (Jinja-injected — no fetch needed)
+        const _savedTz = {{ (current_user.timezone or 'UTC') | tojson }};
+        const _tzSelect = document.getElementById('timezoneSelect');
+        if (_tzSelect) {
+            // Try to select the saved IANA value directly
+            _tzSelect.value = _savedTz;
+            // If it didn't match (e.g. browser-detected tz not in list), fallback to UTC
+            if (!_tzSelect.value) _tzSelect.value = 'UTC';
+        }
 
         // Load weight unit
         const savedWeightUnit = localStorage.getItem('weightUnit') || 'lbs';
@@ -538,27 +551,22 @@
         });
     });
 
-    function saveTimezoneOffset() {
-        const offset = parseInt(document.getElementById('timezoneOffset').value);
+    function saveTimezone() {
+        const tz = document.getElementById('timezoneSelect').value;
 
-        // Save to server
         fetch('/api/user/timezone', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ timezone_offset: offset })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ timezone: tz })
         })
         .then(r => r.json())
         .then(data => {
             if (data.success) {
-                // Store in localStorage for frontend use
-                localStorage.setItem('timezoneOffset', offset);
                 showSuccess('Timezone updated! Page will reload.');
-                // Reload page to apply new timezone to all displayed times
+                // Reload so the Jinja-injected _tz value updates everywhere
                 setTimeout(() => location.reload(), 1500);
             } else {
-                showError('Failed to save timezone');
+                showError(data.error || 'Failed to save timezone');
             }
         })
         .catch(err => {

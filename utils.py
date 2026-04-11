@@ -4,122 +4,129 @@ Utility functions for GymLog application
 
 import re
 
-# Pre-seeded global exercise bank — names are already normalized (Title Case)
+# ---------------------------------------------------------------------------
+# Pre-seeded global exercise bank — 3-tuple: (bare_name, muscle_group, equipment_type)
+# Names are already bare (no equipment word). Equipment type is explicit.
+# ---------------------------------------------------------------------------
 EXERCISE_BANK_SEEDS = [
     # Chest
-    ("Barbell Bench Press", "Chest"),
-    ("Dumbbell Bench Press", "Chest"),
-    ("Incline Barbell Press", "Chest"),
-    ("Incline Dumbbell Press", "Chest"),
-    ("Decline Barbell Press", "Chest"),
-    ("Decline Dumbbell Press", "Chest"),
-    ("Cable Fly", "Chest"),
-    ("Dumbbell Fly", "Chest"),
-    ("Incline Dumbbell Fly", "Chest"),
-    ("Pec Deck", "Chest"),
-    ("Push Up", "Chest"),
-    ("Dip", "Chest"),
-    ("Chest Press Machine", "Chest"),
+    ("Bench Press",            "Chest",       "barbell"),
+    ("Bench Press",            "Chest",       "free_weight"),
+    ("Incline Press",          "Chest",       "barbell"),
+    ("Incline Press",          "Chest",       "free_weight"),
+    ("Decline Press",          "Chest",       "barbell"),
+    ("Decline Press",          "Chest",       "free_weight"),
+    ("Fly",                    "Chest",       "cable"),
+    ("Fly",                    "Chest",       "free_weight"),
+    ("Incline Fly",            "Chest",       "free_weight"),
+    ("Pec Deck",               "Chest",       "machine"),
+    ("Push Up",                "Chest",       "bodyweight"),
+    ("Dip",                    "Chest",       "bodyweight"),
+    ("Chest Press",            "Chest",       "machine"),
     # Back
-    ("Pull Up", "Back"),
-    ("Chin Up", "Back"),
-    ("Barbell Row", "Back"),
-    ("Dumbbell Row", "Back"),
-    ("Cable Row", "Back"),
-    ("Seated Cable Row", "Back"),
-    ("Lat Pulldown", "Back"),
-    ("Wide Grip Lat Pulldown", "Back"),
-    ("Close Grip Lat Pulldown", "Back"),
-    ("Face Pull", "Back"),
-    ("T-Bar Row", "Back"),
-    ("Barbell Deadlift", "Back"),
-    ("Romanian Deadlift", "Back"),
-    ("Straight Arm Pulldown", "Back"),
-    ("Hyperextension", "Back"),
+    ("Pull Up",                "Back",        "bodyweight"),
+    ("Chin Up",                "Back",        "bodyweight"),
+    ("Row",                    "Back",        "barbell"),
+    ("Row",                    "Back",        "free_weight"),
+    ("Row",                    "Back",        "cable"),
+    ("Seated Row",             "Back",        "cable"),
+    ("Lat Pulldown",           "Back",        "cable"),
+    ("Wide Grip Lat Pulldown", "Back",        "cable"),
+    ("Close Grip Lat Pulldown","Back",        "cable"),
+    ("Face Pull",              "Back",        "cable"),
+    ("T-Bar Row",              "Back",        "barbell"),
+    ("Deadlift",               "Back",        "barbell"),
+    ("Straight Arm Pulldown",  "Back",        "cable"),
+    ("Hyperextension",         "Back",        "bodyweight"),
     # Shoulders
-    ("Barbell Overhead Press", "Shoulders"),
-    ("Dumbbell Overhead Press", "Shoulders"),
-    ("Seated Dumbbell Press", "Shoulders"),
-    ("Arnold Press", "Shoulders"),
-    ("Dumbbell Lateral Raise", "Shoulders"),
-    ("Cable Lateral Raise", "Shoulders"),
-    ("Dumbbell Front Raise", "Shoulders"),
-    ("Rear Delt Fly", "Shoulders"),
-    ("Cable Rear Delt Fly", "Shoulders"),
-    ("Barbell Shrug", "Shoulders"),
-    ("Dumbbell Shrug", "Shoulders"),
-    ("Upright Row", "Shoulders"),
+    ("Overhead Press",         "Shoulders",   "barbell"),
+    ("Overhead Press",         "Shoulders",   "free_weight"),
+    ("Seated Press",           "Shoulders",   "free_weight"),
+    ("Arnold Press",           "Shoulders",   "free_weight"),
+    ("Lateral Raise",          "Shoulders",   "free_weight"),
+    ("Lateral Raise",          "Shoulders",   "cable"),
+    ("Front Raise",            "Shoulders",   "free_weight"),
+    ("Rear Delt Fly",          "Shoulders",   "free_weight"),
+    ("Rear Delt Fly",          "Shoulders",   "cable"),
+    ("Shrug",                  "Shoulders",   "barbell"),
+    ("Shrug",                  "Shoulders",   "free_weight"),
+    ("Upright Row",            "Shoulders",   "barbell"),
     # Biceps
-    ("Barbell Curl", "Biceps"),
-    ("Dumbbell Curl", "Biceps"),
-    ("Incline Dumbbell Curl", "Biceps"),
-    ("Hammer Curl", "Biceps"),
-    ("Preacher Curl", "Biceps"),
-    ("Cable Curl", "Biceps"),
-    ("EZ Bar Curl", "Biceps"),
-    ("Concentration Curl", "Biceps"),
+    ("Curl",                   "Biceps",      "barbell"),
+    ("Curl",                   "Biceps",      "free_weight"),
+    ("Incline Curl",           "Biceps",      "free_weight"),
+    ("Hammer Curl",            "Biceps",      "free_weight"),
+    ("Preacher Curl",          "Biceps",      "barbell"),
+    ("Curl",                   "Biceps",      "cable"),
+    ("EZ Bar Curl",            "Biceps",      "barbell"),
+    ("Concentration Curl",     "Biceps",      "free_weight"),
     # Triceps
-    ("Tricep Pushdown", "Triceps"),
-    ("Overhead Tricep Extension", "Triceps"),
-    ("Skull Crusher", "Triceps"),
-    ("Close Grip Bench Press", "Triceps"),
-    ("Tricep Kickback", "Triceps"),
-    ("Cable Overhead Tricep Extension", "Triceps"),
-    ("Diamond Push Up", "Triceps"),
+    ("Tricep Pushdown",        "Triceps",     "cable"),
+    ("Overhead Tricep Extension", "Triceps",  "cable"),
+    ("Skull Crusher",          "Triceps",     "barbell"),
+    ("Close Grip Bench Press", "Triceps",     "barbell"),
+    ("Tricep Kickback",        "Triceps",     "free_weight"),
+    ("Diamond Push Up",        "Triceps",     "bodyweight"),
     # Quads
-    ("Barbell Squat", "Quads"),
-    ("Front Squat", "Quads"),
-    ("Leg Press", "Quads"),
-    ("Hack Squat", "Quads"),
-    ("Leg Extension", "Quads"),
-    ("Dumbbell Lunge", "Quads"),
-    ("Barbell Lunge", "Quads"),
-    ("Bulgarian Split Squat", "Quads"),
-    ("Smith Machine Squat", "Quads"),
+    ("Squat",                  "Quads",       "barbell"),
+    ("Front Squat",            "Quads",       "barbell"),
+    ("Leg Press",              "Quads",       "machine"),
+    ("Hack Squat",             "Quads",       "machine"),
+    ("Leg Extension",          "Quads",       "machine"),
+    ("Lunge",                  "Quads",       "free_weight"),
+    ("Lunge",                  "Quads",       "barbell"),
+    ("Bulgarian Split Squat",  "Quads",       "free_weight"),
+    ("Squat",                  "Quads",       "machine"),     # smith machine squat
     # Hamstrings
-    ("Lying Leg Curl", "Hamstrings"),
-    ("Seated Leg Curl", "Hamstrings"),
-    ("Romanian Deadlift", "Hamstrings"),
-    ("Stiff Leg Deadlift", "Hamstrings"),
-    ("Nordic Hamstring Curl", "Hamstrings"),
+    ("Romanian Deadlift",      "Hamstrings",  "barbell"),
+    ("Lying Leg Curl",         "Hamstrings",  "machine"),
+    ("Seated Leg Curl",        "Hamstrings",  "machine"),
+    ("Stiff Leg Deadlift",     "Hamstrings",  "barbell"),
+    ("Nordic Hamstring Curl",  "Hamstrings",  "bodyweight"),
     # Glutes
-    ("Hip Thrust", "Glutes"),
-    ("Barbell Hip Thrust", "Glutes"),
-    ("Cable Kickback", "Glutes"),
-    ("Glute Bridge", "Glutes"),
+    ("Hip Thrust",             "Glutes",      "bodyweight"),
+    ("Hip Thrust",             "Glutes",      "barbell"),
+    ("Kickback",               "Glutes",      "cable"),
+    ("Glute Bridge",           "Glutes",      "bodyweight"),
     # Calves
-    ("Standing Calf Raise", "Calves"),
-    ("Seated Calf Raise", "Calves"),
-    ("Leg Press Calf Raise", "Calves"),
+    ("Calf Raise",             "Calves",      "machine"),
+    ("Seated Calf Raise",      "Calves",      "machine"),
+    ("Leg Press Calf Raise",   "Calves",      "machine"),
+    ("Calf Raise",             "Calves",      "barbell"),
     # Core
-    ("Plank", "Core"),
-    ("Crunch", "Core"),
-    ("Cable Crunch", "Core"),
-    ("Hanging Leg Raise", "Core"),
-    ("Ab Rollout", "Core"),
-    ("Russian Twist", "Core"),
-    ("Side Plank", "Core"),
-    ("Decline Crunch", "Core"),
+    ("Plank",                  "Core",        "bodyweight"),
+    ("Crunch",                 "Core",        "bodyweight"),
+    ("Crunch",                 "Core",        "cable"),
+    ("Hanging Leg Raise",      "Core",        "bodyweight"),
+    ("Ab Rollout",             "Core",        "bodyweight"),
+    ("Russian Twist",          "Core",        "bodyweight"),
+    ("Side Plank",             "Core",        "bodyweight"),
+    ("Decline Crunch",         "Core",        "bodyweight"),
     # Cardio
-    ("Treadmill Run", "Cardio"),
-    ("Stationary Bike", "Cardio"),
-    ("Rowing Machine", "Cardio"),
-    ("Jump Rope", "Cardio"),
-    ("Stair Climber", "Cardio"),
+    ("Treadmill Run",          "Cardio",      None),
+    ("Stationary Bike",        "Cardio",      None),
+    ("Rowing Machine",         "Cardio",      None),
+    ("Jump Rope",              "Cardio",      "bodyweight"),
+    ("Stair Climber",          "Cardio",      None),
 ]
 
-# Common gym abbreviations and their full forms
+# ---------------------------------------------------------------------------
+# Common gym abbreviations → full forms
+# ---------------------------------------------------------------------------
 ABBREVIATIONS = {
     'db': 'dumbbell',
     'dbs': 'dumbbell',
     'bb': 'barbell',
     'bbs': 'barbell',
+    'kb': 'kettlebell',
+    'kbs': 'kettlebell',
     'ez': 'ez bar',
     'ezbar': 'ez bar',
     't-bar': 't-bar',
     'tbar': 't-bar',
-    'lat': 'lateral',
-    'lats': 'lateral',
+    # Note: 'lat'/'lats' intentionally NOT here — in gym context 'lat' means
+    # latissimus dorsi (the muscle), NOT 'lateral'. 'Lat Pulldown' must stay
+    # 'Lat Pulldown', not become 'Lateral Pulldown'.
     'inc': 'incline',
     'incl': 'incline',
     'dec': 'decline',
@@ -141,9 +148,9 @@ ABBREVIATIONS = {
     'leg press': 'leg press',
     'pec deck': 'pec deck',
     'pec fly': 'pec fly',
-    'chest fly': 'chest fly',
+    'chest fly': 'fly',
     'chest press': 'chest press',
-    'shoulder press': 'shoulder press',
+    'shoulder press': 'overhead press',
     'front raise': 'front raise',
     'side raise': 'lateral raise',
     'rear delt': 'rear delt',
@@ -155,228 +162,185 @@ ABBREVIATIONS = {
     'push up': 'push up',
 }
 
-# Equipment type → word mapping (for stripping when equipment_type is tracked separately)
+# ---------------------------------------------------------------------------
+# Equipment type → words to strip from the exercise name.
+# When equipment_type is tracked as a separate field, these words are redundant
+# in the name and should be removed.
+# Order within each list matters: longer/more-specific first.
+# ---------------------------------------------------------------------------
 EQUIPMENT_TYPE_WORDS = {
-    'barbell':    ['barbell'],
-    'free_weight': ['dumbbell'],
+    'barbell':    ['ez bar', 'trap bar', 'barbell'],
+    'free_weight': ['kettlebell', 'dumbbell'],
     'cable':      ['cable'],
-    'machine':    ['machine'],
+    'machine':    ['smith machine', 'smith', 'machine'],
+    'bodyweight': [],  # bodyweight names are already bare
 }
 
-# Equipment words (should come first)
-EQUIPMENT_WORDS = [
-    'dumbbell', 'barbell', 'cable', 'machine', 'smith', 'smith machine',
-    'trap bar', 'ez bar', 't-bar', 'resistance band', 'band', 'kettlebell',
-    'bodyweight', 'suspension'
-]
-
-# Position/angle words (should come after equipment)
+# ---------------------------------------------------------------------------
+# Position/angle words for reordering (no equipment — equipment is gone by now)
+# ---------------------------------------------------------------------------
 POSITION_WORDS = [
     'incline', 'decline', 'flat', 'seated', 'standing', 'lying', 'kneeling',
     'prone', 'supine', 'bent over', 'single arm', 'single leg', 'unilateral',
     'bilateral', 'alternating', 'close grip', 'wide grip', 'narrow grip',
-    'neutral grip', 'overhand', 'underhand', 'hammer', 'reverse'
+    'neutral grip', 'overhand', 'underhand', 'hammer', 'reverse',
 ]
 
-# Movement/exercise type words (should come last)
+# Movement/exercise type words
 MOVEMENT_WORDS = [
     'press', 'row', 'curl', 'extension', 'raise', 'fly', 'flye', 'pulldown',
     'pull down', 'pull up', 'chin up', 'push up', 'dip', 'squat', 'lunge',
-    'deadlift', 'shrug', 'crunch', 'plank', 'hold', 'walk', 'carry'
+    'deadlift', 'shrug', 'crunch', 'plank', 'hold', 'walk', 'carry', 'thrust',
+    'kickback', 'pushdown',
 ]
-
-# Special case patterns for common exercises
-SPECIAL_PATTERNS = {
-    r'\bbench\s+press\b': 'barbell bench press',
-    r'\bsquat\b(?!\s+(rack|stand))': 'barbell squat',
-    r'\bdeadlift\b(?!\s+romanian)': 'barbell deadlift',
-    r'\boverhead\s+press\b': 'barbell overhead press',
-    r'\bmilitary\s+press\b': 'barbell military press',
-    r'\bpush\s*ups?\b': 'push up',
-    r'\bpull\s*ups?\b': 'pull up',
-    r'\bchin\s*ups?\b': 'chin up',
-    r'\bdips?\b(?!\s+machine)': 'dip',
-    r'\bplank\b': 'plank',
-}
 
 
 def normalize_exercise_name(name, equipment_type=None):
     """
-    Normalize exercise name through multiple stages:
-    1. Cleaning (trim, lowercase, remove special chars)
-    2. Abbreviation expansion
-    3. Special pattern matching
-    4. Word reordering
-    5. Title case formatting
+    Normalize an exercise name to canonical bare form.
+
+    Pipeline:
+      1. Clean (trim, remove special chars, lowercase)
+      2. Expand abbreviations
+      3. Strip equipment words matching equipment_type (if provided)
+      4. Reorder words: [Position] [Target] [Movement]
+      5. Title case + special-case fixes
 
     Args:
-        name (str): The exercise name to normalize
+        name (str): Raw exercise name entered by user.
+        equipment_type (str | None): One of barbell, free_weight, cable,
+            machine, bodyweight, or None (untagged).
 
     Returns:
-        str: The normalized exercise name
+        str: Canonical bare name in Title Case.
     """
     if not name or not name.strip():
         return name
 
-    # Stage 1: Cleaning
+    # Stage 1: Clean
     name = name.strip()
-    # Remove special characters except spaces, hyphens, and apostrophes
     name = re.sub(r'[^\w\s\-\']', '', name)
-    # Convert to lowercase for processing
     name = name.lower()
-    # Remove extra spaces
     name = ' '.join(name.split())
 
-    # Stage 2: Apply special patterns first (e.g., "bench press" → "barbell bench press")
-    for pattern, replacement in SPECIAL_PATTERNS.items():
-        name = re.sub(pattern, replacement, name, flags=re.IGNORECASE)
+    # Stage 2: Expand abbreviations
+    words = name.split()
+    expanded = []
+    i = 0
+    while i < len(words):
+        # Try 2-word abbreviation first
+        if i < len(words) - 1:
+            two_word = f"{words[i]} {words[i+1]}"
+            if two_word in ABBREVIATIONS:
+                expanded.append(ABBREVIATIONS[two_word])
+                i += 2
+                continue
+        # Single-word abbreviation
+        if words[i] in ABBREVIATIONS:
+            expanded.append(ABBREVIATIONS[words[i]])
+        else:
+            expanded.append(words[i])
+        i += 1
+    name = ' '.join(expanded)
 
-    # Stage 2b: Strip equipment words when equipment_type is tracked as a separate field
+    # Stage 3: Strip equipment words for the declared equipment_type
     if equipment_type and equipment_type in EQUIPMENT_TYPE_WORDS:
         for eq_word in EQUIPMENT_TYPE_WORDS[equipment_type]:
             # Remove the equipment word wherever it appears (start, middle, end)
-            name = re.sub(rf'\b{re.escape(eq_word)}\b', '', name)
+            name = re.sub(rf'\b{re.escape(eq_word)}\b', '', name, flags=re.IGNORECASE)
         name = ' '.join(name.split())  # collapse extra spaces
 
-    # Stage 3: Expand abbreviations
-    words = name.split()
-    expanded_words = []
-
-    i = 0
-    while i < len(words):
-        word = words[i]
-
-        # Check for multi-word abbreviations (like "leg ext")
-        if i < len(words) - 1:
-            two_word = f"{word} {words[i+1]}"
-            if two_word in ABBREVIATIONS:
-                expanded_words.append(ABBREVIATIONS[two_word])
-                i += 2
-                continue
-
-        # Single word abbreviation
-        if word in ABBREVIATIONS:
-            expanded_words.append(ABBREVIATIONS[word])
-        else:
-            expanded_words.append(word)
-
-        i += 1
-
-    name = ' '.join(expanded_words)
-
-    # Stage 4: Word reordering for consistency
+    # Stage 4: Reorder words to [Position] [Target] [Movement]
     name = reorder_exercise_words(name)
 
-    # Stage 5: Title case and special formatting
+    # Stage 5: Title case + special-case fixes
     name = name.title()
-
-    # Fix special cases that shouldn't be title-cased normally
     name = name.replace('Ez Bar', 'EZ Bar')
     name = name.replace('T-Bar', 'T-Bar')
     name = re.sub(r'\bDb\b', 'DB', name)
     name = re.sub(r'\bBb\b', 'BB', name)
-
-    # Fix common multi-word terms
     name = re.sub(r'\bRomanian Deadlift\b', 'Romanian Deadlift', name)
-    name = re.sub(r'\bSmith Machine\b', 'Smith Machine', name)
 
     return name
 
 
 def reorder_exercise_words(name):
     """
-    Reorder words in exercise name to follow standard format:
-    [Equipment] [Position/Angle] [Muscle/Target] [Movement]
+    Reorder words in an exercise name to follow the standard bare-name format:
+    [Position/Angle] [Target/Qualifier] [Movement]
 
     Examples:
-        "press incline dumbbell" → "dumbbell incline press"
-        "row cable seated" → "cable seated row"
+        "incline press" → "incline press"  (already correct)
+        "press incline" → "incline press"
+        "row seated cable" → "seated row"  (cable already stripped upstream)
     """
     words = name.split()
+    if not words:
+        return name
 
-    # Categorize words
-    equipment = []
     position = []
     movement = []
     other = []
+    processed = set()
 
-    # Build multi-word phrases first
     i = 0
-    processed_indices = set()
-
     while i < len(words):
-        if i in processed_indices:
+        if i in processed:
             i += 1
             continue
 
-        # Check for multi-word equipment/positions
+        # Check 2-word phrases
         if i < len(words) - 1:
             two_word = f"{words[i]} {words[i+1]}"
-
-            if two_word in EQUIPMENT_WORDS:
-                equipment.append(two_word)
-                processed_indices.add(i)
-                processed_indices.add(i+1)
-                i += 2
-                continue
-            elif two_word in POSITION_WORDS:
+            if two_word in POSITION_WORDS:
                 position.append(two_word)
-                processed_indices.add(i)
-                processed_indices.add(i+1)
+                processed.add(i)
+                processed.add(i + 1)
                 i += 2
                 continue
-            elif two_word in MOVEMENT_WORDS:
+            if two_word in MOVEMENT_WORDS:
                 movement.append(two_word)
-                processed_indices.add(i)
-                processed_indices.add(i+1)
+                processed.add(i)
+                processed.add(i + 1)
                 i += 2
                 continue
 
-        # Single word categorization
         word = words[i]
-        if word in EQUIPMENT_WORDS:
-            equipment.append(word)
-            processed_indices.add(i)
-        elif word in POSITION_WORDS:
+        if word in POSITION_WORDS:
             position.append(word)
-            processed_indices.add(i)
+            processed.add(i)
         elif word in MOVEMENT_WORDS:
             movement.append(word)
-            processed_indices.add(i)
+            processed.add(i)
         else:
             other.append(word)
-            processed_indices.add(i)
+            processed.add(i)
 
         i += 1
 
-    # Reconstruct in standard order
-    result = []
-    result.extend(equipment)
-    result.extend(position)
-    result.extend(other)
-    result.extend(movement)
-
+    result = position + other + movement
     return ' '.join(result) if result else name
 
 
-def preview_exercise_normalization(exercise_names):
+def preview_exercise_normalization(exercise_records):
     """
-    Preview what normalization would do to a list of exercise names
+    Preview what normalization would do to a list of (name, equipment_type) records.
 
     Args:
-        exercise_names (list): List of exercise names to preview
+        exercise_records (list): List of dicts with 'name' and 'equipment_type' keys.
 
     Returns:
-        list: List of dicts with 'original', 'normalized', and 'changed' keys
+        list: List of dicts with 'original', 'normalized', 'equipment_type', 'changed'.
     """
     preview = []
-
-    for name in exercise_names:
-        normalized = normalize_exercise_name(name)
+    for rec in exercise_records:
+        name = rec.get('name', '')
+        equip = rec.get('equipment_type')
+        normalized = normalize_exercise_name(name, equip)
         preview.append({
             'original': name,
             'normalized': normalized,
-            'changed': name != normalized
+            'equipment_type': equip,
+            'changed': name != normalized,
         })
-
     return preview
