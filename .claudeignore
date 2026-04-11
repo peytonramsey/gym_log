@@ -1,0 +1,12 @@
+# .claudeignore
+node_modules/
+dist/
+build/
+.git/
+*.min.js
+*.min.css
+assets/images/
+*.png
+*.jpg
+*.svg
+package-lock.json
