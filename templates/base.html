@@ -292,6 +292,16 @@
             <i class="bi bi-graph-up" aria-hidden="true"></i>
             <span>Progress</span>
         </a>
+        <a href="/strength" class="bottom-nav__item {% if request.path == '/strength' %}active{% endif %}"
+           {% if request.path == '/strength' %}aria-current="page"{% endif %}>
+            <i class="bi bi-bar-chart-steps" aria-hidden="true"></i>
+            <span>Strength</span>
+        </a>
+        <a href="/guide" class="bottom-nav__item {% if request.path == '/guide' %}active{% endif %}"
+           {% if request.path == '/guide' %}aria-current="page"{% endif %}>
+            <i class="bi bi-book" aria-hidden="true"></i>
+            <span>Guide</span>
+        </a>
     </nav>
     {% endif %}
 

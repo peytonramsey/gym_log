@@ -1,0 +1,35 @@
+[
+  {
+    "id": "exrx-squat-001",
+    "text": "Back Squat — Setup, Bar Position, and Stance\n\nBar position — High bar vs. Low bar:\nHigh bar: Bar rests on the upper trapezius shelf, just below C7. Torso stays more upright, knees track further over toes, greater quad dominance. Preferred in Olympic weightlifting and for athletes requiring upright torso mechanics.\nLow bar: Bar rests across the rear deltoids, roughly 2–3 inches lower. Creates a more forward torso lean, shorter moment arm at the knee, longer at the hip — shifts emphasis toward the posterior chain (hamstrings, glutes, erectors). Preferred in powerlifting for maximal load capacity.\n\nStance width: No universal correct stance — individual hip anatomy (femur neck angle and acetabular depth) determines the optimal stance. General guidelines: shoulder-width to slightly wider; toes pointed out 15–35 degrees. A wider stance with more toe-out reduces the demand for hip internal rotation at depth and allows greater range of motion for many athletes. Narrow stance with toes forward is appropriate for those with deeper acetabular sockets.\n\nFoot contact: Maintain a tripod base — heel, base of the big toe, and base of the little toe all in contact with the floor throughout. Avoid heel rise (limited dorsiflexion) or medial arch collapse (knee cave).\n\nGrip: As narrow as shoulder mobility allows while keeping the wrists neutral. Elbows point down and slightly back (not flaring up) to create the upper back shelf for low-bar, or to brace the traps for high-bar.",
+    "metadata": {
+      "source": "ExRx",
+      "exercise_name": "Back Squat",
+      "muscle_group": "Quads / Posterior Chain",
+      "movement_pattern": "Squat",
+      "url": "https://exrx.net/WeightExercises/Quadriceps/BBSquat"
+    }
+  },
+  {
+    "id": "exrx-squat-002",
+    "text": "Back Squat — Descent, Depth, and Ascent\n\nDescent: Initiate by pushing the knees out and hinging at the hips simultaneously — do not initiate by shooting the hips back (that becomes a good morning) or by collapsing forward. Take 2–3 seconds to lower under control. Maintain upper back tightness throughout.\n\nKnee tracking: Knees should track over the second and third toes at all times. Valgus collapse (knees caving in) indicates weak hip abductors or adductor dominance. Cue: 'spread the floor apart' or use a band above the knees during warm-up sets.\n\nDepth: A minimum of parallel (hip crease at or below the top of the patella) is the standard for a competition squat. Full depth (ATG — ass to grass) is achievable with adequate ankle dorsiflexion and hip mobility and is not inherently risky for healthy athletes. Partial squats (above parallel) do not fully load the posterior chain and are generally not recommended as a primary movement unless injury requires.\n\nButt wink: Posterior pelvic tilt at the bottom (the pelvis tucks under) indicates the athlete has exceeded their usable hip flexion range. Solutions: reduce depth to just above where the wink occurs, improve hip flexor and hamstring flexibility, or adjust stance width.\n\nAscent: Drive up by pushing the floor away — lead with the chest, not the hips. For low-bar, a slight hip-first ascent is normal; correct it if the torso becomes too horizontal. Maintain brace and bar pressure throughout. Lock out fully at the top — hips and knees extended, glutes squeezed.",
+    "metadata": {
+      "source": "ExRx",
+      "exercise_name": "Back Squat",
+      "muscle_group": "Quads / Posterior Chain",
+      "movement_pattern": "Squat",
+      "url": "https://exrx.net/WeightExercises/Quadriceps/BBSquat"
+    }
+  },
+  {
+    "id": "ace-squat-001",
+    "text": "Back Squat — Muscles, Breathing, and Common Errors\n\nPrimary movers: Quadriceps (all four heads, with vastus medialis and intermedius as key stabilizers), gluteus maximus, hamstrings (hip extension, especially in low-bar). Adductor magnus contributes meaningfully to hip extension at the bottom.\n\nSecondary: Erector spinae (isometric), gastrocnemius, soleus (ankle stabilizers), core musculature (intra-abdominal pressure).\n\nBreathing and bracing: Take a full breath into the belly (360-degree expansion), brace the core maximally, hold it for the entire rep — inhale at the top, exhale at or after lockout. This Valsalva maneuver substantially increases intra-abdominal pressure and spinal stability. Do not exhale at the bottom.\n\nCommon errors:\n1. Knees caving (valgus) — often driven by weak hip abductors or fatigue. Fix: cue 'knees out,' use hip circle bands in warm-up.\n2. Heel rise — limited ankle dorsiflexion. Fix: elevate heels on plates, or add ankle mobility work (ankle circles, calf stretching, wall ankle stretches).\n3. Good morning squat — hips rise faster than the bar on ascent, converting the squat to a hip hinge. Fix: lead with the chest, not the hips; cue 'elbows down.'\n4. Forward lean (excessive) — often mobility-limited for high-bar; normal for low-bar but can indicate tight hip flexors. Fix: work on hip flexor and ankle mobility.\n5. Shallow depth — reduces stimulus to glutes and hamstrings and builds a false 1RM. Fix: use box squats to groove depth, then remove box.",
+    "metadata": {
+      "source": "ACE",
+      "exercise_name": "Back Squat",
+      "muscle_group": "Quads / Posterior Chain",
+      "movement_pattern": "Squat",
+      "url": null
+    }
+  }
+]

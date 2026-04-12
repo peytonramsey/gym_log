@@ -11,6 +11,8 @@ from utils import normalize_exercise_name
 
 load_dotenv()
 
+ML_SERVICE_URL = os.getenv("ML_SERVICE_URL", "http://localhost:8001")
+
 # App version
 VERSION = "3.0.1"
 
@@ -1016,6 +1018,9 @@ def log_workout():
             db.session.add(exercise)
 
         db.session.commit()
+        if not is_rest_day:
+            _fire_1rm_invalidate(current_user.id, [ex['name'] for ex in data.get('exercises', [])])
+        _fire_fatigue_invalidate(current_user.id)
         return jsonify({'success': True, 'workout_id': workout.id})
 
     return render_template('log.html')
@@ -1227,6 +1232,10 @@ def complete_draft_workout():
     # Mark as complete (no longer a draft)
     draft.is_draft = False
     db.session.commit()
+
+    if 'exercises' in data:
+        _fire_1rm_invalidate(current_user.id, [ex['name'] for ex in data.get('exercises', [])])
+    _fire_fatigue_invalidate(current_user.id)
 
     return jsonify({'success': True, 'workout_id': draft.id, 'workout': draft.to_dict()})
 
@@ -2732,6 +2741,178 @@ def hybrid_stat():
         'has_data': True,
         'balance':  balance_data,
     })
+
+
+# ---------------------------------------------------------------------------
+# Bayesian 1RM proxy — routes on Flask (port 8000) that forward to the
+# ML microservice (port 8001), injecting user_id from the session.
+# ---------------------------------------------------------------------------
+
+# Name variants that map to a tracked 1RM movement slug
+_1RM_SLUG_MAP: dict[str, str] = {
+    "Back Squat": "back-squat", "Back Squats": "back-squat",
+    "Squat": "back-squat", "Squats": "back-squat",
+    "Conventional Deadlift": "conventional-deadlift",
+    "Deadlift": "conventional-deadlift", "Deadlifts": "conventional-deadlift",
+    "Bench Press (Flat Barbell)": "bench-press", "Bench Press": "bench-press",
+    "Overhead Press (Standing Barbell)": "overhead-press",
+    "Overhead Press": "overhead-press", "OHP": "overhead-press",
+    "Shoulder Press": "overhead-press",
+    "Romanian Deadlift": "romanian-deadlift",
+    "Romanian Deadlifts": "romanian-deadlift", "RDL": "romanian-deadlift",
+    "Barbell Row": "barbell-row", "Barbell Rows": "barbell-row",
+    "Rows": "barbell-row", "BB Row": "barbell-row",
+}
+
+
+def _fire_fatigue_invalidate(user_id: int) -> None:
+    """Fire-and-forget fatigue cache invalidation.
+
+    Errors are silently swallowed — workout saves must never fail because
+    of ML service availability.
+    """
+    try:
+        requests.post(
+            f"{ML_SERVICE_URL}/api/ml/fatigue/invalidate",
+            json={"user_id": user_id},
+            timeout=2,
+        )
+    except Exception:
+        pass
+
+
+def _fire_1rm_invalidate(user_id: int, exercise_names: list) -> None:
+    """Fire-and-forget 1RM cache invalidation for any tracked movements.
+
+    Errors are silently swallowed — workout saves must never fail because
+    of ML service availability.
+    """
+    seen_slugs: set[str] = set()
+    for name in exercise_names:
+        slug = _1RM_SLUG_MAP.get(name)
+        if slug and slug not in seen_slugs:
+            seen_slugs.add(slug)
+            try:
+                requests.post(
+                    f"{ML_SERVICE_URL}/api/ml/bayesian/1rm/update",
+                    json={"movement": slug, "weight": 0.0, "reps": 0, "user_id": user_id},
+                    timeout=2,
+                )
+            except Exception:
+                pass
+
+
+@app.route('/api/1rm/update', methods=['POST'])
+@login_required
+def proxy_1rm_update():
+    """Proxy POST /api/1rm/update → ML service, injecting user_id from session."""
+    data = request.get_json() or {}
+    data["user_id"] = current_user.id
+    try:
+        resp = requests.post(
+            f"{ML_SERVICE_URL}/api/ml/bayesian/1rm/update",
+            json=data,
+            timeout=30,
+        )
+        return jsonify(resp.json()), resp.status_code
+    except requests.exceptions.RequestException:
+        return jsonify({"updated": False, "error": "ml_service_unavailable"}), 503
+
+
+@app.route('/api/1rm/<movement>')
+@login_required
+def proxy_1rm(movement):
+    """Proxy GET /api/1rm/{movement} → ML service, injecting user_id from session."""
+    try:
+        resp = requests.get(
+            f"{ML_SERVICE_URL}/api/ml/bayesian/1rm/{movement}",
+            params={"user_id": current_user.id},
+            timeout=30,
+        )
+        return jsonify(resp.json()), resp.status_code
+    except requests.exceptions.RequestException:
+        return jsonify({"error": "ml_service_unavailable"}), 503
+
+
+@app.route('/api/rag/query', methods=['POST'])
+@login_required
+def proxy_rag_query():
+    """Proxy POST /api/rag/query → ML service, injecting user_id from session."""
+    data = request.get_json() or {}
+    data["user_id"] = current_user.id
+    try:
+        resp = requests.post(
+            f"{ML_SERVICE_URL}/api/ml/rag/query",
+            json=data,
+            timeout=30,
+        )
+        return jsonify(resp.json()), resp.status_code
+    except requests.exceptions.RequestException:
+        return jsonify({"error": "ml_service_unavailable"}), 503
+
+
+
+# ---------------------------------------------------------------------------
+# Fatigue / ACWR proxy — routes on Flask (port 8000) that forward to the
+# ML microservice (port 8001), injecting user_id from the session.
+# ---------------------------------------------------------------------------
+
+@app.route('/api/fatigue/status')
+@login_required
+def proxy_fatigue_status():
+    """Proxy GET /api/fatigue/status → ML service, injecting user_id from session."""
+    try:
+        resp = requests.get(
+            f"{ML_SERVICE_URL}/api/ml/fatigue/status",
+            params={"user_id": current_user.id},
+            timeout=10,
+        )
+        return jsonify(resp.json()), resp.status_code
+    except requests.exceptions.RequestException:
+        return jsonify({"error": "ml_service_unavailable"}), 503
+
+
+@app.route('/api/fatigue/history')
+@login_required
+def proxy_fatigue_history():
+    """Proxy GET /api/fatigue/history → ML service, injecting user_id from session."""
+    days = request.args.get('days', 28)
+    try:
+        resp = requests.get(
+            f"{ML_SERVICE_URL}/api/ml/fatigue/history",
+            params={"user_id": current_user.id, "days": days},
+            timeout=10,
+        )
+        return jsonify(resp.json()), resp.status_code
+    except requests.exceptions.RequestException:
+        return jsonify({"error": "ml_service_unavailable"}), 503
+
+
+@app.route('/api/fatigue/invalidate', methods=['POST'])
+@login_required
+def proxy_fatigue_invalidate():
+    """Proxy POST /api/fatigue/invalidate → ML service."""
+    try:
+        resp = requests.post(
+            f"{ML_SERVICE_URL}/api/ml/fatigue/invalidate",
+            json={"user_id": current_user.id},
+            timeout=5,
+        )
+        return jsonify(resp.json()), resp.status_code
+    except requests.exceptions.RequestException:
+        return jsonify({"invalidated": False, "error": "ml_service_unavailable"}), 503
+
+
+@app.route('/strength')
+@login_required
+def strength():
+    return render_template('strength.html')
+
+
+@app.route('/guide')
+@login_required
+def guide():
+    return render_template('guide.html')
 
 
 if __name__ == '__main__':

@@ -1,0 +1,323 @@
+{% extends "base.html" %}
+
+{% block title %}Strength — FitGlyph{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ── Page heading ──────────────────────────────────────────── */
+    .str-heading {
+        font-family: var(--font-display);
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--text);
+        margin: 0 0 4px;
+    }
+
+    .str-subhead {
+        font-family: var(--font-body);
+        font-size: 13px;
+        color: var(--text-muted);
+        margin: 0 0 20px;
+    }
+
+    /* ── Movement grid ─────────────────────────────────────────── */
+    .str-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    @media (max-width: 520px) {
+        .str-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ── Individual movement card ──────────────────────────────── */
+    .str-card {
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-card);
+        padding: 14px 14px 12px;
+        box-shadow: var(--shadow-card);
+        /* no colored left border — constitution anti-pattern */
+    }
+
+    .str-card__label {
+        font-family: var(--font-body);
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--text-faint);
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        margin: 0 0 10px;
+    }
+
+    /* ── Loading / error states ────────────────────────────────── */
+    .str-card--skeleton {
+        min-height: 118px;
+        display: flex;
+        align-items: center;
+    }
+
+    .str-card__status {
+        font-family: var(--font-body);
+        font-size: 12px;
+        color: var(--text-faint);
+        opacity: 0.45;
+    }
+
+    /* ── 1RM mean row ──────────────────────────────────────────── */
+    .one-rm__mean-row {
+        display: flex;
+        align-items: baseline;
+        gap: 5px;
+        margin-bottom: 10px;
+    }
+
+    .one-rm__mean {
+        font-family: var(--font-display);
+        font-size: 40px;
+        font-weight: 700;
+        line-height: 1;
+        color: var(--text);
+        font-variant-numeric: tabular-nums;
+    }
+
+    .one-rm__unit {
+        font-family: var(--font-body);
+        font-size: 16px;
+        line-height: 1;
+        color: var(--text-muted);
+    }
+
+    /* ── HDI range bar — flat, NO gradient fill ────────────────── */
+    .one-rm__range-wrap {
+        position: relative;
+        height: 6px;
+        background: var(--border);
+        border-radius: 3px;
+        margin-bottom: 6px;
+        overflow: visible;
+    }
+
+    .one-rm__range-fill {
+        position: absolute;
+        top: 0;
+        height: 100%;
+        border-radius: 3px;
+        background: rgba(79, 152, 163, 0.40); /* accent @ 40% — NOT gradient */
+    }
+
+    .one-rm__range-tick {
+        position: absolute;
+        top: -3px;
+        width: 2px;
+        height: 12px;
+        background: #4f98a3;
+        border-radius: 1px;
+        transform: translateX(-50%);
+    }
+
+    /* ── Bounds row ────────────────────────────────────────────── */
+    .one-rm__bounds {
+        display: flex;
+        justify-content: space-between;
+        font-family: var(--font-body);
+        font-size: 11px;
+        color: var(--text-muted);
+        font-variant-numeric: tabular-nums;
+        margin-bottom: 4px;
+    }
+
+    /* ── CI label + uncertainty row ────────────────────────────── */
+    .one-rm__label-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .one-rm__ci-label {
+        font-family: var(--font-body);
+        font-size: 10px;
+        color: var(--text-faint);
+        letter-spacing: 0.02em;
+    }
+
+    .one-rm__uncertainty {
+        font-family: var(--font-body);
+        font-size: 10px;
+        color: var(--warning);
+    }
+
+    .one-rm__obs {
+        font-family: var(--font-body);
+        font-size: 10px;
+        color: var(--text-faint);
+        margin-left: auto;
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* ── Reduced motion ────────────────────────────────────────── */
+    @media (prefers-reduced-motion: reduce) {
+        .str-card { transition: none; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 class="str-heading">Strength</h1>
+<p class="str-subhead">Bayesian 1RM estimates · 94% credible interval</p>
+
+<section class="str-grid" id="str-grid" aria-label="Compound movement 1RM estimates">
+    <!-- Cards injected by JS -->
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ── Movement registry ───────────────────────────────────────────────────────
+// Ordered: most structurally loaded → most technically demanding
+const MOVEMENTS = [
+    { slug: 'back-squat',             label: 'Back Squat' },
+    { slug: 'conventional-deadlift',  label: 'Conventional Deadlift' },
+    { slug: 'bench-press',            label: 'Bench Press' },
+    { slug: 'overhead-press',         label: 'Overhead Press' },
+    { slug: 'romanian-deadlift',      label: 'Romanian Deadlift' },
+    { slug: 'barbell-row',            label: 'Barbell Row' },
+];
+
+// ── Boot ────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    const grid = document.getElementById('str-grid');
+
+    // Render skeleton cards immediately so layout is stable
+    MOVEMENTS.forEach(m => {
+        const card = buildSkeletonCard(m);
+        grid.appendChild(card);
+    });
+
+    // Fire all six fetches in parallel — fill in as they resolve
+    MOVEMENTS.forEach(m => fetch1RM(m));
+});
+
+// ── Build skeleton placeholder ───────────────────────────────────────────────
+function buildSkeletonCard({ slug, label }) {
+    const article = document.createElement('article');
+    article.className = 'str-card str-card--skeleton';
+    article.id = `str-card-${slug}`;
+    article.setAttribute('aria-label', `${label} 1RM loading`);
+    article.innerHTML = `
+        <div>
+            <p class="str-card__label">${escHtml(label)}</p>
+            <span class="str-card__status">Loading estimate…</span>
+        </div>`;
+    return article;
+}
+
+// ── Fetch 1RM from proxy route ───────────────────────────────────────────────
+function fetch1RM({ slug, label }) {
+    fetch(`/api/1rm/${slug}`)
+        .then(r => r.json().then(data => ({ status: r.status, data })))
+        .then(({ status, data }) => {
+            const card = document.getElementById(`str-card-${slug}`);
+            if (!card) return;
+
+            if (status !== 200 || data.error) {
+                renderErrorCard(card, label, data.message || 'No logged sets found for this movement');
+                return;
+            }
+            renderRMCard(card, label, data);
+        })
+        .catch(() => {
+            const card = document.getElementById(`str-card-${slug}`);
+            if (card) renderErrorCard(card, label, 'Could not reach 1RM service');
+        });
+}
+
+// ── Render error state (degraded, no broken UI) ──────────────────────────────
+function renderErrorCard(cardEl, label, message) {
+    cardEl.classList.remove('str-card--skeleton');
+    cardEl.setAttribute('aria-label', `${label} — ${message}`);
+    cardEl.innerHTML = `
+        <div>
+            <p class="str-card__label">${escHtml(label)}</p>
+            <span class="str-card__status">${escHtml(message)}</span>
+        </div>`;
+}
+
+// ── Render populated 1RM card ────────────────────────────────────────────────
+/**
+ * Layout (from ML_FEATURES.md spec):
+ *
+ *   [posterior_mean]  lbs
+ *    ──────[═══════════]──────
+ *    [hdi_lower]        [hdi_upper]
+ *    94% credible interval
+ *
+ *  - Posterior mean: --text-2xl Cabinet Grotesk bold, tabular-nums — hero number
+ *  - Range bar: flat accent @ 40% opacity, full-opacity tick at mean — NO gradient
+ *  - Bounds: --text-sm Satoshi, --color-text-muted, tabular-nums
+ *  - CI label: --text-xs, --color-text-faint
+ *  - uncertainty_note shown in --color-warning if n_observations < 6
+ */
+function renderRMCard(cardEl, label, data) {
+    const { posterior_mean, hdi_lower, hdi_upper, n_observations, uncertainty_note } = data;
+
+    // Range bar geometry: 50% symmetric margins around the HDI span
+    const span      = hdi_upper - hdi_lower;
+    const margin    = span * 0.50;
+    const rangeMin  = hdi_lower  - margin;
+    const rangeMax  = hdi_upper  + margin;
+    const total     = rangeMax   - rangeMin;
+
+    const fillLeft  = ((hdi_lower     - rangeMin) / total * 100).toFixed(2);
+    const fillWidth = ((hdi_upper     - hdi_lower) / total * 100).toFixed(2);
+    const tickLeft  = ((posterior_mean - rangeMin) / total * 100).toFixed(2);
+
+    // Observation count label
+    const obsLabel = n_observations != null
+        ? `${n_observations} set${n_observations !== 1 ? 's' : ''}`
+        : '';
+
+    // Uncertainty note only shown when n_observations < 6
+    const uncertaintyHtml = (uncertainty_note && n_observations != null && n_observations < 6)
+        ? `<span class="one-rm__uncertainty">${escHtml(uncertainty_note)}</span>`
+        : '';
+
+    cardEl.classList.remove('str-card--skeleton');
+    cardEl.setAttribute('aria-label',
+        `${label}: estimated 1RM ${posterior_mean.toFixed(1)} lbs, 94% credible interval ${hdi_lower.toFixed(1)}–${hdi_upper.toFixed(1)} lbs`);
+
+    cardEl.innerHTML = `
+        <p class="str-card__label">${escHtml(label)}</p>
+
+        <div class="one-rm__mean-row">
+            <span class="one-rm__mean">${posterior_mean.toFixed(1)}</span>
+            <span class="one-rm__unit">lbs</span>
+        </div>
+
+        <div class="one-rm__range-wrap" role="img" aria-hidden="true">
+            <div class="one-rm__range-fill" style="left:${fillLeft}%;width:${fillWidth}%"></div>
+            <div class="one-rm__range-tick" style="left:${tickLeft}%"></div>
+        </div>
+
+        <div class="one-rm__bounds">
+            <span>${hdi_lower.toFixed(1)}</span>
+            <span>${hdi_upper.toFixed(1)}</span>
+        </div>
+
+        <div class="one-rm__label-row">
+            <span class="one-rm__ci-label">94% credible interval</span>
+            ${uncertaintyHtml}
+            ${obsLabel ? `<span class="one-rm__obs">${escHtml(obsLabel)}</span>` : ''}
+        </div>`;
+}
+
+// ── Utility ──────────────────────────────────────────────────────────────────
+function escHtml(str) {
+    const d = document.createElement('div');
+    d.appendChild(document.createTextNode(str || ''));
+    return d.innerHTML;
+}
+</script>
+{% endblock %}

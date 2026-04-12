@@ -391,12 +391,150 @@ body.dark-mode h3, body.dark-mode h4 {
         animation: none !important;
     }
 }
+
+/* ── Readiness Panel ───────────────────────────────────────────────── */
+.readiness {
+    padding: 32px 0 36px;
+    border-bottom: 1px solid var(--border);
+}
+
+.readiness--cold {
+    opacity: 0.6;
+}
+
+.readiness--unavailable {
+    opacity: 1;
+}
+
+.readiness__section-label {
+    font-size: 11px;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-family: var(--font-body);
+    font-weight: 500;
+    display: block;
+    margin-bottom: 14px;
+}
+
+.readiness__hero {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 4px;
+}
+
+.readiness__hero .t-num {
+    font-size: 40px;
+}
+
+.readiness__zone {
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.readiness__zone--optimal      { color: var(--success); }
+.readiness__zone--caution      { color: var(--warning); }
+.readiness__zone--high-risk    { color: var(--warning); }
+.readiness__zone--undertrained { color: var(--text-muted); }
+.readiness__zone--unavailable  { color: var(--text-faint); }
+
+.readiness__label {
+    font-size: 14px;
+    color: var(--text-muted);
+    font-family: var(--font-body);
+    margin-bottom: 20px;
+}
+
+.readiness__metrics {
+    display: flex;
+    gap: 40px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.readiness__metric {
+    display: flex;
+    flex-direction: column;
+}
+
+.readiness__metric .t-num {
+    font-size: 20px;
+}
+
+.readiness__cold-note {
+    font-size: 12px;
+    color: var(--text-faint);
+    font-family: var(--font-body);
+    margin-top: 10px;
+}
+
+.readiness__unavailable-note {
+    font-size: 12px;
+    color: var(--text-faint);
+    font-family: var(--font-body);
+    font-variant-numeric: tabular-nums;
+}
+
+.readiness__sparkline {
+    display: block;
+    width: 100%;
+    height: 64px;
+}
+
+@media (max-width: 480px) {
+    .readiness__hero .t-num { font-size: 36px; }
+    .readiness__metrics { gap: 24px; }
+}
 </style>
 {% endblock %}
 
 {% block content %}
 <main id="dashboard">
     <h1 class="vis-hidden">Training overview</h1>
+
+    <!-- ── Readiness Panel (ACWR / Fatigue Engine) ────────────────── -->
+    <section class="readiness" id="readiness-panel" aria-label="Training readiness">
+
+        <span class="readiness__section-label">Training Readiness</span>
+
+        <div class="readiness__hero" id="readiness-hero">
+            <span class="t-num" id="readiness-acwr">—</span>
+            <span class="readiness__zone" id="readiness-zone"></span>
+        </div>
+        <p class="readiness__label" id="readiness-label"></p>
+
+        <div class="readiness__metrics" id="readiness-metrics" hidden>
+            <div class="readiness__metric">
+                <div style="display:flex;align-items:baseline;gap:5px;">
+                    <span class="t-num" id="readiness-acute">—</span>
+                </div>
+                <span class="t-lbl">7d EWMA · acute load</span>
+            </div>
+            <div class="readiness__metric">
+                <div style="display:flex;align-items:baseline;gap:5px;">
+                    <span class="t-num" id="readiness-chronic">—</span>
+                </div>
+                <span class="t-lbl">28d EWMA · chronic load</span>
+            </div>
+            <div class="readiness__metric">
+                <div style="display:flex;align-items:baseline;gap:5px;">
+                    <span class="t-num" id="readiness-monotony">—</span>
+                </div>
+                <span class="t-lbl">7d window · monotony</span>
+            </div>
+        </div>
+
+        <canvas class="readiness__sparkline" id="readiness-sparkline" hidden
+                aria-hidden="true" width="640" height="64"></canvas>
+
+        <p class="readiness__cold-note" id="readiness-cold-note" hidden></p>
+        <p class="readiness__unavailable-note" id="readiness-unavailable-note" hidden>
+            Readiness data unavailable
+        </p>
+
+    </section>
 
     <!-- ── Level 1: What matters right now ─────────────────────────── -->
     <section class="l1" aria-label="Weekly progress">
@@ -490,6 +628,12 @@ body.dark-mode h3, body.dark-mode h4 {
             </a>
             <a href="/schedule">
                 My Schedule
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M6 3L11 8L6 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </a>
+            <a href="/guide">
+                Exercise Guide
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                     <path d="M6 3L11 8L6 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
@@ -770,5 +914,129 @@ body.dark-mode h3, body.dark-mode h4 {
             labelsEl.appendChild(label);
         });
     }
+    // ── Readiness Panel (ACWR / Fatigue Engine) ──────────────────────
+    (function initReadiness() {
+        var ZONE_LABELS = {
+            optimal:      'Optimal',
+            undertrained: 'Undertraining',
+            caution:      'Caution',
+            high_risk:    'High risk'
+        };
+
+        function zoneClass(zone) {
+            return 'readiness__zone--' + (zone === 'high_risk' ? 'high-risk' : zone);
+        }
+
+        function applyUnavailable() {
+            var panel = document.getElementById('readiness-panel');
+            panel.classList.add('readiness--unavailable');
+            document.getElementById('readiness-acwr').textContent = '\u2014';
+            var zoneEl = document.getElementById('readiness-zone');
+            zoneEl.textContent = '';
+            zoneEl.className = 'readiness__zone readiness__zone--unavailable';
+            document.getElementById('readiness-label').textContent = '';
+            document.getElementById('readiness-unavailable-note').hidden = false;
+        }
+
+        function drawSparkline(histData) {
+            var canvas = document.getElementById('readiness-sparkline');
+            if (!canvas || !canvas.getContext) return;
+            canvas.hidden = false;
+
+            // Scale canvas for devicePixelRatio
+            var dpr = window.devicePixelRatio || 1;
+            var cssW = canvas.offsetWidth || 600;
+            var cssH = 64;
+            canvas.width  = cssW * dpr;
+            canvas.height = cssH * dpr;
+            canvas.style.height = cssH + 'px';
+            var ctx = canvas.getContext('2d');
+            ctx.scale(dpr, dpr);
+
+            var acwrArr = histData.acwr || [];
+            if (acwrArr.length < 2) return;
+
+            var W = cssW;
+            var H = cssH;
+            var yMin = 0.5, yMax = 1.8;
+
+            function toY(v) {
+                return H - ((Math.min(Math.max(v, yMin), yMax) - yMin) / (yMax - yMin)) * H;
+            }
+            function toX(i) {
+                return (i / (acwrArr.length - 1)) * W;
+            }
+
+            // Zone bands
+            var bands = [
+                { lo: 0.8,  hi: 1.3,  color: 'oklch(from #6daa45 l c h / 0.06)' },
+                { lo: 1.3,  hi: 1.5,  color: 'oklch(from #bb653b l c h / 0.06)' },
+                { lo: 1.5,  hi: 1.8,  color: 'oklch(from #bb653b l c h / 0.12)' }
+            ];
+            bands.forEach(function(b) {
+                ctx.fillStyle = b.color;
+                ctx.fillRect(0, toY(b.hi), W, toY(b.lo) - toY(b.hi));
+            });
+
+            // ACWR line
+            ctx.beginPath();
+            ctx.strokeStyle = '#4f98a3';
+            ctx.lineWidth = 1;
+            ctx.lineJoin = 'round';
+            ctx.lineCap  = 'round';
+            acwrArr.forEach(function(v, i) {
+                if (i === 0) ctx.moveTo(toX(i), toY(v));
+                else         ctx.lineTo(toX(i), toY(v));
+            });
+            ctx.stroke();
+        }
+
+        // Fetch status
+        fetch('/api/fatigue/status')
+            .then(function(r) {
+                if (!r.ok) throw new Error('status ' + r.status);
+                return r.json();
+            })
+            .then(function(d) {
+                if (d.error) throw new Error(d.error);
+
+                var panel   = document.getElementById('readiness-panel');
+                var acwrEl  = document.getElementById('readiness-acwr');
+                var zoneEl  = document.getElementById('readiness-zone');
+                var labelEl = document.getElementById('readiness-label');
+
+                acwrEl.textContent = d.acwr.toFixed(2);
+
+                var zone      = d.acwr_zone || 'optimal';
+                zoneEl.textContent = ZONE_LABELS[zone] || zone;
+                zoneEl.className   = 'readiness__zone ' + zoneClass(zone);
+
+                labelEl.textContent = d.readiness_label || '';
+
+                // Secondary metrics
+                document.getElementById('readiness-acute').textContent    = Math.round(d.acute_load);
+                document.getElementById('readiness-chronic').textContent  = Math.round(d.chronic_load);
+                document.getElementById('readiness-monotony').textContent = d.monotony.toFixed(2);
+                document.getElementById('readiness-metrics').hidden       = false;
+
+                // Cold start
+                if (d.days_of_data < 28) {
+                    panel.classList.add('readiness--cold');
+                    var noteEl = document.getElementById('readiness-cold-note');
+                    noteEl.hidden = false;
+                    noteEl.textContent = 'Building baseline \u2014 ' + d.days_of_data + '/28 days';
+                    if (d.warning) noteEl.textContent = d.warning;
+                }
+
+                // Fetch history for sparkline
+                fetch('/api/fatigue/history?days=28')
+                    .then(function(r) { return r.ok ? r.json() : null; })
+                    .then(function(h) { if (h && !h.error) drawSparkline(h); })
+                    .catch(function() {});
+            })
+            .catch(function() {
+                applyUnavailable();
+            });
+    }());
 </script>
 {% endblock %}

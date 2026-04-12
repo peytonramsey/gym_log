@@ -1,0 +1,455 @@
+{% extends "base.html" %}
+
+{% block title %}Exercise Guide — FitGlyph{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ── Page header ────────────────────────────────────────────── */
+    .guide-header {
+        margin-bottom: 28px;
+    }
+
+    .guide-header h1 {
+        font-family: var(--font-display);
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--text);
+        margin: 0 0 6px;
+        line-height: 1.15;
+    }
+
+    .guide-header__sub {
+        font-family: var(--font-body);
+        font-size: 14px;
+        color: var(--text-muted);
+        margin: 0;
+    }
+
+    /* ── Query form ─────────────────────────────────────────────── */
+    .guide-form {
+        margin-bottom: 24px;
+    }
+
+    .guide__input-wrap {
+        display: flex;
+        gap: 8px;
+        align-items: stretch;
+    }
+
+    .guide__input-wrap input[type="text"] {
+        flex: 1;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-input);
+        color: var(--text);
+        font-family: var(--font-body);
+        font-size: 15px;
+        padding: 10px 14px;
+        outline: none;
+        transition: border-color 0.15s;
+        min-height: 44px;
+    }
+
+    .guide__input-wrap input[type="text"]::placeholder {
+        color: var(--text-faint);
+    }
+
+    .guide__input-wrap input[type="text"]:focus {
+        border-color: oklch(from #4f98a3 l c h / 0.60);
+        box-shadow: 0 0 0 2px oklch(from #4f98a3 l c h / 0.12);
+    }
+
+    /* Loading: opacity pulse on the input border */
+    @keyframes guide-border-pulse {
+        0%, 100% { border-color: var(--border); box-shadow: none; }
+        50%       { border-color: oklch(from #4f98a3 l c h / 0.50);
+                    box-shadow: 0 0 0 2px oklch(from #4f98a3 l c h / 0.10); }
+    }
+
+    .guide__input-wrap--loading input[type="text"] {
+        animation: guide-border-pulse 1.2s ease-in-out infinite;
+        pointer-events: none;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .guide__input-wrap--loading input[type="text"] {
+            animation: none;
+            border-color: oklch(from #4f98a3 l c h / 0.50);
+        }
+    }
+
+    .guide__submit {
+        background: var(--accent);
+        color: #0f0e0d;
+        border: none;
+        border-radius: var(--radius-btn);
+        font-family: var(--font-body);
+        font-size: 14px;
+        font-weight: 500;
+        padding: 0 20px;
+        min-height: 44px;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: opacity 0.15s;
+        flex-shrink: 0;
+    }
+
+    .guide__submit:hover   { opacity: 0.85; }
+    .guide__submit:active  { opacity: 0.70; }
+    .guide__submit:disabled {
+        opacity: 0.40;
+        cursor: not-allowed;
+    }
+
+    /* ── Exercise context badge ─────────────────────────────────── */
+    .guide__exercise-context {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 8px;
+        font-family: var(--font-body);
+        font-size: 12px;
+        color: var(--text-muted);
+    }
+
+    .guide__exercise-context-pill {
+        background: oklch(from #4f98a3 l c h / 0.10);
+        border: 1px solid oklch(from #4f98a3 l c h / 0.20);
+        border-radius: 9999px;
+        padding: 2px 10px;
+        font-size: 12px;
+        color: var(--accent);
+        font-family: var(--font-body);
+    }
+
+    .guide__clear-hint {
+        background: none;
+        border: none;
+        color: var(--text-faint);
+        font-size: 12px;
+        font-family: var(--font-body);
+        cursor: pointer;
+        padding: 0;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+        transition: color 0.15s;
+    }
+
+    .guide__clear-hint:hover { color: var(--text-muted); }
+
+    /* ── Response card ──────────────────────────────────────────── */
+    .guide-card {
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-card);
+        box-shadow: var(--shadow-card);
+        overflow: hidden;
+    }
+
+    .guide-card__answer {
+        padding: 20px 20px 16px;
+        font-family: var(--font-body);
+        font-size: 15px;
+        color: var(--text);
+        line-height: 1.65;
+        white-space: pre-wrap;
+    }
+
+    /* ── Workout context callout ────────────────────────────────── */
+    .guide-card__context {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        border-top: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+        background: var(--bg-raised);
+    }
+
+    .guide-card__context-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--accent);
+        opacity: 0.7;
+        flex-shrink: 0;
+    }
+
+    .guide-card__context-label {
+        font-family: var(--font-body);
+        font-size: 12px;
+        color: var(--text-muted);
+    }
+
+    /* ── Citations ──────────────────────────────────────────────── */
+    .guide-card__citations {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 12px 20px 16px;
+    }
+
+    .guide-card__citations:empty {
+        display: none;
+    }
+
+    .guide-citation-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background: oklch(from #4f98a3 l c h / 0.12);
+        color: var(--text-muted);
+        border-radius: 9999px;
+        font-family: var(--font-body);
+        font-size: 12px;
+        padding: 3px 10px 3px 10px;
+        text-decoration: none;
+        transition: background 0.15s, color 0.15s;
+        cursor: default;
+    }
+
+    a.guide-citation-pill {
+        cursor: pointer;
+    }
+
+    a.guide-citation-pill:hover {
+        background: oklch(from #4f98a3 l c h / 0.20);
+        color: var(--text);
+    }
+
+    .guide-citation-pill__icon {
+        width: 10px;
+        height: 10px;
+        opacity: 0.6;
+        flex-shrink: 0;
+    }
+
+    /* ── Error state ────────────────────────────────────────────── */
+    .guide-error {
+        padding: 14px 16px;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-card);
+    }
+
+    .guide-error__msg {
+        font-family: var(--font-body);
+        font-size: 14px;
+        color: var(--warning);
+        margin: 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<main>
+    <header class="guide-header">
+        <h1>Exercise Guide</h1>
+        <p class="guide-header__sub">
+            Ask about technique, cues, common errors, or stance for any lift.
+        </p>
+    </header>
+
+    <form class="guide-form" id="guide-form" novalidate>
+        <div class="guide__input-wrap" id="guide-input-wrap">
+            <input
+                type="text"
+                id="guide-input"
+                name="question"
+                placeholder="e.g. What are the cues for a proper Romanian deadlift?"
+                autocomplete="off"
+                autocorrect="off"
+                spellcheck="false"
+                aria-label="Exercise question"
+            />
+            <button type="submit" class="guide__submit" id="guide-submit">Ask</button>
+        </div>
+
+        <!-- Exercise hint badge — visible when ?exercise= param is present -->
+        <div id="guide-exercise-hint-badge" hidden>
+            <span class="guide__exercise-context">
+                Context:
+                <span class="guide__exercise-context-pill" id="guide-hint-label"></span>
+                <button type="button" class="guide__clear-hint" id="guide-clear-hint">clear</button>
+            </span>
+        </div>
+
+        <!-- Hidden field carries the exercise hint to the API -->
+        <input type="hidden" id="guide-exercise-hint" value="" />
+    </form>
+
+    <!-- Response card — hidden until a result arrives -->
+    <div id="guide-result" hidden>
+        <div class="guide-card">
+            <div class="guide-card__answer" id="guide-answer" aria-live="polite"></div>
+
+            <!-- Workout context callout — shown only when workout_context_used=true -->
+            <div class="guide-card__context" id="guide-context" hidden aria-label="Training context used">
+                <div class="guide-card__context-dot" aria-hidden="true"></div>
+                <span class="guide-card__context-label">Answer informed by your training history</span>
+            </div>
+
+            <!-- Citation pills -->
+            <div class="guide-card__citations" id="guide-citations" aria-label="Sources"></div>
+        </div>
+    </div>
+
+    <!-- Error state -->
+    <div id="guide-error" hidden>
+        <div class="guide-error">
+            <p class="guide-error__msg" id="guide-error-msg" role="alert"></p>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    'use strict';
+
+    const form       = document.getElementById('guide-form');
+    const inputEl    = document.getElementById('guide-input');
+    const wrapEl     = document.getElementById('guide-input-wrap');
+    const submitBtn  = document.getElementById('guide-submit');
+    const hintInput  = document.getElementById('guide-exercise-hint');
+    const hintBadge  = document.getElementById('guide-exercise-hint-badge');
+    const hintLabel  = document.getElementById('guide-hint-label');
+    const clearBtn   = document.getElementById('guide-clear-hint');
+
+    const resultEl   = document.getElementById('guide-result');
+    const answerEl   = document.getElementById('guide-answer');
+    const contextEl  = document.getElementById('guide-context');
+    const citationsEl = document.getElementById('guide-citations');
+    const errorEl    = document.getElementById('guide-error');
+    const errorMsg   = document.getElementById('guide-error-msg');
+
+    // ── Pre-fill exercise hint from URL ?exercise=Romanian+Deadlift ──
+    const params   = new URLSearchParams(location.search);
+    const exercise = params.get('exercise');
+    if (exercise) {
+        hintInput.value    = exercise;
+        hintLabel.textContent = exercise;
+        hintBadge.hidden   = false;
+    }
+
+    clearBtn.addEventListener('click', function () {
+        hintInput.value  = '';
+        hintBadge.hidden = true;
+        // Remove ?exercise from URL without a reload
+        const url = new URL(location.href);
+        url.searchParams.delete('exercise');
+        history.replaceState(null, '', url.toString());
+    });
+
+    // ── External link SVG (12×12) ─────────────────────────────────
+    function externalLinkSVG() {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('viewBox', '0 0 12 12');
+        svg.setAttribute('width',  '10');
+        svg.setAttribute('height', '10');
+        svg.setAttribute('fill', 'none');
+        svg.setAttribute('aria-hidden', 'true');
+        svg.classList.add('guide-citation-pill__icon');
+        svg.innerHTML =
+            '<path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7" ' +
+            'stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>' +
+            '<path d="M8 1h3m0 0v3m0-3L5.5 6.5" ' +
+            'stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>';
+        return svg;
+    }
+
+    // ── Loading state helpers ─────────────────────────────────────
+    function setLoading(on) {
+        if (on) {
+            wrapEl.classList.add('guide__input-wrap--loading');
+            submitBtn.disabled   = true;
+            inputEl.disabled     = true;
+        } else {
+            wrapEl.classList.remove('guide__input-wrap--loading');
+            submitBtn.disabled   = false;
+            inputEl.disabled     = false;
+            inputEl.focus();
+        }
+    }
+
+    // ── Render helpers ────────────────────────────────────────────
+    function renderCitations(citations) {
+        citationsEl.innerHTML = '';
+        if (!citations || citations.length === 0) return;
+
+        citations.forEach(function (c) {
+            const hasUrl = c.url && c.url.trim().length > 0;
+            const pill   = document.createElement(hasUrl ? 'a' : 'span');
+            pill.className = 'guide-citation-pill';
+
+            if (hasUrl) {
+                pill.href   = c.url;
+                pill.target = '_blank';
+                pill.rel    = 'noopener noreferrer';
+            }
+
+            // Source name text node
+            pill.appendChild(document.createTextNode(c.source));
+
+            // External link icon (only when URL present)
+            if (hasUrl) {
+                pill.appendChild(externalLinkSVG());
+            }
+
+            citationsEl.appendChild(pill);
+        });
+    }
+
+    // ── Form submit ───────────────────────────────────────────────
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const question = inputEl.value.trim();
+        if (!question) return;
+
+        // Reset previous state
+        resultEl.hidden  = true;
+        errorEl.hidden   = true;
+        setLoading(true);
+
+        try {
+            const resp = await fetch('/api/rag/query', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({
+                    question:      question,
+                    exercise_hint: hintInput.value.trim() || null,
+                }),
+            });
+
+            const data = await resp.json();
+
+            if (data.error) {
+                const msg = data.error === 'ml_service_unavailable'
+                    ? 'Exercise guide is temporarily offline.'
+                    : (data.message || 'Something went wrong.');
+                throw new Error(msg);
+            }
+
+            // Render answer
+            answerEl.textContent = data.answer || '';
+
+            // Workout context callout
+            contextEl.hidden = !data.workout_context_used;
+
+            // Citations
+            renderCitations(data.citations);
+
+            resultEl.hidden = false;
+
+        } catch (err) {
+            errorMsg.textContent = err.message || 'Something went wrong.';
+            errorEl.hidden = false;
+        } finally {
+            setLoading(false);
+        }
+    });
+})();
+</script>
+{% endblock %}
