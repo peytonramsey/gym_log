@@ -162,6 +162,110 @@
         color: var(--text-faint);
     }
 
+    /* ── 1RM Bayesian card ───────────────────────────────────── */
+    .one-rm-card {
+        border-top: 1px solid var(--border);
+        padding: 12px 14px 14px;
+    }
+
+    .one-rm-card--loading {
+        border-top: 1px solid var(--border);
+        padding: 10px 14px 12px;
+        font-family: var(--font-body);
+        font-size: 12px;
+        color: var(--text-faint);
+        opacity: 0.4;
+    }
+
+    .one-rm-card--error {
+        border-top: 1px solid var(--border);
+        padding: 10px 14px 12px;
+        font-family: var(--font-body);
+        font-size: 12px;
+        color: var(--text-faint);
+        opacity: 0.4;
+    }
+
+    .one-rm__mean-row {
+        display: flex;
+        align-items: baseline;
+        gap: 5px;
+        margin-bottom: 10px;
+    }
+
+    .one-rm__mean {
+        font-family: var(--font-display);
+        font-size: 40px;
+        font-weight: 700;
+        line-height: 1;
+        color: var(--text);
+        font-variant-numeric: tabular-nums;
+    }
+
+    .one-rm__unit {
+        font-family: var(--font-body);
+        font-size: 16px;
+        line-height: 1;
+        color: var(--text-muted);
+    }
+
+    /* Flat HDI range bar — no gradient */
+    .one-rm__range-wrap {
+        position: relative;
+        height: 6px;
+        background: var(--border);
+        border-radius: 3px;
+        margin-bottom: 6px;
+        overflow: visible;
+    }
+
+    .one-rm__range-fill {
+        position: absolute;
+        top: 0;
+        height: 100%;
+        border-radius: 3px;
+        background: rgba(79, 152, 163, 0.40);
+    }
+
+    .one-rm__range-tick {
+        position: absolute;
+        top: -3px;
+        width: 2px;
+        height: 12px;
+        background: #4f98a3;
+        border-radius: 1px;
+        transform: translateX(-50%);
+    }
+
+    .one-rm__bounds {
+        display: flex;
+        justify-content: space-between;
+        font-family: var(--font-body);
+        font-size: 11px;
+        color: var(--text-muted);
+        font-variant-numeric: tabular-nums;
+        margin-bottom: 4px;
+    }
+
+    .one-rm__label-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .one-rm__ci-label {
+        font-family: var(--font-body);
+        font-size: 10px;
+        color: var(--text-faint);
+        letter-spacing: 0.02em;
+    }
+
+    .one-rm__uncertainty {
+        font-family: var(--font-body);
+        font-size: 10px;
+        color: var(--warning);
+    }
+
     /* ── Reduced motion ──────────────────────────────────────── */
     @media (prefers-reduced-motion: reduce) {
         .form-select { transition: none; }
@@ -338,7 +442,121 @@ function buildExerciseCard(ex, idx) {
             <span class="prog-card__delta ${deltaCls}" aria-label="Delta: ${escHtml(deltaText)}">${escHtml(deltaText)}</span>
         </div>
         ${bodyHtml}`;
+
+    maybeInject1RM(el, ex.name);
     return el;
+}
+
+// ── 1RM Bayesian Estimator ────────────────────────────────────────────────────
+
+const TRACKED_MOVEMENTS = {
+    "Back Squat":                         "back-squat",
+    "Back Squats":                        "back-squat",
+    "Squat":                              "back-squat",
+    "Squats":                             "back-squat",
+    "Conventional Deadlift":              "conventional-deadlift",
+    "Deadlift":                           "conventional-deadlift",
+    "Deadlifts":                          "conventional-deadlift",
+    "Bench Press (Flat Barbell)":         "bench-press",
+    "Bench Press":                        "bench-press",
+    "Overhead Press (Standing Barbell)":  "overhead-press",
+    "Overhead Press":                     "overhead-press",
+    "OHP":                                "overhead-press",
+    "Shoulder Press":                     "overhead-press",
+    "Romanian Deadlift":                  "romanian-deadlift",
+    "Romanian Deadlifts":                 "romanian-deadlift",
+    "RDL":                                "romanian-deadlift",
+    "Barbell Row":                        "barbell-row",
+    "Barbell Rows":                       "barbell-row",
+    "Rows":                               "barbell-row",
+    "BB Row":                             "barbell-row",
+};
+
+/**
+ * If the exercise is a tracked compound movement, append a loading
+ * placeholder to the card immediately, then fetch and render the
+ * 1RM HDI card. Degrades gracefully on cold-start or service errors.
+ */
+function maybeInject1RM(cardEl, exerciseName) {
+    const slug = TRACKED_MOVEMENTS[exerciseName];
+    if (!slug) return;
+
+    const placeholder = document.createElement('div');
+    placeholder.className = 'one-rm-card--loading';
+    placeholder.textContent = 'Loading 1RM estimate…';
+    cardEl.appendChild(placeholder);
+
+    fetch(`/api/1rm/${slug}`)
+        .then(r => r.json().then(data => ({ status: r.status, data })))
+        .then(({ status, data }) => {
+            placeholder.remove();
+            if (status !== 200 || data.error) {
+                const errEl = document.createElement('div');
+                errEl.className = 'one-rm-card--error';
+                errEl.textContent = data.message || 'No logged sets found for this movement';
+                cardEl.appendChild(errEl);
+                return;
+            }
+            cardEl.appendChild(build1RMCard(data));
+        })
+        .catch(() => {
+            placeholder.remove();
+            const errEl = document.createElement('div');
+            errEl.className = 'one-rm-card--error';
+            errEl.textContent = 'Could not reach 1RM service';
+            cardEl.appendChild(errEl);
+        });
+}
+
+/**
+ * Build the 1RM HDI range bar card from the JSON payload.
+ *
+ * Layout:
+ *   [posterior_mean]  lbs
+ *   ──────[═══════════]──────
+ *   [hdi_lower]        [hdi_upper]
+ *   94% credible interval
+ */
+function build1RMCard(data) {
+    const { posterior_mean, hdi_lower, hdi_upper, uncertainty_note } = data;
+
+    // Range bar geometry: 50% margin on each side of the HDI span
+    const span = hdi_upper - hdi_lower;
+    const margin = span * 0.5;
+    const rangeMin = hdi_lower - margin;
+    const rangeMax = hdi_upper + margin;
+    const totalRange = rangeMax - rangeMin;
+
+    const fillLeft  = ((hdi_lower    - rangeMin) / totalRange * 100).toFixed(2);
+    const fillWidth = ((hdi_upper    - hdi_lower) / totalRange * 100).toFixed(2);
+    const tickLeft  = ((posterior_mean - rangeMin) / totalRange * 100).toFixed(2);
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'one-rm-card';
+    wrapper.setAttribute('aria-label',
+        `Estimated 1RM: ${posterior_mean} lbs, 94% credible interval ${hdi_lower}–${hdi_upper} lbs`);
+
+    wrapper.innerHTML = `
+        <div class="one-rm__mean-row">
+            <span class="one-rm__mean">${posterior_mean.toFixed(1)}</span>
+            <span class="one-rm__unit">lbs</span>
+        </div>
+        <div class="one-rm__range-wrap" role="img" aria-hidden="true">
+            <div class="one-rm__range-fill" style="left:${fillLeft}%;width:${fillWidth}%"></div>
+            <div class="one-rm__range-tick" style="left:${tickLeft}%"></div>
+        </div>
+        <div class="one-rm__bounds">
+            <span>${hdi_lower.toFixed(1)}</span>
+            <span>${hdi_upper.toFixed(1)}</span>
+        </div>
+        <div class="one-rm__label-row">
+            <span class="one-rm__ci-label">94% credible interval</span>
+            ${uncertainty_note
+                ? `<span class="one-rm__uncertainty">${escHtml(uncertainty_note)}</span>`
+                : ''}
+        </div>`;
+
+    return wrapper;
 }
 
 // ── Chart ─────────────────────────────────────────────────────────────────────
